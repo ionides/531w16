@@ -56,3 +56,16 @@ Discussion of homework problems is encouraged, but solutions must be written up 
 Any material taken from any source, such as the internet, must be properly acknowledged. Unattributed copying from any source is plagiarism, and has potentially [serious consequences](http://www.rackham.umich.edu/current-students/policies/academic-policies/section11).
 
 
+----------
+
+## Class notes
+
+1. [Introduction](intro/intro.html). [(R script)](intro/intro.R)
+
+--------
+
+## Homework assignments
+
+* [Homework 0](hw/hw00.html), due in class on 1/12. Setting up your computational environment.
+
+---------

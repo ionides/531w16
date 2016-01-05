@@ -1,0 +1,26 @@
+---
+title: "Homework 0, due in class on Tues 1/12"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+Welcome to Stats 531 (Analysis of Timeseries). Homework 0 involves getting your laptop ready for the computing environment we'll be using. Specifically, your assignment is to complete a signup on the class github site (task 1 below) and install R and RStudio if you do not already have them (tasks 2 and 3 below).
+
+Stats 531 emphasizes data analysis, as well as the theory of time series inference. You are welcome to bring your laptop to class, and follow along with data analysis in real time. Class notes will be in a web format, which may not be convenient to print out. You may like to bring a notebook to class to make annotations. 
+
+We will be using the following data analysis tools. Computing assistance is available if you run into difficulties. Please email the GSI (Dao Nguyen, nguyenxd@umich.edu) with a detailed description of your question. Alternatively, you can come to office hours of either Dao or myself. 
+
+
+1. **Git/Github**: The course materials are posted on Github. Git is a tool for file sharing that has become dominant for collaborative computing projects in science and industry. Github is the largest internet code repository, and is based on git. Getting a github account and learning a few basic commands will let you pull up-to-date copies of all the notes and homework files onto your laptop. Github will also be the preferred method of submitting midterm and final projects. I will present an introduction to github in class, covering the notes in Section 1.5 of the [Introduction](https://ionides.github.io/531w16/intro/intro.html#internet-repositories-for-collaboration-and-open-source-research-git-and-github). For Homework 0, you should work through this introduction on your own computer. You are finished with this assignment when you have successfully submitted a pull request to add your name to the hw0_signup.html file.
+
+2. **R**: You have probably used R before, and if not it is time to start! We will make extensive use of R. Please check R is installed on your laptop. It is available at [www.r-project.org](https://www.r-project.org)
+
+3. **Rstudio**: Rstudio is a popular environment for carrying out statistical analysis in R. You can choose whether or not to access R through Rstudio for this course, but many people find that a convenient approach. It can be downloaded from [www.rstudio.com](https://www.rstudio.com)
+
+4. **Rmarkdown/Knitr**: The midterm and final projects will be submitted as reproducible reports. A reproducible report combines text and source code, generates the results by running the code, and inserts the resulting tables, figures and numbers into the finished document. Advantages of this approach are: (i) you can easily modify your report if you want to try doing something differently; (ii) the reader can, if necessary, inspect or run the code that gave the results; (iii) classmates can easily learn effective data analysis techniques from each other. Rmarkdown and knitr are two closely related approaches for doing this. Rmarkdown is somewhat easier to learn (see [rmarkdown.rstudio.com](http://rmarkdown.rstudio.com)). Knitr is good for generating publication-quality reproducible pdf documents using Latex, and if that is something you want to be able to do, you can practice in this course (see [kbroman.org/knitr_knutshell](http://kbroman.org/knitr_knutshell/)). You do not have to study Knitr/Rmarkdown for homework 0, but if you like you can start familiarizing yourself with this approach. Rstudio works well with Rmarkdown (Rmd) and knitr (Rnw) files. Also, you can inspect the Rmd source files for the course notes, which are posted on github.
+
+------
