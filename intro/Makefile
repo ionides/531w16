@@ -1,8 +1,11 @@
+default: r-scripts html-docs
+
+r-scripts: mugss15.R
+
+html-docs: mugss15.html
+
 %.html: %.Rmd
 	Rscript --vanilla -e "rmarkdown::render(\"$*.Rmd\",output_format=\"html_document\")"
-
-%.html: %.md
-	pandoc $*.md > $*.html
 
 %.R: %.Rmd
 	Rscript --vanilla -e "library(knitr); purl(\"$*.Rmd\",output=\"$*.R\")"
