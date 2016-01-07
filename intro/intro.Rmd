@@ -60,7 +60,7 @@ options(
 
 ------------------
 
-## Objectives
+<big><big><big>Objectives</big></big></big>
 
 1. Discuss some basic motivations for the topic of time series analysis.
 
@@ -78,7 +78,7 @@ options(
 
 ---------------
 
-## Introduction
+## Overview
 
 * Time series data are, simply, data collected at many different times. 
 
@@ -530,6 +530,12 @@ The following steps guide you through a test example.
 git clone git@github.com:my_username/531w16
 ```
 
+Equivalently, you can type
+
+```
+git clone https://github.com/my_username/531w16
+```
+
 4. Move to the `531w16` directory and edit the file `hw0_signup.html` to add your own name. You should use an ascii text editor, such as Emacs. Do not use Microsoft Word or any other word processing editor. 
 
 5. It can be helpful to type
@@ -553,6 +559,8 @@ and see how the `git status` has changed. Another useful command for checking on
 ```
 git log
 ```
+
+Type `q` to exit the listing of the log.
 
 6. Push this change to the forked `531w16` on github:
 
