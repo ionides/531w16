@@ -1,8 +1,9 @@
-default: r-scripts html-docs
+default: html-docs
+# default: r-scripts html-docs   to make both
 
-r-scripts: mugss15.R
+r-scripts: intro.R
 
-html-docs: mugss15.html
+html-docs: intro.html
 
 %.html: %.Rmd
 	Rscript --vanilla -e "rmarkdown::render(\"$*.Rmd\",output_format=\"html_document\")"
