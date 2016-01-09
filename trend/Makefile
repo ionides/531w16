@@ -1,9 +1,9 @@
 default: html-docs
 # default: r-scripts html-docs   to make both
 
-r-scripts: intro.R
+r-scripts: trend.R
 
-html-docs: intro.html
+html-docs: trend.html
 
 %.html: %.Rmd
 	Rscript --vanilla -e "rmarkdown::render(\"$*.Rmd\",output_format=\"html_document\")"

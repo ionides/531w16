@@ -60,7 +60,7 @@ options(
 
 ------------------
 
-## Objectives
+<big><big><big>Objectives</big></big></big>
 
 1. Discuss some basic motivations for the topic of time series analysis.
 
@@ -78,7 +78,7 @@ options(
 
 ---------------
 
-## Introduction
+## Overview
 
 * Time series data are, simply, data collected at many different times. 
 
@@ -232,16 +232,26 @@ plot(Low~Year,data=x,ty="l")
     + We'll look at ARMA models in much more detail later in the course.
 
 * Let's fit an ARMA model given by
-$$ x_t = \mu + \alpha(x_{t-1}-\mu) + \epsilon_t + \beta \epsilon_{t-1}.$$
+$$ X_t = \mu + \alpha(X_{t-1}-\mu) + \epsilon_t + \beta \epsilon_{t-1}.$$
 This has a one-lag autoregressive term, $\alpha(x_{t-1}-\mu)$, and a one-lag moving average term, $\beta \epsilon_{t-1}$. It is therefore called an ARMA(1,1) model. These lags give the model some time dependence. 
 
-    + If $\alpha=\beta=0$, we get back to the basic independent model, $x_t = \mu + \epsilon_t$.
+    + If $\alpha=\beta=0$, we get back to the basic independent model, $X_t = \mu + \epsilon_t$.
  
     + If $\alpha=0$ we have a moving average model with one lag, MA(1).
 
     + If $\beta=0$, we have an autoregressive model with one lag, AR(1).
 
 * We suppose that $\epsilon_1\dots,\epsilon_T$ is an independent, identically distributed sequence. To be concrete, let's suppose they are normally distributed with mean zero and variance $\sigma^2$.
+
+* A note on notation:
+
+    + In this course, capital Roman letters, e.g., $X$, $Y$, $Z$, denote random variables. We may also use $\epsilon$, $\eta$, $\xi$, $\zeta$ for random noise processes. Thus, these symbols are used to build models.
+
+    + We use lower case Roman letters ($x$, $y$, $z$, $\dots$) to denote fixed numbers. Thus, these symbols refer to data or function of the data (i.e., statistics).
+
+    + ``We must be careful not to confuse data with the abstractions we use to analyze them.'' (William James, 1842-1910).
+
+    + Other Greek letters will usually be parameters, i.e., real numbers that form part of the model.
 
 * We can readily fit the ARMA(1,1) model by maximum likelihood,
 
@@ -275,7 +285,7 @@ The naive standard error needs to be inflated by $100(SE_2/SE_1-1)=$ `r round((s
 
 
 * We should do **diagnostic analysis**. The first thing to do is to look at the residuals. For an ARMA model, the residual $r_t$ at time $t$ is defined to be the difference between the data, $x_t$, and its predicted value, written as $\hat x_t$. From the ARMA(1,1) definition, 
-$$ x_t = \mu + \alpha(x_{t-1}-\mu) + \epsilon_t + \beta \epsilon_{t-1},$$
+$$ X_t = \mu + \alpha(X_{t-1}-\mu) + \epsilon_t + \beta \epsilon_{t-1},$$
 a simple one-step-ahead predicted value corresponding to parameter estimates $\hat\mu$ and $\hat\alpha$ could be
 $$\hat x_t = \hat\mu + \hat\alpha(x_{t-1}-\hat\mu).$$
 A so-called residual time series, $\{r_t\}$, is then given by
@@ -289,7 +299,7 @@ plot(arma11$resid)
 <br>
 
 * We see that there seems to be some slow variation in the residuals, over a decadal time scale.
-However, the residuals are close to uncorrelated, as we can check by plotting their pairwise sample correlations at a range of lags. This is called the autocorrelation function, or ACF, which is computed for the residual time series $\{r_t\}$ as
+However, the residuals are close to uncorrelated, as we can check by plotting their pairwise sample correlations at a range of lags. This is called the sample autocorrelation function, or ACF, which is computed for the residual time series $\{r_t\}$ as
 $$ ACF(\ell) = \frac{1}{T-\ell}\sum_{t=1}^{T-\ell} r_{t+\ell}\, r_t.$$
  
 ```{r acf}
@@ -530,6 +540,12 @@ The following steps guide you through a test example.
 git clone git@github.com:my_username/531w16
 ```
 
+Equivalently, you can type
+
+```
+git clone https://github.com/my_username/531w16
+```
+
 4. Move to the `531w16` directory and edit the file `hw0_signup.html` to add your own name. You should use an ascii text editor, such as Emacs. Do not use Microsoft Word or any other word processing editor. 
 
 5. It can be helpful to type
@@ -553,6 +569,8 @@ and see how the `git status` has changed. Another useful command for checking on
 ```
 git log
 ```
+
+Type `q` to exit the listing of the log.
 
 6. Push this change to the forked `531w16` on github:
 
