@@ -1,0 +1,179 @@
+---
+title: "2. Estimating the trend of a time series"
+author: "Edward Ionides"
+date: "1/08/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=1"
+    ]
+bibliography: intro.bib
+csl: ecology.csl
+---
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+1. Define the trend function for a time series model, and discuss its estimation from data. In particular, discuss the properties of least square estimation of the trend.
+
+2. Consider different parametric and non-parametric approaches to modeling the trend.
+
+3. Discuss difficulties arising in practice when assessing appropriate model specification for the trend function.
+
+<br>
+
+----------------------
+
+---------------
+
+## Some definitions and notation
+
+* A time series is a sequence of numbers, called **data**. In general, we will suppose that there are $N$ numbers, $x^*_1,x^*_2,\dots,x^*_N$, collected at an increasing sequence of times, $t_1,t_2,\dots,t_N$. 
+
+    + We write this collection of numbers as $x^*_{1:N}$.
+
+* A time series model is a collection of jointly defined random variables, $X_1,X_2,\dots,X_N$.
+
+    + We write this collection of random variables as  $X_{1:N}$. 
+
+    + Like all jointly defined random variables, the distribution of $X_{1:N}$ is defined by a joint density function, which we write as 
+$$ f_{X_{1:N}}(x_1,\dots,x_N \given \theta).$$
+
+    + Here, $\theta$ is a vector of parameters.
+
+    + Scientifically, we postulate that $x^*_{1:N}$ are a realization of $X_{1:N}$ for some unknown value of $\theta$.
+
+* Our notation distinguishes clearly between 
+
+    + the model, $X_{1:N}$
+    + an arbitrary realization of the model, $x_{1:N}$
+    + the specific sequence of numbers that we observed as data, $x^*_{1:N}$
+
+
+<br>
+
+---------
+
+-----------
+
+### Review questions
+
+1. What is a random variable? 
+
+2. What is a collection of jointly defined random variables? 
+
+3. What is a probability density function? What is a joint density function?
+
+4. What does it mean to say that ``$\theta$ is a vector of parameters?''
+
+(There are different answers to these questions, but you should be able to write down an answer that you are satisfied with.)
+
+<br>
+
+---------
+
+-----------
+
+### The mean function, or trend 
+
+* Random variables usually have an expected value, and in this course they always do. We write $\E[X]$ for the expected value of a random variable $X$. (Review: What is expected value? How is it defined? How can it fail to exist for a properly defined random variable?)
+
+* We define the **mean function** by
+$$ mu_n = \E[X_n] = \int_{-\infty}^\infty f_{X_n}(x_n)\, dx_n$$
+for $n=1,2,\dots,N$
+
+* We use the words ``mean function'' and ``trend'' interchangeably.
+
+* We say ``function'' since we are thinking of $\mu_n$ as a function of $n$. 
+
+    + Sometimes, it makes sense to think of time as continuous. Then, we can write 
+$$\mu(t)$$
+for the expected value of an observation at time $t$. We only make observations at the discrete collection of times $t_{1:N}$ and so we require
+$$ \mu(t_n)= \mu_n.$$
+
+    + A time series may have measurements evenly spaced in time, but our notation does not insist on this. In practice, time series data may contain missing values or unequally spaced observations. 
+
+* $\mu_n$ may depend on the parameter vector, $\theta$. We can write $\mu_n(\theta)$ to make this explicit.
+
+* We write $\hat\mu_n$ for some estimate of $\mu_n$.
+
+    + For example, if we suppose $\mu_n=\mu$, so the mean is constant, we might estimate $\mu$ by the **sample mean**,
+$$\hat\mu_n=\hat\mu=\frac{1}{N}\sum_{k=1}^N x^*_k.$$
+
+    + We call $\hat\mu_n$ an **estimated mean function** or **estimated trend**.
+
+    + Thus, the trend is a property of the model, and the estimated trend is a function of the data.
+
+    + Formally, we should not talk about the trend of the data. People do, but we should try not to.
+
+### The covariance function
+
+* We will also assume that variances and covariances exist for the random variables $X_{1:N}$. We write
+$$ \gamma_{m,n} = \E\big[(X_m-\mu_m)(X_n-\mu_n)\big].$$
+* Often, we will suppose that the covariance between two observations depends only on the time difference between the observations. In this case, supposing also that the observations are equally spaced in time, we write
+$$ \gamma_{h} = \gamma_{n,n+h}.$$
+
+
+<br>
+
+------------------
+
+-----------------
+
+
+----------------------
+
+----------------
+
+## References
+
+
+
