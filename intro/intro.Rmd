@@ -185,11 +185,11 @@ Let's focus on `Low`, which is the lowest temperature, in Fahrenheit, for each y
 
 * As statisticians, we want an uncertainty estimate. We want to know how reliable our estimate is, since it is based on only a limited amount of data. 
 
-* Write the data as $x_1,\dots,x_T$. 
+* Write the data as $x^*_1,\dots,x^*_N$. 
 
-* A basic estimate of the mean and standard deviation is $\hat\mu= \frac{1}{T}\sum_{t=1}^Tx_t$ and $\hat\sigma^2= \frac{1}{T-1}\sum_{t=1}^T(x_t-\hat\mu)^2$, suggesting an approximate confidence interval for $\mu$ of $\hat\mu\pm 1.96\hat\sigma/\sqrt{T}$, 
+* A basic estimate of the mean and standard deviation is $\hat\mu= \frac{1}{N}\sum_{n=1}^Nx^*_n$ and $\hat\sigma^2= \frac{1}{N-1}\sum_{n=1}^N(x^*_n-\hat\mu)^2$, suggesting an approximate confidence interval for $\mu$ of $\hat\mu\pm 1.96\hat\sigma/\sqrt{N}$, 
 
-* 1955 has missing data, coded as `NA`, requiring a minor modification. So, we compute $\hat\mu_1$ and $SE_1=\hat\sigma/\sqrt{T}$ as
+* 1955 has missing data, coded as `NA`, requiring a minor modification. So, we compute $\hat\mu_1$ and $SE_1=\hat\sigma/\sqrt{N}$ as
 
 ```{r mean}
 mu1 <- mean(x$Low,na.rm=TRUE)
@@ -232,24 +232,24 @@ plot(Low~Year,data=x,ty="l")
     + We'll look at ARMA models in much more detail later in the course.
 
 * Let's fit an ARMA model given by
-$$ X_t = \mu + \alpha(X_{t-1}-\mu) + \epsilon_t + \beta \epsilon_{t-1}.$$
-This has a one-lag autoregressive term, $\alpha(x_{t-1}-\mu)$, and a one-lag moving average term, $\beta \epsilon_{t-1}$. It is therefore called an ARMA(1,1) model. These lags give the model some time dependence. 
+$$ X_n = \mu + \alpha(X_{n-1}-\mu) + \epsilon_n + \beta \epsilon_{n-1}.$$
+This has a one-lag autoregressive term, $\alpha(x_{n-1}-\mu)$, and a one-lag moving average term, $\beta \epsilon_{n-1}$. It is therefore called an ARMA(1,1) model. These lags give the model some time dependence. 
 
-    + If $\alpha=\beta=0$, we get back to the basic independent model, $X_t = \mu + \epsilon_t$.
+    + If $\alpha=\beta=0$, we get back to the basic independent model, $X_n = \mu + \epsilon_n$.
  
     + If $\alpha=0$ we have a moving average model with one lag, MA(1).
 
     + If $\beta=0$, we have an autoregressive model with one lag, AR(1).
 
-* We suppose that $\epsilon_1\dots,\epsilon_T$ is an independent, identically distributed sequence. To be concrete, let's suppose they are normally distributed with mean zero and variance $\sigma^2$.
+* We suppose that $\epsilon_1\dots,\epsilon_N$ is an independent, identically distributed sequence. To be concrete, let's suppose they are normally distributed with mean zero and variance $\sigma^2$.
 
 * A note on notation:
 
     + In this course, capital Roman letters, e.g., $X$, $Y$, $Z$, denote random variables. We may also use $\epsilon$, $\eta$, $\xi$, $\zeta$ for random noise processes. Thus, these symbols are used to build models.
 
-    + We use lower case Roman letters ($x$, $y$, $z$, $\dots$) to denote fixed numbers. Thus, these symbols refer to data or function of the data (i.e., statistics).
+    + We use lower case Roman letters ($x$, $y$, $z$, $\dots$) to denote fixed numbers, which could be data or function of the data (i.e., statistics). We will often write the data themselves with an asterisk ($x^*$, $y^*$, $\dots$) for added emphasis. 
 
-    + ``We must be careful not to confuse data with the abstractions we use to analyze them.'' (William James, 1842-1910).
+    + "We must be careful not to confuse data with the abstractions we use to analyze them." (William James, 1842-1910).
 
     + Other Greek letters will usually be parameters, i.e., real numbers that form part of the model.
 
@@ -284,12 +284,12 @@ The naive standard error needs to be inflated by $100(SE_2/SE_1-1)=$ `r round((s
 * Exactly how the ARMA(1,1) model is fitted and the standard errors computed will be covered later.
 
 
-* We should do **diagnostic analysis**. The first thing to do is to look at the residuals. For an ARMA model, the residual $r_t$ at time $t$ is defined to be the difference between the data, $x_t$, and its predicted value, written as $\hat x_t$. From the ARMA(1,1) definition, 
-$$ X_t = \mu + \alpha(X_{t-1}-\mu) + \epsilon_t + \beta \epsilon_{t-1},$$
+* We should do **diagnostic analysis**. The first thing to do is to look at the residuals. For an ARMA model, the residual $r_n$ at time $t_n$ is defined to be the difference between the data, $x_n$, and its predicted value, written as $\hat x_n$. From the ARMA(1,1) definition, 
+$$ X_n = \mu + \alpha(X_{n-1}-\mu) + \epsilon_n + \beta \epsilon_{n-1},$$
 a simple one-step-ahead predicted value corresponding to parameter estimates $\hat\mu$ and $\hat\alpha$ could be
-$$\hat x_t = \hat\mu + \hat\alpha(x_{t-1}-\hat\mu).$$
-A so-called residual time series, $\{r_t\}$, is then given by
-$$ r_t = x_t - \hat x_t.$$
+$$\hat x_n = \hat\mu + \hat\alpha(x_{n-1}-\hat\mu).$$
+A so-called residual time series, $\{r_n\}$, is then given by
+$$ r_n = x_n - \hat x_n.$$
 In fact, R does something slightly more sophisticated.
 
 ```{r arma_diag}
@@ -299,9 +299,11 @@ plot(arma11$resid)
 <br>
 
 * We see that there seems to be some slow variation in the residuals, over a decadal time scale.
-However, the residuals are close to uncorrelated, as we can check by plotting their pairwise sample correlations at a range of lags. This is called the sample autocorrelation function, or ACF, which is computed for the residual time series $\{r_t\}$ as
-$$ ACF(\ell) = \frac{1}{T-\ell}\sum_{t=1}^{T-\ell} r_{t+\ell}\, r_t.$$
- 
+However, the residuals are close to uncorrelated, as we can check by plotting their pairwise sample correlations at a range of lags. This is called the sample autocorrelation function, or sample ACF, which can be computed at each lag $h$ for the residual time series $\{r_n\}$ as
+$$ ACF(h) = \frac{\sum_{n=1}^{N-h} r_n \, r_{n+h}}
+{\frac{1}{N}\sum_{n=1}^{N} r_{n}^2}.$$
+We will discuss the sample ACF at greater length later.
+
 ```{r acf}
 acf(arma11$resid,na.action=na.pass)
 ```
@@ -351,7 +353,7 @@ acf(arma11$resid,na.action=na.pass)
 
 ### Fitting a model for volatility of a stock market index
 
-* Let $\{y_t,t=1,\dots,T\}$ be the daily returns on a stock market index, such as the S&P 500. 
+* Let $\{y^*_n,n=1,\dots,N\}$ be the daily returns on a stock market index, such as the S&P 500. 
 
 * Since the stock market is notoriously unpredictable, it is often unproductive to predict the mean of the returns and instead there is much emphasis on predicting the variability of the returns (known as the volatility).
 
@@ -362,19 +364,19 @@ We will not work on understanding it right now.
 The relevant point here is that investigators often find it useful to write down models for how a dynamic system progresses through time, and this gives rise to the time series analysis goals of estimating unknown parameters and assessing how successfully the fitted model describes the data.
 
 $$
-\begin{aligned} Y_t &= \exp\{H_t/2\} \epsilon_t, \\
-H_t &= \mu_h(1-\phi) + \phi H_{t-1} + Y_{t-1}\sigma_\eta\sqrt{1-\phi^2}\tanh(G_{t-1}+\nu_t)\exp\{-H_{t-1}/2\} + \omega_t,\\
-G_t &= G_{t-1}+\nu_t,
+\begin{aligned} Y_n &= \exp\{H_n/2\} \epsilon_n, \\
+H_n &= \mu_h(1-\phi) + \phi H_{n-1} + Y_{n-1}\sigma_\eta\sqrt{1-\phi^2}\tanh(G_{n-1}+\nu_n)\exp\{-H_{n-1}/2\} + \omega_n,\\
+G_n &= G_{n-1}+\nu_n,
 \end{aligned}
 $$
 
-* $\{\epsilon_t\}$ is an iid $N(0,1)$ sequence, $\{\nu_t\}$ is an iid $N(0,\sigma_{\nu}^2)$ sequence, and $\{\omega_t\}$ is an iid $N(0,\sigma_\omega^2)$ sequence.
+* $\{\epsilon_n\}$ is an iid $N(0,1)$ sequence, $\{\nu_n\}$ is an iid $N(0,\sigma_{\nu}^2)$ sequence, and $\{\omega_n\}$ is an iid $N(0,\sigma_\omega^2)$ sequence.
 
-* $H_t$ represents the volatility at time $t$. Volatility is unobserved; we only get to observe the return, $Y_t$.
+* $H_n$ represents the volatility at time $t$. Volatility is unobserved; we only get to observe the return, $Y_n$.
 
-* $G_t$ is a slowly-varying process that regulates $H_t$.
+* $G_n$ is a slowly-varying process that regulates $H_n$.
 
-*  $H_t$ has auto-regressive behavior and dependence on the previous return, $Y_{t-1}$, as well as being driven by $G_t$.
+*  $H_n$ has auto-regressive behavior and dependence on the previous return, $Y_{n-1}$, as well as being driven by $G_n$.
 
 This is an example of a <b>mechanistic model</b>, where scientific or engineering considerations lead to a model of interest. Now there is data and a model of interest, it is time to recruit a statistician! (Statisticians can have roles to play in data collection and model development, as well.)
 
