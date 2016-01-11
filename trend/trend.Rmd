@@ -11,9 +11,20 @@ output:
     pandoc_args: [
       "--number-offset=1"
     ]
-bibliography: intro.bib
+bibliography: trend.bib
 csl: ecology.csl
 ---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\prob{\mathbb{P}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\given{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
 
 Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
 Please share and remix noncommercially, mentioning its origin.  
@@ -74,11 +85,13 @@ options(
 
 ---------------
 
-## Some definitions and notation
+## Definition: Time series data and time series models
 
-* A time series is a sequence of numbers, called **data**. In general, we will suppose that there are $N$ numbers, $x^*_1,x^*_2,\dots,x^*_N$, collected at an increasing sequence of times, $t_1,t_2,\dots,t_N$. 
+* A time series is a sequence of numbers, called **data**. In general, we will suppose that there are $N$ numbers, $\data{x_1},\data{x_2},\dots,\data{x_N}$, collected at an increasing sequence of times, $t_1,t_2,\dots,t_N$. 
 
-    + We write this collection of numbers as $x^*_{1:N}$.
+    + We write $1:N$ for the sequence $\{1,2,\dots,N\}$ and we write the collection of numbers $\{\data{x_n}, n=1,\dots,N\}$ as $\data{x_{1:N}}$.
+
+    + We keep $t$ to represent continuous time, and $n$ to represent the discrete sequence of observations. This will serve us well later, when we fit continuous time models to data.
 
 * A time series model is a collection of jointly defined random variables, $X_1,X_2,\dots,X_N$.
 
@@ -89,13 +102,17 @@ $$ f_{X_{1:N}}(x_1,\dots,x_N \given \theta).$$
 
     + Here, $\theta$ is a vector of parameters.
 
-    + Scientifically, we postulate that $x^*_{1:N}$ are a realization of $X_{1:N}$ for some unknown value of $\theta$.
+    + This notation generalizes. We will generally write $f_Y(y)$ for the density of a random variable $Y$ evaluated at $y$, and $f_{YZ}(y,z)$ for the joint density of the pair of random variables $(Y,Z)$ evaluated at $(y,z)$. We can also write $f_{Y|Z}(y|z)$ for the conditional density of $Y$ given $Z$.
 
-* Our notation distinguishes clearly between 
+    + For discrete data, such as count data, our model may also be discrete and we interpret the density function as a probability mass function. Formulas for expectations and probabilities are written as integrals for continuous models, and sums for discrete models. Otherwise, everything remains the same. We will write formulas only for the continuous case. You should be able to swap integrals for sums, if necessary, to work with discrete models.
+
+    + Scientifically, we postulate that $\data{x_{1:N}}$ are a realization of $X_{1:N}$ for some unknown value of $\theta$.
+
+* Our notation distinguishes between 
 
     + the model, $X_{1:N}$
     + an arbitrary realization of the model, $x_{1:N}$
-    + the specific sequence of numbers that we observed as data, $x^*_{1:N}$
+    + the specific sequence of numbers that we observed as data, $\data{x_{1:N}}$
 
 
 <br>
@@ -110,7 +127,7 @@ $$ f_{X_{1:N}}(x_1,\dots,x_N \given \theta).$$
 
 2. What is a collection of jointly defined random variables? 
 
-3. What is a probability density function? What is a joint density function?
+3. What is a probability density function? What is a joint density function? What is a conditional density function?
 
 4. What does it mean to say that ``$\theta$ is a vector of parameters?''
 
@@ -122,17 +139,17 @@ $$ f_{X_{1:N}}(x_1,\dots,x_N \given \theta).$$
 
 -----------
 
-### The mean function, or trend 
+## Definition: The mean function, or trend 
 
 * Random variables usually have an expected value, and in this course they always do. We write $\E[X]$ for the expected value of a random variable $X$. (Review: What is expected value? How is it defined? How can it fail to exist for a properly defined random variable?)
 
 * We define the **mean function** by
-$$ mu_n = \E[X_n] = \int_{-\infty}^\infty f_{X_n}(x_n)\, dx_n$$
-for $n=1,2,\dots,N$
+$$ \mu_n = \E[X_n] = \int_{-\infty}^\infty x_n \, f^{}_{X_n}(x_n)\, dx_n$$
+for $n=1:N$. 
 
-* We use the words ``mean function'' and ``trend'' interchangeably.
+* We use the words "mean function" and "trend" interchangeably.
 
-* We say ``function'' since we are thinking of $\mu_n$ as a function of $n$. 
+* We say "function" since we are thinking of $\mu_n$ as a function of $n$. 
 
     + Sometimes, it makes sense to think of time as continuous. Then, we can write 
 $$\mu(t)$$
@@ -141,25 +158,63 @@ $$ \mu(t_n)= \mu_n.$$
 
     + A time series may have measurements evenly spaced in time, but our notation does not insist on this. In practice, time series data may contain missing values or unequally spaced observations. 
 
-* $\mu_n$ may depend on the parameter vector, $\theta$. We can write $\mu_n(\theta)$ to make this explicit.
+* $\mu_n$ may depend on $\theta$, the parameter vector. We can write $\mu_n(\theta)$ to make this explicit.
 
-* We write $\hat\mu_n$ for some estimate of $\mu_n$.
+* We write $\hat\mu_n(x_{1:N})$ to be some estimator of $\mu_n$, i.e., a map which is applied to the data to give an estimate of $\mu_n$.  An appropriate choice of $\hat\mu_n$ will depend on the data and the model.
 
-    + For example, if we suppose $\mu_n=\mu$, so the mean is constant, we might estimate $\mu$ by the **sample mean**,
-$$\hat\mu_n=\hat\mu=\frac{1}{N}\sum_{k=1}^N x^*_k.$$
+* The **estimate** of the mean function is the value of the estimator when applied to the data. Here, we write this as
+$$ \data{\mu_n^*} = \hat\mu_n(\data{x_{1:N}}).$$
 
-    + We call $\hat\mu_n$ an **estimated mean function** or **estimated trend**.
+* We call $\data{\mu_n}$ an **estimated mean function** or **estimated trend**.
 
-    + Thus, the trend is a property of the model, and the estimated trend is a function of the data.
+*  For example, sometimes we suppose $\mu_n=\mu$, so the mean is constant. In this case, the model is called **mean stationary**. Then, we might estimate $\mu$ using the mean estimator,
+$$\hat\mu(x_{1:N})=\frac{1}{N}\sum_{k=1}^N x_k.$$
+In this case, the corresponding estimate $\data{\mu}$ is the sample mean.
+
+    + We can compute the sample mean, $\data{\mu}$, for any dataset. It is only a reasonable estimator of the mean function when a mean stationary model is appropriate.
+
+    + Notice that trend is a property of the model, and the estimated trend is a function of the data.
 
     + Formally, we should not talk about the trend of the data. People do, but we should try not to.
 
-### The covariance function
+    + Similarly, data cannot be mean stationary. A model can be mean stationary.
 
-* We will also assume that variances and covariances exist for the random variables $X_{1:N}$. We write
+    + Consider these two statements. Does is matter which we use?
+
+        1. ``The data look mean stationary.''
+
+        2. ``A mean stationary model looks appropriate for these data.''
+
+## Definition: The autocovariance and autocorrelation functions, and some estimators of them
+
+* We will assume that variances and covariances exist for the random variables $X_{1:N}$. We write
 $$ \gamma_{m,n} = \E\big[(X_m-\mu_m)(X_n-\mu_n)\big].$$
-* Often, we will suppose that the covariance between two observations depends only on the time difference between the observations. In this case, supposing also that the observations are equally spaced in time, we write
+This is  called the **autocovariance** function, viewed as a function of $m$ and $n$.
+
+* We may also write $\Gamma$ for the matrix whose $(m,n)$ entry is $\gamma_{m,n}$.
+
+* Often, we will suppose that the covariance between two observations depends only on the time difference between the observations. In this case, we say that the time series model is **covariance stationary**. Supposing also that the observations are equally spaced in time, we write the autocovariance function as a function of a lag, $h$, given by
 $$ \gamma_{h} = \gamma_{n,n+h}.$$
+
+* For a covariance stationary model, and some mean function estimator $\hat\mu_n=\hat \mu_n(x_{1:N})$, a common estimator for $\gamma_h$ is
+$$ \hat\gamma_h(x_{1:N}) = \frac{1}{N}\sum_{n=1}^{N-h} \big( {x_n} - \hat\mu_n \big)\, \big({x_{n+h}}-\hat\mu_{n+h} \big).$$
+
+* The corresponding estimate of $\gamma_h$, known as the **sample autocovariance function**,
+is
+$$\data{\gamma_h} = \hat\gamma_h(\data{x_{1:N}).$$
+
+* Dividing through by the variance (or sample variance) gives the **autocorrelation function** $\rho_h$ (and $\data{\rho_h}$), given by
+$$ \rho_h = \gamma_h / \gamma_0.$$
+We can analogously construct the standard autocorrelation estimator,
+$$ \hat\rho_h(x_{1:N}) = \gamma_h(x_{1:N}) / \gamma_0(x_{1:N}),$$
+which leads to an estimate known as the **sample autocorrelation**,
+$$ \data{\rho_h} = \hat\rho(\data{x_{1:N}).$$
+
+* It is common to use ACF as an acronym for any or all of the autocorrelation function, sample autocorrelation function, autocovariance function, and sample autocovariance function. **If you use the acronym ACF, you are expected to define it, to remove any ambiguity**.
+
+* The sample autocorrelation and sample autocovariance functions are statistics computed from the data. They exist, and can be computed, even when the data are not well modeled as covariance stationary. However, in that case, it does not make sense to view them as estimators of the autocorrelation and autocovariance functions (which exist as functions of a lag $h$ only for covariance stationary models).
+
+* Formally, we should not talk about the correlation or covariance of data. These are properties of models. We can talk about the sample autocorrelation or sample autocovariance of data. 
 
 
 <br>
@@ -168,6 +223,165 @@ $$ \gamma_{h} = \gamma_{n,n+h}.$$
 
 -----------------
 
+## Estimating a trend by least squares
+
+Let's analyze a time series of global mean annual temperature downloaded from 
+[http://climate.nasa.gov/system/internal_resources/details/original/647_Global_Temperature_Data_File.txt](http://climate.nasa.gov/system/internal_resources/details/original/647_Global_Temperature_Data_File.txt). These data are in degrees Celsius measured as an anomaly from a 1951-1980 base. This is climatology jargon for saying that the sample mean of the temperature over the interval 1951-1980 was subtracted from all time points.
+
+```{r data}
+global_temp <- read.table("Global_Temperature.txt",header=TRUE)
+str(global_temp)
+```
+
+```{r data_plot}
+plot(Annual~Year,data=global_temp,ty="l")
+```
+
+* These data should make all of us pause for thought about the future of our planet. 
+
+* Truly understanding climate change involves understanding the hugely complex systems of physical, chemical and biological processes driving climate. 
+
+* However, it is very hard to know if the gigantic models that attempt to capture all important parts of the global climate processes are in fact a reasonable description of what is happening.
+
+* There is value in relatively simple statistical analysis, which can at least help to tell us what evidence there is for how things are changing. 
+
+### Fitting a least squares model with a quadratic trend
+
+Perhaps the simplest trend model that makes sense looking at these data is a quadratic trend,
+$$\mu(t)= \beta+0 + \beta_1 t + \beta_2 t^2.$$
+To write the least squares estimate of $\beta_0$, $\beta_1$ and $\beta_2$, we set up matrix notation. Write
+$$ \mu = (\mu_1,\mu_2,\dots,\mu_N)^\transpose$$
+for the column vector describing the mean function, and similarly,
+$$ \beta = (\beta_0,\beta_1,\beta_2)^\transpose.$$
+Then, defining
+$$ Z = \left(\begin{array}{ccc}
+1 & 1880 & 1880^2 \\
+1 & 1881 & 1881^2 \\
+1 & 1882 & 1882^2 \\
+\vdots & \vdots & \vdots
+\end{array}\right),$$
+we have 
+$$ \mu = Z\beta.$$
+We also write a generic potential dataset $x_{1:N}$ and the data $\data{x_{1:N}}$ as column vectors,
+$$\begin{eqnarray}
+x &=& (x_1,x_2,\dots,x_N)^\transpose,\\
+\data{x} & =& (\data{x_1},\data{x_2},\dots,\data{x_N})^\transpose.
+\end{eqnarray}$$
+The ordinary least squares (OLS) estimator of $\beta$ is
+$$\hat\beta_{OLS}(x_{1:N}) = (Z^\transpose Z)^{-1}Z^\transpose x,$$
+with corresponding OLS estimate
+$$\data{\beta}=\hat\beta_{OLS}(\data{x_{1:N}}) = (Z^\transpose Z)^{-1}Z^\transpose \data{x}.$$
+We can carry out this computation in R by
+```{r glob_temp_lm}
+lm_fit <- lm(Annual~Year+I(Year^2),data=global_temp)
+summary(lm_fit)
+```
+where `I()` is a function that tells R to construct `Year^2` as a variable, and inhibits interpretation in the R model formula notation.
+
+We can check visually how well this model fits the data.
+```{r glob_temp_lm_plot}
+yr <- 1880:2026
+Z <- cbind(1,yr,yr^2)
+beta <- coef(lm_fit)
+prediction <- Z%*%beta
+plot(Annual~Year,data=global_temp,ty="l",xlim=range(yr),ylim=range(c(global_temp$Annual,prediction),na.rm=TRUE),lty="dashed")
+lines(x=yr,y=prediction,col="red")
+```
+
+* The overall estimated trend seems a reasonable fit for the data. 
+
+* If we want to attach uncertainty to our parameter estimates, and consequently to our forecast, we need a time series model $X_{1:N}$, which we write in column vector form as
+$$X = (X_1,X_2,\dots,X_N)^\transpose.$$
+
+* The standard OLS model is
+$$[L1]\quad\quad X = Z\beta + \epsilon,$$
+where $\epsilon=\epsilon_{1:N}$ is a vector of independent, identically distributed random variables with mean zero and constant variance,
+$$\E[\epsilon_n]=0, \quad\quad \var[\epsilon_n] = \sigma^2.$$
+Standard linear model software, such as `lm` in R, provides confidence intervals based on this model. 
+
+* Under model L1, the estimator $\hat\beta_{OLS}(x_{1:N})$ is unbiased. This can be checked:
+$$\begin{eqnarray}
+\E\big[\hat\beta_{OLS}(X_{1:N})\big] &=&\E\big[ (Z^\transpose Z)^{-1}Z^\transpose X \big]\\
+&=& \E\big[ (Z^\transpose Z)^{-1}Z^\transpose \{Z\beta + \epsilon \}\big]\\
+&=&  (Z^\transpose Z)^{-1}Z^\transpose \{Z\beta + \E[\epsilon]\} \\
+&=&  (Z^\transpose Z)^{-1}(Z^\transpose Z)\beta \\
+&=& \beta
+\end{eqnarray}$$
+* A result for linear models is that $\hat\beta_{OLS}(x_{1:N})$ is the minimum variance unbiased estimator for model L1.
+
+* The variance/covariance matrix of $\hat\beta_{OLS}(X_{1:N})$ under this model is
+$$\cov[\hat\beta_{OLS}(X_{1:N})] = \sigma^2 \big( Z^\transpose Z\big)^{-1},$$
+which is estimated using an estimator for $\sigma$ of
+$$\hat\sigma_{OLS}(x_{1:N})= \sqrt{\frac{1}{N-d} \big(x-Z\hat\beta_{OLS}\big)^\transpose \big(x-Z\hat\beta_{OLS}\big)},$$
+where $d$ is the number of covariates, i.e., the number of columns of $Z$.
+
+Let's look at the residuals to assess how appropriate this model is here.
+
+```{r acf_global_temp}
+acf(resid(lm_fit))
+```
+
+* The horizontal dashed lines on the graph of the sample autocorrelation function (ACF) give a measure of chance variation under the null hypothesis that the residuals are IID. 
+
+* At each lag $h$, the chance that the estimated ACF falls within this band is 5%. 
+
+* Thus, under the null hypothesis, one expects a fraction of $1/20$ of the lags of the sample ACF to fall outside this band.
+
+* Here, the sample ACF confirms what we can probably see from the plot of the fitted model: the variation around the fitted model is clustered in time, so the sample ACF of the residuals is not consistent with a model having independent error terms.
+
+
+<br>
+
+----------
+
+--------
+
+### Question: How does R construct these horizontal dashed lines?
+
+* How would you check what R actually does when it constructs these dashed lines? What approximation is being made? When is that approximation appropriate?
+
+Hint: If you type `acf` in R, you get the source code for the acf function. You'll see that the plotting is done by a service function `plot.acf`. This service function is part of the package, and is not immediately accessible to you. Nevertheless, you can check the source code as follows
+
+1.  Notice, either from the help documentation `?acf` or the last line of the source code `acf` that this function resides in the package `stats`.
+
+2. Now, you can access this namespace directly, to list the source code, by
+```
+stats:::plot.acf
+```
+
+3. Finally, relate this source code to the task of testing for lack of correlation, a standard topic in undergrad introductory statistics courses. The critical line of code seems to be
+```
+clim0 <- if (with.ci) qnorm((1 + ci)/2)/sqrt(x$n.used)
+```
+This appears to use a normal distribution approximation for the sample autocorrelation estimator, with mean zero and standard deviation $1/\sqrt{n}$. Derive this approximation, for a sequence of IID mean zero random variables. You can ignore the issue of estimating the mean:  suppose that the mean is known to be zero.
+
+<br>
+
+--------
+
+--------
+
+### Generalized least squares
+
+* Suppose for the moment that we knew the covariance matrix, $\Gamma$, for a model with dependent errors,
+$$[L2]\quad\quad X = Z\beta + \zeta, \quad \quad \zeta \sim N[0,\Gamma].$$
+We read "\zeta \sim N[0,\Gamma]" as "$\zeta$ follows a multivariate normal distribution with mean zero and covariance matrix $\Gamma$."
+
+* The minimum variance unbiased estimator of $\beta$ for model L2 is the generalized least square (GLS) estimator,
+$$\hat \beta_{GLS}(x_{1:N}) = \big( Z^\transpose \Gamma^{-1} Z \big)^{-1} Z^\transpose \Gamma^{-1} x.$$
+
+* The OLS estimator remains unbiased for L2 (you can check this as an exercise). In this sense it remains a reasonable estimator. It is often a practical solution to use the OLS estimator, expecially for preliminary data analysis. We don't know $\Gamma$ so can't necessarily make a good estimator based on the GLS model. It might be easier to get an estimate of $\Gamma$ once we have a reasonable estimate of the trend.
+
+* For model L2, the variance of the OLS estimator is
+$$\var\big[\hat \beta_{OLS}(X_{1:N})\big] = (Z^\tranpose Z)^{-1} Z^\tranpose \Gamma Z(Z^\tranpose Z)^{-1}.$$
+This is different from the variance under model L1.
+
+* **CONCLUSION. It is okay to do ordinary linear regression for data which are not well modeled with uncorrelated errors. However, if we do so, we should not trust the error estimates coming from L1.**
+
+* This is an example of a situation where some parts of the output from statistical software are reasonable (here, the parameter estimates from `lm`) and other parts are unreasonable (the corresponding standard errors and any tests based on them). The theory helps us decide which bits of computer output to use and which to ignore.
+
+
+<br>
 
 ----------------------
 

@@ -300,7 +300,7 @@ plot(arma11$resid)
 
 * We see that there seems to be some slow variation in the residuals, over a decadal time scale.
 However, the residuals are close to uncorrelated, as we can check by plotting their pairwise sample correlations at a range of lags. This is called the sample autocorrelation function, or sample ACF, which can be computed at each lag $h$ for the residual time series $\{r_n\}$ as
-$$ ACF(h) = \frac{\sum_{n=1}^{N-h} r_n \, r_{n+h}}
+$$ ACF(h) = \frac{\frac{1}{N}\sum_{n=1}^{N-h} r_n \, r_{n+h}}
 {\frac{1}{N}\sum_{n=1}^{N} r_{n}^2}.$$
 We will discuss the sample ACF at greater length later.
 
