@@ -1,7 +1,7 @@
 ---
 title: "2. Definitions and trend estimation by least squares"
 author: "Edward Ionides"
-date: "1/08/2016"
+date: "1/12/2016"
 output:
   html_document:
     theme: flatly
