@@ -1,5 +1,5 @@
 ---
-title: "2. Estimating the trend of a time series"
+title: "2. Definitions and trend estimation by least squares"
 author: "Edward Ionides"
 date: "1/08/2016"
 output:
