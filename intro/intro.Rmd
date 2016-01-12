@@ -15,6 +15,19 @@ bibliography: intro.bib
 csl: ecology.csl
 ---
 
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\prob{\mathbb{P}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\predict[1]{#1^{P\,*}}
+\newcommand\given{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+
 Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
 Please share and remix noncommercially, mentioning its origin.  
 ![CC-BY_NC](cc-by-nc.png)
@@ -187,9 +200,9 @@ Let's focus on `Low`, which is the lowest temperature, in Fahrenheit, for each y
 
 * Write the data as $x^*_1,\dots,x^*_N$. 
 
-* A basic estimate of the mean and standard deviation is $\hat\mu= \frac{1}{N}\sum_{n=1}^Nx^*_n$ and $\hat\sigma^2= \frac{1}{N-1}\sum_{n=1}^N(x^*_n-\hat\mu)^2$, suggesting an approximate confidence interval for $\mu$ of $\hat\mu\pm 1.96\hat\sigma/\sqrt{N}$, 
+* A basic estimate of the mean and standard deviation is $\data{\mu}= \frac{1}{N}\sum_{n=1}^Nx^*_n$ and $\data\sigma= \sqrt{\frac{1}{N-1}\sum_{n=1}^N(x^*_n-\data{\mu})^2}$, suggesting an approximate confidence interval for $\mu$ of $\data{\mu}\pm 1.96\data{\sigma}/\sqrt{N}$, 
 
-* 1955 has missing data, coded as `NA`, requiring a minor modification. So, we compute $\hat\mu_1$ and $SE_1=\hat\sigma/\sqrt{N}$ as
+* 1955 has missing data, coded as `NA`, requiring a minor modification. So, we compute $\data{\mu_1}$ and $SE_1=\data{\sigma}/\sqrt{N}$ as
 
 ```{r mean}
 mu1 <- mean(x$Low,na.rm=TRUE)
@@ -247,7 +260,9 @@ This has a one-lag autoregressive term, $\alpha(x_{n-1}-\mu)$, and a one-lag mov
 
     + In this course, capital Roman letters, e.g., $X$, $Y$, $Z$, denote random variables. We may also use $\epsilon$, $\eta$, $\xi$, $\zeta$ for random noise processes. Thus, these symbols are used to build models.
 
-    + We use lower case Roman letters ($x$, $y$, $z$, $\dots$) to denote fixed numbers, which could be data or function of the data (i.e., statistics). We will often write the data themselves with an asterisk ($x^*$, $y^*$, $\dots$) for added emphasis. 
+    + We use lower case Roman letters ($x$, $y$, $z$, $\dots$) to denote fixed numbers. 
+
+    + When fixed numbers are data or derived from data (i.e., statistics) we will often add an asterisk ($x^*$, $y^*$, $\dots$). 
 
     + "We must be careful not to confuse data with the abstractions we use to analyze them." (William James, 1842-1910).
 
@@ -265,7 +280,7 @@ We can see a summary of the fitted model, where $\alpha$ is called `ar1`, $\beta
 arma11
 ```
 
-Write the ARMA(1,1) estimate of $\mu$ and its standard error as $\hat\mu_2$ and $SE_2$. Some poking around is required to extract the bits of primary interest here. 
+Write the ARMA(1,1) estimate of $\mu$ and its standard error as $\data{\mu_2}$ and $SE_2$. Some poking around is required to extract the bits of primary interest here. 
 
 ```{r names}
 names(arma11)
@@ -277,19 +292,19 @@ se2 <- sqrt(arma11$var.coef["intercept","intercept"])
 cat("mu2 =", mu2, ",  se2 =", se2, "\n")
 ```
 
-* We see that the two estimators, $\hat\mu_1=`r round(mu1,2)`$ and $\hat\mu_2=`r round(mu2,2)`$, are close. 
+* We see that the two estimates, $\data{\mu_1}=`r round(mu1,2)`$ and $\data{\mu_2}=`r round(mu2,2)`$, are close. 
 However, $SE_1=`r formatC(round(se1,2),2,format="f")`$ is an underestimate of error, compared to the better estimate $SE_2=`r formatC(round(se2,2),2,format="f")`$.
 The naive standard error needs to be inflated by $100(SE_2/SE_1-1)=$ `r round((se2/se1 - 1)*100,1)` percent.
  
 * Exactly how the ARMA(1,1) model is fitted and the standard errors computed will be covered later.
 
 
-* We should do **diagnostic analysis**. The first thing to do is to look at the residuals. For an ARMA model, the residual $r_n$ at time $t_n$ is defined to be the difference between the data, $x_n$, and its predicted value, written as $\hat x_n$. From the ARMA(1,1) definition, 
+* We should do **diagnostic analysis**. The first thing to do is to look at the residuals. For an ARMA model, the residual $r_n$ at time $t_n$ is defined to be the difference between the data, $\data{x_n}$, and a one-step ahead prediction of $\data{x_n}$ based on $\data{x_{1:n-1}}$, written as $\predict{x_n}$. From the ARMA(1,1) definition, 
 $$ X_n = \mu + \alpha(X_{n-1}-\mu) + \epsilon_n + \beta \epsilon_{n-1},$$
-a simple one-step-ahead predicted value corresponding to parameter estimates $\hat\mu$ and $\hat\alpha$ could be
-$$\hat x_n = \hat\mu + \hat\alpha(x_{n-1}-\hat\mu).$$
-A so-called residual time series, $\{r_n\}$, is then given by
-$$ r_n = x_n - \hat x_n.$$
+a simple one-step-ahead predicted value corresponding to parameter estimates $\data{\mu}$ and $\data{\alpha}$ could be
+$$\predict{x_n} = \data{\mu} + \data{\alpha}(\data{x_{n-1}}-\data{\mu}).$$
+A so-called residual time series, $\{\data{r_n}\}$, is then given by
+$$ \data{r_n} = \data{x_n} - \predict{x_n}.$$
 In fact, R does something slightly more sophisticated.
 
 ```{r arma_diag}
@@ -300,8 +315,8 @@ plot(arma11$resid)
 
 * We see that there seems to be some slow variation in the residuals, over a decadal time scale.
 However, the residuals are close to uncorrelated, as we can check by plotting their pairwise sample correlations at a range of lags. This is called the sample autocorrelation function, or sample ACF, which can be computed at each lag $h$ for the residual time series $\{r_n\}$ as
-$$ ACF(h) = \frac{\frac{1}{N}\sum_{n=1}^{N-h} r_n \, r_{n+h}}
-{\frac{1}{N}\sum_{n=1}^{N} r_{n}^2}.$$
+$$ ACF(h) = \frac{\frac{1}{N}\sum_{n=1}^{N-h} \data{r_n} \, \data{r_{n+h}}}
+{\frac{1}{N}\sum_{n=1}^{N} \data{r_{n}}^2}.$$
 We will discuss the sample ACF at greater length later.
 
 ```{r acf}
@@ -372,7 +387,7 @@ $$
 
 * $\{\epsilon_n\}$ is an iid $N(0,1)$ sequence, $\{\nu_n\}$ is an iid $N(0,\sigma_{\nu}^2)$ sequence, and $\{\omega_n\}$ is an iid $N(0,\sigma_\omega^2)$ sequence.
 
-* $H_n$ represents the volatility at time $t$. Volatility is unobserved; we only get to observe the return, $Y_n$.
+* $H_n$ represents the volatility at time $t_n$. Volatility is unobserved; we only get to observe the return, $Y_n$.
 
 * $G_n$ is a slowly-varying process that regulates $H_n$.
 

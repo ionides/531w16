@@ -82,9 +82,9 @@ img {
 <hr />
 <p><big><big><big>Objectives</big></big></big></p>
 <ol style="list-style-type: decimal">
+<li><p>Set up general notation for working with time series data and time series models.</p></li>
 <li><p>Define the trend function for a time series model, and discuss its estimation from data. In particular, discuss the properties of least square estimation of the trend.</p></li>
-<li><p>Consider different parametric and non-parametric approaches to modeling the trend.</p></li>
-<li><p>Discuss difficulties arising in practice when assessing appropriate model specification for the trend function.</p></li>
+<li><p>Define the autocovariance and autocorrelation functions and their standard estimators.</p></li>
 </ol>
 <p><br></p>
 <hr />
@@ -143,9 +143,10 @@ img {
 </ul></li>
 <li><p><span class="math">\(\mu_n\)</span> may depend on <span class="math">\(\theta\)</span>, the parameter vector. We can write <span class="math">\(\mu_n(\theta)\)</span> to make this explicit.</p></li>
 <li><p>We write <span class="math">\(\hat\mu_n(x_{1:N})\)</span> to be some estimator of <span class="math">\(\mu_n\)</span>, i.e., a map which is applied to the data to give an estimate of <span class="math">\(\mu_n\)</span>. An appropriate choice of <span class="math">\(\hat\mu_n\)</span> will depend on the data and the model.</p></li>
-<li><p>The <strong>estimate</strong> of the mean function is the value of the estimator when applied to the data. Here, we write this as <span class="math">\[ {\mu_n^*^*} = \hat\mu_n({x_{1:N}^*}).\]</span></p></li>
+<li><p>Usually, applied statistics courses do not distinguish between estimators (functions that can be applied to any dataset) and estimates (an estimator evaluated on the actual data). In this course, we will want to be quite careful when thinking about model specification and diagnosing model misspecification. Therefore, we are going to try to preserve this distinction. Properly, this distinction is always there, but is often ignored.</p></li>
+<li><p>For example, the estimate of the mean function is the value of the estimator when applied to the data. Here, we write this as <span class="math">\[ {\mu_n^*} = \hat\mu_n({x_{1:N}^*}).\]</span></p></li>
 <li><p>We call <span class="math">\({\mu_n^*}\)</span> an <strong>estimated mean function</strong> or <strong>estimated trend</strong>.</p></li>
-<li><p>For example, sometimes we suppose <span class="math">\(\mu_n=\mu\)</span>, so the mean is constant. In this case, the model is called <strong>mean stationary</strong>. Then, we might estimate <span class="math">\(\mu\)</span> using the mean estimator, <span class="math">\[\hat\mu(x_{1:N})=\frac{1}{N}\sum_{k=1}^N x_k.\]</span> In this case, the corresponding estimate <span class="math">\({\mu^*}\)</span> is the sample mean.</p>
+<li><p>For example, sometimes we suppose a model with <span class="math">\(\mu_n=\mu\)</span>, so the mean is assumed constant. In this case, the model is called <strong>mean stationary</strong>. Then, we might estimate <span class="math">\(\mu\)</span> using the mean estimator, <span class="math">\[\hat\mu(x_{1:N})=\frac{1}{N}\sum_{k=1}^N x_k.\]</span> In this case, the corresponding estimate <span class="math">\({\mu^*}=\hat\mu({x_{1:N}^*})\)</span> is the sample mean.</p>
 <ul>
 <li><p>We can compute the sample mean, <span class="math">\({\mu^*}\)</span>, for any dataset. It is only a reasonable estimator of the mean function when a mean stationary model is appropriate.</p></li>
 <li><p>Notice that trend is a property of the model, and the estimated trend is a function of the data.</p></li>
@@ -166,8 +167,8 @@ img {
 <li><p>We may also write <span class="math">\(\Gamma\)</span> for the matrix whose <span class="math">\((m,n)\)</span> entry is <span class="math">\(\gamma_{m,n}\)</span>.</p></li>
 <li><p>Often, we will suppose that the covariance between two observations depends only on the time difference between the observations. In this case, we say that the time series model is <strong>covariance stationary</strong>. Supposing also that the observations are equally spaced in time, we write the autocovariance function as a function of a lag, <span class="math">\(h\)</span>, given by <span class="math">\[ \gamma_{h} = \gamma_{n,n+h}.\]</span></p></li>
 <li><p>For a covariance stationary model, and some mean function estimator <span class="math">\(\hat\mu_n=\hat \mu_n(x_{1:N})\)</span>, a common estimator for <span class="math">\(\gamma_h\)</span> is <span class="math">\[ \hat\gamma_h(x_{1:N}) = \frac{1}{N}\sum_{n=1}^{N-h} \big( {x_n} - \hat\mu_n \big)\, \big({x_{n+h}}-\hat\mu_{n+h} \big).\]</span></p></li>
-<li><p>The corresponding estimate of <span class="math">\(\gamma_h\)</span>, known as the <strong>sample autocovariance function</strong>, is <span class="math">\[{\gamma_h^*} = \hat\gamma_h({{^*}x_{1:N}).\]</span></p></li>
-<li><p>Dividing through by the variance (or sample variance) gives the <strong>autocorrelation function</strong> <span class="math">\(\rho_h\)</span> (and <span class="math">\({\rho_h^*}\)</span>), given by <span class="math">\[ \rho_h = \gamma_h / \gamma_0.\]</span> We can analogously construct the standard autocorrelation estimator, <span class="math">\[ \hat\rho_h(x_{1:N}) = \gamma_h(x_{1:N}) / \gamma_0(x_{1:N}),\]</span> which leads to an estimate known as the <strong>sample autocorrelation</strong>, <span class="math">\[ {\rho_h^*} = \hat\rho({{^*}x_{1:N}).\]</span></p></li>
+<li><p>The corresponding estimate of <span class="math">\(\gamma_h\)</span>, known as the <strong>sample autocovariance function</strong>, is <span class="math">\[{\gamma_h^*} = \hat\gamma_h({x_{1:N}^*}).\]</span></p></li>
+<li><p>Dividing through by the variance (or sample variance) gives the <strong>autocorrelation function</strong> <span class="math">\(\rho_h\)</span> (and <span class="math">\({\rho_h^*}\)</span>), given by <span class="math">\[ \rho_h = \gamma_h / \gamma_0.\]</span> We can analogously construct the standard autocorrelation estimator, <span class="math">\[ \hat\rho_h(x_{1:N}) = \gamma_h(x_{1:N}) / \gamma_0(x_{1:N}),\]</span> which leads to an estimate known as the <strong>sample autocorrelation</strong>, <span class="math">\[ {\rho_h^*} = \hat\rho({x_{1:N}^*}).\]</span></p></li>
 <li><p>It is common to use ACF as an acronym for any or all of the autocorrelation function, sample autocorrelation function, autocovariance function, and sample autocovariance function. <strong>If you use the acronym ACF, you are expected to define it, to remove any ambiguity</strong>.</p></li>
 <li><p>The sample autocorrelation and sample autocovariance functions are statistics computed from the data. They exist, and can be computed, even when the data are not well modeled as covariance stationary. However, in that case, it does not make sense to view them as estimators of the autocorrelation and autocovariance functions (which exist as functions of a lag <span class="math">\(h\)</span> only for covariance stationary models).</p></li>
 <li><p>Formally, we should not talk about the correlation or covariance of data. These are properties of models. We can talk about the sample autocorrelation or sample autocovariance of data.</p></li>
@@ -191,7 +192,7 @@ str(global_temp)</code></pre>
 <li><p>These data should make all of us pause for thought about the future of our planet.</p></li>
 <li><p>Truly understanding climate change involves understanding the hugely complex systems of physical, chemical and biological processes driving climate.</p></li>
 <li><p>However, it is very hard to know if the gigantic models that attempt to capture all important parts of the global climate processes are in fact a reasonable description of what is happening.</p></li>
-<li><p>There is value in relatively simple statistical analysis, which can at least help to tell us what evidence there is for how things are changing.</p></li>
+<li><p>There is value in relatively simple statistical analysis, which can at least help to tell us what evidence there is for how things are, or are not, changing.</p></li>
 </ul>
 <div id="fitting-a-least-squares-model-with-a-quadratic-trend" class="section level3">
 <h3><span class="header-section-number">1.4.1</span> Fitting a least squares model with a quadratic trend</h3>
@@ -238,7 +239,7 @@ lines(x=yr,y=prediction,col=&quot;red&quot;)</code></pre>
 <ul>
 <li><p>The overall estimated trend seems a reasonable fit for the data.</p></li>
 <li><p>If we want to attach uncertainty to our parameter estimates, and consequently to our forecast, we need a time series model <span class="math">\(X_{1:N}\)</span>, which we write in column vector form as <span class="math">\[X = (X_1,X_2,\dots,X_N)^{\scriptsize{T}}.\]</span></p></li>
-<li><p>The standard OLS model is <span class="math">\[[L1]\quad\quad X = Z\beta + \epsilon,\]</span> where <span class="math">\(\epsilon=\epsilon_{1:N}\)</span> is a vector of independent, identically distributed random variables with mean zero and constant variance, <span class="math">\[{\mathbb{E}}[\epsilon_n]=0, \quad\quad {\mathrm{Var}}[\epsilon_n] = \sigma^2.\]</span> Standard linear model software, such as <code>lm</code> in R, provides confidence intervals based on this model.</p></li>
+<li><p>The standard OLS model is <br><br> [L1] <span class="math">\(\quad\quad\quad\quad\quad X = Z\beta + \epsilon,\)</span> <br><br> where <span class="math">\(\epsilon=\epsilon_{1:N}\)</span> is a vector of independent, identically distributed random variables with mean zero and constant variance, <span class="math">\[{\mathbb{E}}[\epsilon_n]=0, \quad\quad {\mathrm{Var}}[\epsilon_n] = \sigma^2.\]</span> Standard linear model software, such as <code>lm</code> in R, provides confidence intervals based on this model.</p></li>
 <li>Under model L1, the estimator <span class="math">\(\hat\beta_{OLS}(x_{1:N})\)</span> is unbiased. This can be checked: <span class="math">\[\begin{eqnarray}
 {\mathbb{E}}\big[\hat\beta_{OLS}(X_{1:N})\big] &amp;=&amp;{\mathbb{E}}\big[ (Z^{\scriptsize{T}}Z)^{-1}Z^{\scriptsize{T}}X \big]\\
 &amp;=&amp; {\mathbb{E}}\big[ (Z^{\scriptsize{T}}Z)^{-1}Z^{\scriptsize{T}}\{Z\beta + \epsilon \}\big]\\
@@ -274,7 +275,7 @@ lines(x=yr,y=prediction,col=&quot;red&quot;)</code></pre>
 <pre><code>stats:::plot.acf</code></pre></li>
 <li><p>Finally, relate this source code to the task of testing for lack of correlation, a standard topic in undergrad introductory statistics courses. The critical line of code seems to be</p>
 <pre><code>clim0 &lt;- if (with.ci) qnorm((1 + ci)/2)/sqrt(x$n.used)</code></pre>
-<p>This appears to use a normal distribution approximation for the sample autocorrelation estimator, with mean zero and standard deviation <span class="math">\(1/\sqrt{n}\)</span>. Derive this approximation, for a sequence of IID mean zero random variables. You can ignore the issue of estimating the mean: suppose that the mean is known to be zero.</p></li>
+<p>This appears to use a normal distribution approximation for the sample autocorrelation estimator, with mean zero and standard deviation <span class="math">\(1/\sqrt{N}\)</span>. Derive this approximation, for a sequence of IID mean zero random variables. You can ignore the issue of estimating the mean: suppose that the mean is known to be zero.</p></li>
 </ol>
 <p><br></p>
 <hr />
@@ -283,10 +284,10 @@ lines(x=yr,y=prediction,col=&quot;red&quot;)</code></pre>
 <div id="generalized-least-squares" class="section level3">
 <h3><span class="header-section-number">1.4.3</span> Generalized least squares</h3>
 <ul>
-<li><p>Suppose for the moment that we knew the covariance matrix, <span class="math">\(\Gamma\)</span>, for a model with dependent errors, <span class="math">\[[L2]\quad\quad X = Z\beta + \zeta, \quad \quad \zeta \sim N[0,\Gamma].\]</span> We read “N[0,]” as “<span class="math">\(\zeta\)</span> follows a multivariate normal distribution with mean zero and covariance matrix <span class="math">\(\Gamma\)</span>.”</p></li>
-<li><p>The minimum variance unbiased estimator of <span class="math">\(\beta\)</span> for model L2 is the generalized least square (GLS) estimator, <span class="math">\[\hat \beta_{GLS}(x_{1:N}) = \big( Z^{\scriptsize{T}}\Gamma^{-1} Z \big)^{-1} Z^{\scriptsize{T}}\Gamma^{-1} x.\]</span></p></li>
+<li><p>Suppose for the moment that we knew the covariance matrix, <span class="math">\(\Gamma\)</span>, for a model with dependent errors, <br><br> [L2] <span class="math">\(\quad\quad\quad\quad X = Z\beta + \zeta, \quad \quad \zeta \sim N[0,\Gamma].\)</span> <br><br> We read “<span class="math">\(\zeta \sim N[0,\Gamma]\)</span>” as “<span class="math">\(\zeta\)</span> follows a multivariate normal distribution with mean zero and covariance matrix <span class="math">\(\Gamma\)</span>.”</p></li>
+<li><p>The minimum variance unbiased estimator of <span class="math">\(\beta\)</span> for model L2 is the generalized least square (GLS) estimator, <span class="math">\[\hat \beta_{GLS}(x_{1:N}) = \big( Z^{\scriptsize{T}}\Gamma^{-1} Z \big)^{-1} \, Z^{\scriptsize{T}}\Gamma^{-1} x.\]</span></p></li>
 <li><p>The OLS estimator remains unbiased for L2 (you can check this as an exercise). In this sense it remains a reasonable estimator. It is often a practical solution to use the OLS estimator, expecially for preliminary data analysis. We don’t know <span class="math">\(\Gamma\)</span> so can’t necessarily make a good estimator based on the GLS model. It might be easier to get an estimate of <span class="math">\(\Gamma\)</span> once we have a reasonable estimate of the trend.</p></li>
-<li><p>For model L2, the variance of the OLS estimator is <span class="math">\[{\mathrm{Var}}\big[\hat \beta_{OLS}(X_{1:N})\big] = (Z^\tranpose Z)^{-1} Z^\tranpose \Gamma Z(Z^\tranpose Z)^{-1}.\]</span> This is different from the variance under model L1.</p></li>
+<li><p>For model L2, the variance of the OLS estimator is <span class="math">\[{\mathrm{Var}}\big[\hat \beta_{OLS}(X_{1:N})\big] = (Z^{\scriptsize{T}}Z)^{-1} \, Z^{\scriptsize{T}}\Gamma Z\, (Z^{\scriptsize{T}}Z)^{-1}.\]</span> This is different from the variance under model L1.</p></li>
 <li><p><strong>CONCLUSION. It is okay to do ordinary linear regression for data which are not well modeled with uncorrelated errors. However, if we do so, we should not trust the error estimates coming from L1.</strong></p></li>
 <li><p>This is an example of a situation where some parts of the output from statistical software are reasonable (here, the parameter estimates from <code>lm</code>) and other parts are unreasonable (the corresponding standard errors and any tests based on them). The theory helps us decide which bits of computer output to use and which to ignore.</p></li>
 </ul>
@@ -294,7 +295,7 @@ lines(x=yr,y=prediction,col=&quot;red&quot;)</code></pre>
 <hr />
 <hr />
 <div class="references">
-<h2>References</h2>
+
 </div>
 </div>
 </div>

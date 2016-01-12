@@ -73,11 +73,11 @@ options(
 
 <big><big><big>Objectives</big></big></big>
 
-1. Define the trend function for a time series model, and discuss its estimation from data. In particular, discuss the properties of least square estimation of the trend.
+1. Set up general notation for working with time series data and time series models.
 
-2. Consider different parametric and non-parametric approaches to modeling the trend.
+2. Define the trend function for a time series model, and discuss its estimation from data. In particular, discuss the properties of least square estimation of the trend.
 
-3. Discuss difficulties arising in practice when assessing appropriate model specification for the trend function.
+3. Define the autocovariance and autocorrelation functions and their standard estimators.
 
 <br>
 
@@ -162,14 +162,17 @@ $$ \mu(t_n)= \mu_n.$$
 
 * We write $\hat\mu_n(x_{1:N})$ to be some estimator of $\mu_n$, i.e., a map which is applied to the data to give an estimate of $\mu_n$.  An appropriate choice of $\hat\mu_n$ will depend on the data and the model.
 
-* The **estimate** of the mean function is the value of the estimator when applied to the data. Here, we write this as
-$$ \data{\mu_n^*} = \hat\mu_n(\data{x_{1:N}}).$$
+* Usually, applied statistics courses do not distinguish between estimators (functions that can be applied to any dataset) and estimates (an estimator evaluated on the actual data). In this course, we will want to be quite careful when thinking about model specification and diagnosing model misspecification. Therefore, we are going to try to preserve this distinction. Properly, this distinction is always there, but is often ignored.
+
+
+* For example, the estimate of the mean function is the value of the estimator when applied to the data. Here, we write this as
+$$ \data{\mu_n} = \hat\mu_n(\data{x_{1:N}}).$$
 
 * We call $\data{\mu_n}$ an **estimated mean function** or **estimated trend**.
 
-*  For example, sometimes we suppose $\mu_n=\mu$, so the mean is constant. In this case, the model is called **mean stationary**. Then, we might estimate $\mu$ using the mean estimator,
+*  For example, sometimes we suppose a model with $\mu_n=\mu$, so the mean is assumed constant. In this case, the model is called **mean stationary**. Then, we might estimate $\mu$ using the mean estimator,
 $$\hat\mu(x_{1:N})=\frac{1}{N}\sum_{k=1}^N x_k.$$
-In this case, the corresponding estimate $\data{\mu}$ is the sample mean.
+In this case, the corresponding estimate $\data{\mu}=\hat\mu(\data{x_{1:N}})$ is the sample mean.
 
     + We can compute the sample mean, $\data{\mu}$, for any dataset. It is only a reasonable estimator of the mean function when a mean stationary model is appropriate.
 
@@ -201,14 +204,14 @@ $$ \hat\gamma_h(x_{1:N}) = \frac{1}{N}\sum_{n=1}^{N-h} \big( {x_n} - \hat\mu_n \
 
 * The corresponding estimate of $\gamma_h$, known as the **sample autocovariance function**,
 is
-$$\data{\gamma_h} = \hat\gamma_h(\data{x_{1:N}).$$
+$$\data{\gamma_h} = \hat\gamma_h(\data{x_{1:N}}).$$
 
 * Dividing through by the variance (or sample variance) gives the **autocorrelation function** $\rho_h$ (and $\data{\rho_h}$), given by
 $$ \rho_h = \gamma_h / \gamma_0.$$
 We can analogously construct the standard autocorrelation estimator,
 $$ \hat\rho_h(x_{1:N}) = \gamma_h(x_{1:N}) / \gamma_0(x_{1:N}),$$
 which leads to an estimate known as the **sample autocorrelation**,
-$$ \data{\rho_h} = \hat\rho(\data{x_{1:N}).$$
+$$ \data{\rho_h} = \hat\rho(\data{x_{1:N}}).$$
 
 * It is common to use ACF as an acronym for any or all of the autocorrelation function, sample autocorrelation function, autocovariance function, and sample autocovariance function. **If you use the acronym ACF, you are expected to define it, to remove any ambiguity**.
 
@@ -243,7 +246,7 @@ plot(Annual~Year,data=global_temp,ty="l")
 
 * However, it is very hard to know if the gigantic models that attempt to capture all important parts of the global climate processes are in fact a reasonable description of what is happening.
 
-* There is value in relatively simple statistical analysis, which can at least help to tell us what evidence there is for how things are changing. 
+* There is value in relatively simple statistical analysis, which can at least help to tell us what evidence there is for how things are, or are not, changing. 
 
 ### Fitting a least squares model with a quadratic trend
 
@@ -294,7 +297,9 @@ lines(x=yr,y=prediction,col="red")
 $$X = (X_1,X_2,\dots,X_N)^\transpose.$$
 
 * The standard OLS model is
-$$[L1]\quad\quad X = Z\beta + \epsilon,$$
+<br><br>
+[L1] $\quad\quad\quad\quad\quad X = Z\beta + \epsilon,$
+<br><br>
 where $\epsilon=\epsilon_{1:N}$ is a vector of independent, identically distributed random variables with mean zero and constant variance,
 $$\E[\epsilon_n]=0, \quad\quad \var[\epsilon_n] = \sigma^2.$$
 Standard linear model software, such as `lm` in R, provides confidence intervals based on this model. 
@@ -353,7 +358,7 @@ stats:::plot.acf
 ```
 clim0 <- if (with.ci) qnorm((1 + ci)/2)/sqrt(x$n.used)
 ```
-This appears to use a normal distribution approximation for the sample autocorrelation estimator, with mean zero and standard deviation $1/\sqrt{n}$. Derive this approximation, for a sequence of IID mean zero random variables. You can ignore the issue of estimating the mean:  suppose that the mean is known to be zero.
+This appears to use a normal distribution approximation for the sample autocorrelation estimator, with mean zero and standard deviation $1/\sqrt{N}$. Derive this approximation, for a sequence of IID mean zero random variables. You can ignore the issue of estimating the mean:  suppose that the mean is known to be zero.
 
 <br>
 
@@ -364,16 +369,18 @@ This appears to use a normal distribution approximation for the sample autocorre
 ### Generalized least squares
 
 * Suppose for the moment that we knew the covariance matrix, $\Gamma$, for a model with dependent errors,
-$$[L2]\quad\quad X = Z\beta + \zeta, \quad \quad \zeta \sim N[0,\Gamma].$$
-We read "\zeta \sim N[0,\Gamma]" as "$\zeta$ follows a multivariate normal distribution with mean zero and covariance matrix $\Gamma$."
+<br><br>
+[L2] $\quad\quad\quad\quad X = Z\beta + \zeta, \quad \quad \zeta \sim N[0,\Gamma].$
+<br><br>
+We read "$\zeta \sim N[0,\Gamma]$" as "$\zeta$ follows a multivariate normal distribution with mean zero and covariance matrix $\Gamma$."
 
 * The minimum variance unbiased estimator of $\beta$ for model L2 is the generalized least square (GLS) estimator,
-$$\hat \beta_{GLS}(x_{1:N}) = \big( Z^\transpose \Gamma^{-1} Z \big)^{-1} Z^\transpose \Gamma^{-1} x.$$
+$$\hat \beta_{GLS}(x_{1:N}) = \big( Z^\transpose \Gamma^{-1} Z \big)^{-1} \, Z^\transpose \Gamma^{-1} x.$$
 
 * The OLS estimator remains unbiased for L2 (you can check this as an exercise). In this sense it remains a reasonable estimator. It is often a practical solution to use the OLS estimator, expecially for preliminary data analysis. We don't know $\Gamma$ so can't necessarily make a good estimator based on the GLS model. It might be easier to get an estimate of $\Gamma$ once we have a reasonable estimate of the trend.
 
 * For model L2, the variance of the OLS estimator is
-$$\var\big[\hat \beta_{OLS}(X_{1:N})\big] = (Z^\tranpose Z)^{-1} Z^\tranpose \Gamma Z(Z^\tranpose Z)^{-1}.$$
+$$\var\big[\hat \beta_{OLS}(X_{1:N})\big] = (Z^\transpose Z)^{-1} \, Z^\transpose \Gamma Z\, (Z^\transpose Z)^{-1}.$$
 This is different from the variance under model L1.
 
 * **CONCLUSION. It is okay to do ordinary linear regression for data which are not well modeled with uncorrelated errors. However, if we do so, we should not trust the error estimates coming from L1.**
@@ -387,7 +394,7 @@ This is different from the variance under model L1.
 
 ----------------
 
-## References
+
 
 
 
