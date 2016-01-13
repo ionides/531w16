@@ -145,7 +145,7 @@ $$ f_{X_{1:N}}(x_1,\dots,x_N \given \theta).$$
 
 * We define the **mean function** by
 $$ \mu_n = \E[X_n] = \int_{-\infty}^\infty x_n \, f^{}_{X_n}(x_n)\, dx_n$$
-for $n=1:N$. 
+for $n\in 1:N$. 
 
 * We use the words "mean function" and "trend" interchangeably.
 
@@ -207,11 +207,11 @@ is
 $$\data{\gamma_h} = \hat\gamma_h(\data{x_{1:N}}).$$
 
 * Dividing through by the variance (or sample variance) gives the **autocorrelation function** $\rho_h$ (and $\data{\rho_h}$), given by
-$$ \rho_h = \gamma_h / \gamma_0.$$
+$$ \rho_h = \frac{\gamma_h}{\gamma_0}.$$
 We can analogously construct the standard autocorrelation estimator,
-$$ \hat\rho_h(x_{1:N}) = \gamma_h(x_{1:N}) / \gamma_0(x_{1:N}),$$
+$$ \hat\rho_h(x_{1:N}) = \frac{\hat\gamma_h(x_{1:N})}{\hat\gamma_0(x_{1:N})},$$
 which leads to an estimate known as the **sample autocorrelation**,
-$$ \data{\rho_h} = \hat\rho(\data{x_{1:N}}).$$
+$$ \data{\rho_h} = \hat\rho_h(\data{x_{1:N}})= \frac{\data{\gamma_h}}{\data{\gamma_0}}.$$
 
 * It is common to use ACF as an acronym for any or all of the autocorrelation function, sample autocorrelation function, autocovariance function, and sample autocovariance function. **If you use the acronym ACF, you are expected to define it, to remove any ambiguity**.
 
@@ -256,7 +256,7 @@ plot(Annual~Year,data=global_temp,ty="l")
 ### Fitting a least squares model with a quadratic trend
 
 Perhaps the simplest trend model that makes sense looking at these data is a quadratic trend,
-$$\mu(t)= \beta+0 + \beta_1 t + \beta_2 t^2.$$
+$$\mu(t)= \beta_0 + \beta_1 t + \beta_2 t^2.$$
 To write the least squares estimate of $\beta_0$, $\beta_1$ and $\beta_2$, we set up matrix notation. Write
 $$ \mu = (\mu_1,\mu_2,\dots,\mu_N)^\transpose$$
 for the column vector describing the mean function, and similarly,
@@ -333,7 +333,7 @@ acf(resid(lm_fit))
 
 * The horizontal dashed lines on the graph of the sample autocorrelation function (ACF) give a measure of chance variation under the null hypothesis that the residuals are IID. 
 
-* At each lag $h$, the chance that the estimated ACF falls within this band is 5%. 
+* At each lag $h$, the chance that the estimated ACF falls within this band is approximately 95%, under the null hypothesis. 
 
 * Thus, under the null hypothesis, one expects a fraction of $1/20$ of the lags of the sample ACF to fall outside this band.
 
