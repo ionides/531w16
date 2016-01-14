@@ -9,7 +9,7 @@ output:
     toc_depth: 2
     number_sections: true
     pandoc_args: [
-      "--number-offset=1"
+      "--number-offset=2"
     ]
 bibliography: trend.bib
 csl: ecology.csl

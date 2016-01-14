@@ -1,7 +1,7 @@
 ---
 title: "3. Stationarity, white noise, and some basic time series models"
 author: "Edward Ionides"
-date: "1/12/2016"
+date: "1/14/2016"
 output:
   html_document:
     theme: flatly
@@ -9,7 +9,7 @@ output:
     toc_depth: 2
     number_sections: true
     pandoc_args: [
-      "--number-offset=1"
+      "--number-offset=3"
     ]
 csl: ecology.csl
 ---
@@ -249,11 +249,13 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 
 ```
 
--------------
+* Now we're going to use white noise as a building block for various other time series models.
 
---------------
+<br>
 
-## Some time series models
+---------
+
+--------
 
 ### Reminder: why do we need time series models?
 
@@ -269,7 +271,9 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 
 ---------
 
-### The autoregressive model, AR(p)
+## Autoregressive models
+
+### The AR(p) autoregressive model
 
 * The AR(p) model is
 <br><br>
@@ -277,13 +281,26 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 <br><br>
 where $\{\epsilon_n\}$ is a white noise process. 
 
+
 * Often, we consider the **Gaussian AR(p)** model, where  $\{\epsilon_n\}$ is a Gaussian white noise process. 
+
+* M1 is a **stochastic difference equation**. It is a [difference equation (also known as a recurrence relation)](https://en.wikipedia.org/wiki/Recurrence_relation) since each time point is specified recursively in terms of previous time points. Stochastic just means random.
+
+* To complete the model, we need to **initialize** the solution to the stochastic difference equation. Supposing we want to specify a distribution for $X_{1:N}$, we have some choices in how to set up the **initial values**.
+
+    1. We can specify $X_{1:p}$ explicitly, to get the recursion started.
+
+    2. We can specify $X_{1-p:0}$ explicitly.
+
+    3. For either of these choices, we can define these initial values either to be additional parameters in the model (i.e., not random) or to be specified random variables.
+
+    4. If we want our model is strictly stationary, we must initialize so that $X_{1:p}$ have the proper joint distribution for this stationary model.
 
 * Let's investigate a particular Gaussian AR(1) process, as an exercise.
 <br><br>
 [M2] $\quad\quad \quad X_n = 0.6 X_{n-1}+ \epsilon_n$,
 <br><br>
-where $\epsilon_n\sim \mathrm{IID} N[0,1]$.
+where $\epsilon_n\sim \mathrm{IID} N[0,1]$. We will initialize with $X_1\sim N[0,1.56^2]$.
 
 <br>
 
@@ -297,9 +314,9 @@ where $\epsilon_n\sim \mathrm{IID} N[0,1]$.
 
 * We will do this for the AR(1) model M2
 
-* One approach is to use `arima.sim`.
+* One approach is to use the `arima.sim` function in R.
 
-```{r arima_sim1,fig.width=4}
+```{r ar_arima_sim,fig.width=4}
 set.seed(123456789)
 ar1 <- arima.sim(list(ar=0.6),n=100,sd=1)
 plot(ar1,type="l")
@@ -315,6 +332,102 @@ plot(ar1,type="l")
 
 * Play with simulating different models with different seeds to train your intuition.
 
-* Another approach to simulating model M2 is to write out the model explicitly.
+* A direct approach to simulating model M2 is to write out the model equation explicitly.
+
+```{r ar_sim,fig.width=4}
+set.seed(123456789)
+N <- 100
+X <- numeric(N)
+X[1] <- rnorm(1,sd=1.56)
+for(n in 2:N) X[n] <- 0.6 * X[n-1] + rnorm(1)
+plot(X,type="l")
+```
+
+* This looks very similar to the `arima.sim` simulation, except for a difference near the start. Can you explain this? Hint: How does `arima.sim` initialize the simulation?
+
+<br>
+
+-------
+
+------
+
+### What are the advantages and disadvantages of `arima.sim` over the direct simulation method?
+
+<br>
+
+-------
+
+------
+
+### Exercise: Compute the autcovariance function for model M2.
+
+<br>
+
+-------
+
+--------
+
+## Moving average models
+
+### The MA(q) moving average model
+
+* The MA(q) model is
+<br><br>
+[M3] $\quad\quad \quad X_n =  \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}$,
+<br><br>
+where $\{\epsilon_n\}$ is a white noise process. 
+
+* To fully specify $X_{1:N}$ we must specify the joint distribution of $\epsilon_{1-q:N}$.
+
+* Often, we consider the **Gaussian MA(q)** model, where  $\{\epsilon_n\}$ is a Gaussian white noise process. 
+
+* Let's investigate a particular Gaussian MA(2) process, as an exercise.
+<br><br>
+[M4] $\quad\quad \quad X_n = \epsilon_n + 1.5\epsilon_{n-1}+\epsilon_{n-2}$,
+<br><br>
+where $\epsilon_n\sim \mathrm{IID} N[0,1]$.
+
+### Simulating a moving average model 
+
+* Let's simulate M4 using both the methods we tried for the autoregressive model
+
+```{r ma_sim}
+N <- 100
+set.seed(123456789)
+X1 <- arima.sim(list(ma=c(1.5,1)),n=N,sd=1)
+set.seed(123456789)
+epsilon <- rnorm(N+2)
+X2 <- numeric(N)
+for(n in 1:N) X2[n] <- epsilon[n+2]+1.5*epsilon[n+1]+epsilon[n]
+oldpars <- par(mfrow=c(1,2))
+plot(X1,type="l")
+plot(X2,type="l")
+par(oldpars)
+```
+
+* `X1` and `X2` look identical. We can check this
+```{r check}
+all(X1==X2)
+```
+
+* Perhaps you agree that the spurious evidence for a trend that we saw for the AR(1) model is still somewhat present for the MA(2) simulation.
+
+* We could be curious about what the underlying white noise process looks like
+
+```{r noise_sim,fig.width=4}
+N <- 100
+set.seed(123456789)
+epsilon <- rnorm(N)
+plot(epsilon,type="l")
+```
+
+* To me, the trend-like behavior is not visually apparent in the white noise that "drives" the AR and MA models.
+
+<br>
+
+---------
+
+--------
 
 
+<br>

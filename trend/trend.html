@@ -70,10 +70,10 @@ img {
 
 <div id="TOC">
 <ul>
-<li><a href="#definition-time-series-data-and-time-series-models"><span class="toc-section-number">1.1</span> Definition: Time series data and time series models</a></li>
-<li><a href="#definition-the-mean-function-or-trend"><span class="toc-section-number">1.2</span> Definition: The mean function, or trend</a></li>
-<li><a href="#definition-the-autocovariance-and-autocorrelation-functions-and-some-estimators-of-them"><span class="toc-section-number">1.3</span> Definition: The autocovariance and autocorrelation functions, and some estimators of them</a></li>
-<li><a href="#estimating-a-trend-by-least-squares"><span class="toc-section-number">1.4</span> Estimating a trend by least squares</a></li>
+<li><a href="#definition-time-series-data-and-time-series-models"><span class="toc-section-number">2.1</span> Definition: Time series data and time series models</a></li>
+<li><a href="#definition-the-mean-function-or-trend"><span class="toc-section-number">2.2</span> Definition: The mean function, or trend</a></li>
+<li><a href="#definition-the-autocovariance-and-autocorrelation-functions-and-some-estimators-of-them"><span class="toc-section-number">2.3</span> Definition: The autocovariance and autocorrelation functions, and some estimators of them</a></li>
+<li><a href="#estimating-a-trend-by-least-squares"><span class="toc-section-number">2.4</span> Estimating a trend by least squares</a></li>
 </ul>
 </div>
 
@@ -90,7 +90,7 @@ img {
 <hr />
 <hr />
 <div id="definition-time-series-data-and-time-series-models" class="section level2">
-<h2><span class="header-section-number">1.1</span> Definition: Time series data and time series models</h2>
+<h2><span class="header-section-number">2.1</span> Definition: Time series data and time series models</h2>
 <ul>
 <li><p>A time series is a sequence of numbers, called <strong>data</strong>. In general, we will suppose that there are <span class="math">\(N\)</span> numbers, <span class="math">\({x_1^*},{x_2^*},\dots,{x_N^*}\)</span>, collected at an increasing sequence of times, <span class="math">\(t_1,t_2,\dots,t_N\)</span>.</p>
 <ul>
@@ -117,7 +117,7 @@ img {
 <hr />
 <hr />
 <div id="review-questions" class="section level3">
-<h3><span class="header-section-number">1.1.1</span> Review questions</h3>
+<h3><span class="header-section-number">2.1.1</span> Review questions</h3>
 <ol style="list-style-type: decimal">
 <li><p>What is a random variable?</p></li>
 <li><p>What is a collection of jointly defined random variables?</p></li>
@@ -131,7 +131,7 @@ img {
 </div>
 </div>
 <div id="definition-the-mean-function-or-trend" class="section level2">
-<h2><span class="header-section-number">1.2</span> Definition: The mean function, or trend</h2>
+<h2><span class="header-section-number">2.2</span> Definition: The mean function, or trend</h2>
 <ul>
 <li><p>Random variables usually have an expected value, and in this course they always do. We write <span class="math">\({\mathbb{E}}[X]\)</span> for the expected value of a random variable <span class="math">\(X\)</span>. (Review: What is expected value? How is it defined? How can it fail to exist for a properly defined random variable?)</p></li>
 <li><p>We define the <strong>mean function</strong> by <span class="math">\[ \mu_n = {\mathbb{E}}[X_n] = \int_{-\infty}^\infty x_n \, f^{}_{X_n}(x_n)\, dx_n\]</span> for <span class="math">\(n\in 1:N\)</span>.</p></li>
@@ -161,7 +161,7 @@ img {
 </ul>
 </div>
 <div id="definition-the-autocovariance-and-autocorrelation-functions-and-some-estimators-of-them" class="section level2">
-<h2><span class="header-section-number">1.3</span> Definition: The autocovariance and autocorrelation functions, and some estimators of them</h2>
+<h2><span class="header-section-number">2.3</span> Definition: The autocovariance and autocorrelation functions, and some estimators of them</h2>
 <ul>
 <li><p>We will assume that variances and covariances exist for the random variables <span class="math">\(X_{1:N}\)</span>. We write <span class="math">\[ \gamma_{m,n} = {\mathbb{E}}\big[(X_m-\mu_m)(X_n-\mu_n)\big].\]</span> This is called the <strong>autocovariance</strong> function, viewed as a function of <span class="math">\(m\)</span> and <span class="math">\(n\)</span>.</p></li>
 <li><p>We may also write <span class="math">\(\Gamma\)</span> for the matrix whose <span class="math">\((m,n)\)</span> entry is <span class="math">\(\gamma_{m,n}\)</span>.</p></li>
@@ -178,7 +178,7 @@ img {
 <hr />
 </div>
 <div id="estimating-a-trend-by-least-squares" class="section level2">
-<h2><span class="header-section-number">1.4</span> Estimating a trend by least squares</h2>
+<h2><span class="header-section-number">2.4</span> Estimating a trend by least squares</h2>
 <p>Let’s analyze a time series of global mean annual temperature downloaded from <a href="http://climate.nasa.gov/system/internal_resources/details/original/647_Global_Temperature_Data_File.txt"><a href="http://climate.nasa.gov/system/internal_resources/details/original/647_Global_Temperature_Data_File.txt" class="uri">http://climate.nasa.gov/system/internal_resources/details/original/647_Global_Temperature_Data_File.txt</a></a>. These data are in degrees Celsius measured as an anomaly from a 1951-1980 base. This is climatology jargon for saying that the sample mean of the temperature over the interval 1951-1980 was subtracted from all time points.</p>
 <pre class="r"><code>global_temp &lt;- read.table(&quot;Global_Temperature.txt&quot;,header=TRUE)
 str(global_temp)</code></pre>
@@ -196,7 +196,7 @@ str(global_temp)</code></pre>
 <li><p>Here is a quote from <em>Science</em> (18 December 2015, volume 350, page 1461; I’ve added some emphasis).<br><br> “Scientists are still debating whether—and, if so, how—warming in the Arctic and dwindling sea ice influences extreme weather events at midlatitudes. <strong>Model limitations</strong>, <strong>scarce data</strong> on the warming Arctic, and the <strong>inherent variability</strong> of the systems make answers elusive.”<br><br></p></li>
 </ul>
 <div id="fitting-a-least-squares-model-with-a-quadratic-trend" class="section level3">
-<h3><span class="header-section-number">1.4.1</span> Fitting a least squares model with a quadratic trend</h3>
+<h3><span class="header-section-number">2.4.1</span> Fitting a least squares model with a quadratic trend</h3>
 <p>Perhaps the simplest trend model that makes sense looking at these data is a quadratic trend, <span class="math">\[\mu(t)= \beta_0 + \beta_1 t + \beta_2 t^2.\]</span> To write the least squares estimate of <span class="math">\(\beta_0\)</span>, <span class="math">\(\beta_1\)</span> and <span class="math">\(\beta_2\)</span>, we set up matrix notation. Write <span class="math">\[ \mu = (\mu_1,\mu_2,\dots,\mu_N)^{\scriptsize{T}}\]</span> for the column vector describing the mean function, and similarly, <span class="math">\[ \beta = (\beta_0,\beta_1,\beta_2)^{\scriptsize{T}}.\]</span> Then, defining <span class="math">\[ Z = \left(\begin{array}{ccc}
 1 &amp; 1880 &amp; 1880^2 \\
 1 &amp; 1881 &amp; 1881^2 \\
@@ -265,7 +265,7 @@ lines(x=yr,y=prediction,col=&quot;red&quot;)</code></pre>
 <hr />
 </div>
 <div id="question-how-does-r-construct-these-horizontal-dashed-lines" class="section level3">
-<h3><span class="header-section-number">1.4.2</span> Question: How does R construct these horizontal dashed lines?</h3>
+<h3><span class="header-section-number">2.4.2</span> Question: How does R construct these horizontal dashed lines?</h3>
 <ul>
 <li>How would you check what R actually does when it constructs these dashed lines? What approximation is being made? When is that approximation appropriate?</li>
 </ul>
@@ -283,7 +283,7 @@ lines(x=yr,y=prediction,col=&quot;red&quot;)</code></pre>
 <hr />
 </div>
 <div id="generalized-least-squares" class="section level3">
-<h3><span class="header-section-number">1.4.3</span> Generalized least squares</h3>
+<h3><span class="header-section-number">2.4.3</span> Generalized least squares</h3>
 <ul>
 <li><p>Suppose for the moment that we knew the covariance matrix, <span class="math">\(\Gamma\)</span>, for a model with dependent errors, <br><br> [L2] <span class="math">\(\quad\quad\quad\quad X = Z\beta + \zeta, \quad \quad \zeta \sim N[0,\Gamma].\)</span> <br><br> We read “<span class="math">\(\zeta \sim N[0,\Gamma]\)</span>” as “<span class="math">\(\zeta\)</span> follows a multivariate normal distribution with mean zero and covariance matrix <span class="math">\(\Gamma\)</span>.”</p></li>
 <li><p>The minimum variance unbiased estimator of <span class="math">\(\beta\)</span> for model L2 is the generalized least square (GLS) estimator, <span class="math">\[\hat \beta_{GLS}(x_{1:N}) = \big( Z^{\scriptsize{T}}\Gamma^{-1} Z \big)^{-1} \, Z^{\scriptsize{T}}\Gamma^{-1} x.\]</span></p></li>
