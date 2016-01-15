@@ -88,6 +88,14 @@ img {
 </ol>
 <p><br></p>
 <p><strong>A</strong>. Write an argument to justify the use of <span class="math">\(1/\sqrt{N}\)</span> as an approximation to the standard deviation of the sample autocorrelation estimator under the null hypothesis that the time series is a sequence of independent, identically distributed (IID) mean zero random variables.</p>
+<p>Hint: you will probably want to make an argument based on linearization. You can reason at whatever level of math stat formalization you’re happy with. According to <em>Mathematical Statistics and Data Analysis</em> by John Rice, a textbook used for the undergraduate upper level Math Stats course, STATS 426,</p>
+<p>“When confronted with a nonlinear problem we cannot solve, we linearize. In probability and statistics, this method is called <strong>propagation of errors</strong> or the <strong><span class="math">\(\delta\)</span> method</strong>. Linearization is carried out through a <a href="https://en.wikipedia.org/wiki/Taylor_series">Taylor Series</a> expansion.”</p>
+<p>Rice then proceeds to describe the delta method in a way very similar to the <a href="https://en.wikipedia.org/wiki/Delta_method">Wikipedia article</a> on this topic. In summary, suppose <span class="math">\(X\)</span> is a random variable with mean <span class="math">\(\mu^{}_X\)</span> and small variance <span class="math">\(\sigma^2_X\)</span>, and <span class="math">\(g(x)\)</span> is a nonlinear function with derivative <span class="math">\(g^\prime(x)=dg/dx\)</span>. To study the random variable <span class="math">\(Y=g(X)\)</span> we can make a Taylor series approximation, <span class="math">\[ Y \approx g(\mu^{}_X) + (X-\mu^{}_X) g^\prime(\mu^{}_X).\]</span> This approximates <span class="math">\(Y\)</span> as a linear function of <span class="math">\(X\)</span>, so we have</p>
+<ol style="list-style-type: decimal">
+<li><p><span class="math">\(\quad \mu^{}_Y = {\mathbb{E}}[Y]\approx g(\mu^{}_X)\)</span>.</p></li>
+<li><p><span class="math">\(\quad \sigma^2_Y = {\mathrm{Var}}(Y) \approx \sigma^2_X \big\{g^\prime(\mu^{}_X)\big\}^2\)</span>.</p></li>
+<li><p><span class="math">\(\quad\)</span>If <span class="math">\(X\sim N\big[\mu^{}_X,\sigma_X^2\big]\)</span>, then <span class="math">\(Y\)</span> approximately follows a <span class="math">\(N\big[g(\mu^{}_X), \sigma^2_X \big\{g^\prime(\mu^{}_X)\big\}^2\big]\)</span> distribution.</p></li>
+</ol>
 <p><br></p>
 <p><strong>B</strong>. It is often asserted that the horizontal dashed lines on the sample ACF plot represent a confidence interval. For example, in the documentation produced by <code>?plot.acf</code> we read</p>
 <pre><code>ci: coverage probability for confidence interval.  Plotting of the confidence interval is suppressed if ‘ci’ is zero or negative.</code></pre>
