@@ -429,5 +429,130 @@ plot(epsilon,type="l")
 
 --------
 
+## A random walk model
+
+* The **random walk** model is
+<br><br>
+[M5] $\quad\quad\quad X_n = X_{n-1} + \epsilon_n$,
+<br><br>
+where $\{\epsilon_n\}$ is white noise. Unless otherwise specified, we usually initialize with $X_0=0$.
+
+* If $\{\epsilon_n\}$ is Gaussian white noise, then we have a Gaussian random walk.
+
+* The random walk model is a special case of AR(1) with $\phi_1=1$. 
+
+* The stochastic difference equation in M5 has an exact solution,
+$$ X_n = \sum_{k=1}^n\epsilon_k.$$
+
+* We can also call $X_{0:N}$ an **integrated white noise process**. We think of summation as a discrete version of integration.
+
+* If data $\data{x_{1:N}}$ are modeled as a random walk, the value of $X_0$ is usually an unknown. Rather than introducing an unknown parameter to our model, we may initialize our model at time $t_1$ with $X_1=\data{x_1}$.
+
+* The **first difference** time series $\data{z_{2:N}$ is defined by
+$$ \data{z_n}= \Delta \data{x_n} = \data{x_{n}}-\data{x_{n-1}}$$ 
+
+* From a time series of length $N$, we only get $N-1$ first differences. 
+
+* A random walk model for $\data{x_{1:N}}$ is essentially equivalent to a white noise model for $\data{z_{2:N}= \Delta \data{x_{2:N}}$, apart from the issue of initialization.
+
+* The **random walk with drift** model is given by the difference equation
+<br><br>
+[M6] $\quad\quad\quad X_n = X_{n-1} + \mu + \epsilon_n$,
+<br><br>
+driven by a white noise process $\{\epsilon_n\}$. This has solution
+$$ X_n = X_0 + n\mu + \sum_{k=1}^n\epsilon_k.$$
+
+* As for the random walk without drift, we must define $X_0$ to initialize the model and complete the model specification. Unless otherwise specified, we usually initialize with $X_0=0$.
 
 <br>
+
+-------
+
+--------
+
+### Exercise: compute the mean and covariance functions for the random walk model with and without drift. 
+
+<br>
+
+---------
+
+--------
+
+### An example of a random walk: Modeling financial markets
+
+* The theory of efficient financial markets suggests that the logarithm of a stock market index (or, for that matter, the value of an individual stock or other investment) might behave like a random walk with drift
+
+* Let's test that out on daily S&P 500 data, downloaded from [yahoo.com](http://real-chart.finance.yahoo.com/table.csv?s=%5EGSPC&d=0&e=15&f=2016&g=d&a=0&b=3&c=1950&ignore=.csv).
+
+```{r sp500}
+dat <- read.table("sp500.csv",sep=",",header=TRUE)
+N <- nrow(dat)
+sp500 <- dat$Close[N:1] # data are in reverse order in sp500.csv
+par(mfrow=c(1,2))
+plot(sp500,type="l")
+plot(log(sp500),type="l")
+```
+
+* To train our intuition, we can compare the data with simulations from a fitted model. A simple starting point is a Gaussian random walk with drift, having parameters estimated by
+```{r sp500params}
+mu <- mean(diff(log(sp500)))
+sigma <- sd(diff(log(sp500)))
+set.seed(95483123)
+X1 <- log(sp500[1])+cumsum(c(0,rnorm(N-1,mean=mu,sd=sigma)))
+set.seed(324324587)
+X2 <- log(sp500[1])+cumsum(c(0,rnorm(N-1,mean=mu,sd=sigma)))
+par(mfrow=c(1,2))
+plot(X1,type="l")
+plot(X2,type="l")
+```
+
+* Seems reasonable enough so far. Let's plot the sample autocorrelation function (sample ACF) of `diff(log(sp500))`. 
+
+* It is bad style to refer to quantities using computer code notation. We should set up mathematical notation in the text. Let's try again...
+
+* Let $\data{x_{1:N}}$ be the time series of S&P 500 daily closing values downloaded from yahoo.com.  Let $\data{z_n}= \Delta \log \data{x_n} = \log \data{x_{n}}-\log \data{x_{n-1}}$. 
+
+* The temporal difference of the log of the value of an investment is called the **return** on the investment. Let's plot the sample autocorrelation function of the time series of S&P 500 returns, $\data{z_{2:N}}$.
+```{r sp500_acf}
+z <- diff(log(sp500))
+acf(z)
+```
+
+* This looks pretty close to the ACF of white noise. There is some evidence for a small nonzero autocorrelation at lags 0 and 1. 
+
+* Here, we have have a long time series ($N=`r N`$). For such a long time series, statistically significant effects may be practically insignificant. Why?
+
+* It seems like the S&P 500 returns (centered, by subtracting the sample mean) may be a real-life time series well modeled by white noise.
+
+* However, things become less clear when we look at the absolute value of the centered returns. 
+
+<br>
+
+-------
+
+------
+
+### Question: How should we interpret the following plot? To what extent does this plot refute the white noise model for the centered returns (or, equivalently, the random walk model for the log index value)?
+
+```{r sp500_abs_return_acf}
+acf(abs(z-mean(z)),lag.max=200)
+```
+
+--------
+
+-------
+
+### Volatility and market inefficiencies
+
+* Nowadays, nobody is surprised that the sample ACF of a financial return time series shows little or no evidence for autocorrelation.
+
+* Deviations from the efficient market hypothesis, if you can find them, are of interest.
+
+* Also, it remains a challenge to find good models for **volatility**, the conditional variance process of a financial return model.
+
+<br>
+
+------
+
+-------
+
