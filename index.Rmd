@@ -1,0 +1,78 @@
+---
+title: "Stats 531 (Winter 2016) <br>'Analysis of Time Series'"
+author: "Instructor: Edward L. Ionides"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+------
+
+## Course description
+
+This course gives an introduction to time series analysis using
+time domain methods and frequency domain methods. The goal is to
+acquire the theoretical and computational skills required to investigate
+data collected as a time series. The first half of the course will develop 
+classical time series methodology, including auto-regressive moving average (ARMA) models, regression with ARMA errors, and estimation of the spectral density.
+The second half of the course will focus on state space model techniques for fitting structured dynamic models to time series data. We will progress from fitting linear, Gaussian dynamic models to fitting nonlinear models for which Monte Carlo methods are required.
+Examples will be drawn from ecology, economics, epidemiology, finance and elsewhere.
+
+--------------
+
+## Course information
+
+* Class meets Tu/Th 2:30-4:00 in 1084 East Hall
+
+* Contact information:
+    + Office: 453 West Hall 
+    + Phone: 647 5457 
+    + E-mail: ionides@umich.edu 
+    + Web: dept.stat.lsa.umich.edu/~ionides
+    + Office hours:  Mon 11:30-12:30; Wed 1:00-2:00. 
+* GSI: Dao Nguyen
+    + Office hours: Tue 10:00-11:00, Science Learning Center, 1720 Chemistry Building.
+    + Computing support: inquire by email, with a detailed description of the problem, what you did, and what error message you obtained.
+    + E-mail: nguyenxd@umich.edu
+* Textbook: R. Shumway and D. Stoffer ``Time Series Analysis and its Applications'' 3rd edition. Available for free from [David Stoffer's website](www.stat.pitt.edu/stoffer/tsa3/tsa3.pdf)
+* Pre-requisites: Stat 426 (Introduction to Theoretical
+ Statistics) or equivalent. For review, see ``Mathematical
+ Statistics and Data Analysis'' by J. A. Rice. A certain amount
+ of basic linear algebra will be required. For review, see 
+[www.sosmath.com/matrix/matrix.html](www.sosmath.com/matrix/matrix.html)
+
+-----------
+
+##  Grading
+
+* Weekly homeworks (25\%, due Tuesdays, in class).
+* A midterm exam (25\%, in class on Thursday 2/25).
+* A midterm project analyzing a time series of your choice using methods covered in the first half of the course (15\%, due Thursday 3/10). 
+* A final project analyzing a time series of your choice using methods covered in the entire course (35\%, due Thursday 4/28). 
+
+Discussion of homework problems is encouraged, but solutions must be written up individually.  Direct copying is not acceptable.
+
+Any material taken from any source, such as the internet, must be properly acknowledged. Unattributed copying from any source is plagiarism, and has potentially [serious consequences](http://www.rackham.umich.edu/current-students/policies/academic-policies/section11).
+
+
+----------
+
+## Class notes
+
+1. [Introduction](intro/intro.html). [(R script)](intro/intro.R)
+
+2. [Definitions and trend estimation by least squares](trend/trend.html). [(R script)](trend/trend.R)
+
+2. [Stationarity, white noise, and some basic time series models](notes3/notes3.html). [(R script)](notes3/notes3.R)
+
+--------
+
+## Homework assignments
+
+* [Homework 0](hw/hw00.html), due in class on 1/12. Setting up your computational environment.
+
+* [Homework 1](hw/hw01.html), due in class on 1/19. 
+
+---------
