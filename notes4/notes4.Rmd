@@ -83,7 +83,13 @@ options(
 
 ---------------
 
-## Definition: Stationary linear time series models.
+## Definition: Stationary causal linear process.
+
+A **stationary causal linear process** is a time series models that can be written as
+$$X_n = \mu + \psi_0\epsilon_n + \psi_1\epsilon_{n-1}+\psi_2\epsilon_{n-2}+\dots$$
+where $\{\epsilon_n\}$ is white noise with variance $\var(\epsilon_n)=\sigma^2$.
+
+
 
 <br>
 
