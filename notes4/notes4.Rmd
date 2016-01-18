@@ -85,9 +85,17 @@ options(
 
 ## Definition: Stationary causal linear process.
 
-A **stationary causal linear process** is a time series models that can be written as
+* A **stationary causal linear process** is a time series models that can be written as
 $$X_n = \mu + \psi_0\epsilon_n + \psi_1\epsilon_{n-1}+\psi_2\epsilon_{n-2}+\dots$$
 where $\{\epsilon_n\}$ is white noise with variance $\var(\epsilon_n)=\sigma^2$.
+
+* The autocovariance function is,
+$$\begin{eqnarray}
+\gamma_h &=& \cov\big(X_n,X_{n+h}\big)\\
+&=& \cov\left(\sum_{j=0}^\infty \psi_j\epsilon_{n-j},\sum_{k=0}^\infty \psi_k\epsilon_{n+h-k}\right)\\
+&=& \sum_{j=0}^\infty \sum_{k=0}^\infty  \psi_j \psi_k\cov\big(\epsilon_{n-j},\epsilon_{n+h-k}\big)\\
+&=& \sum_{j=0}^\infty \psi_j\psi_{j+h} \sigma^2, \mbox{for $h\ge 0$}.
+\end{eqnarray}$$
 
 
 
