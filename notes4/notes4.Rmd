@@ -97,6 +97,8 @@ $$\begin{eqnarray}
 &=& \sum_{j=0}^\infty \psi_j\psi_{j+h} \sigma^2, \mbox{for $h\ge 0$}.
 \end{eqnarray}$$
 
+* In order for this autocovariance function to exist, we need
+$$\sum_{j=0}^\infty \psi_j^2 < \infty.$$
 
 
 <br>

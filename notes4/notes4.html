@@ -87,7 +87,16 @@ img {
 <hr />
 <div id="definition-stationary-causal-linear-process." class="section level2">
 <h2><span class="header-section-number">4.1</span> Definition: Stationary causal linear process.</h2>
-<p>A <strong>stationary causal linear process</strong> is a time series models that can be written as <span class="math">\[X_n = \mu + \psi_0\epsilon_n + \psi_1\epsilon_{n-1}+\psi_2\epsilon_{n-2}+\dots\]</span> where <span class="math">\(\{\epsilon_n\}\)</span> is white noise with variance <span class="math">\({\mathrm{Var}}(\epsilon_n)=\sigma^2\)</span>.</p>
+<ul>
+<li><p>A <strong>stationary causal linear process</strong> is a time series models that can be written as <span class="math">\[X_n = \mu + \psi_0\epsilon_n + \psi_1\epsilon_{n-1}+\psi_2\epsilon_{n-2}+\dots\]</span> where <span class="math">\(\{\epsilon_n\}\)</span> is white noise with variance <span class="math">\({\mathrm{Var}}(\epsilon_n)=\sigma^2\)</span>.</p></li>
+<li><p>The autocovariance function is, <span class="math">\[\begin{eqnarray}
+\gamma_h &amp;=&amp; {\mathrm{Cov}}\big(X_n,X_{n+h}\big)\\
+&amp;=&amp; {\mathrm{Cov}}\left(\sum_{j=0}^\infty \psi_j\epsilon_{n-j},\sum_{k=0}^\infty \psi_k\epsilon_{n+h-k}\right)\\
+&amp;=&amp; \sum_{j=0}^\infty \sum_{k=0}^\infty  \psi_j \psi_k{\mathrm{Cov}}\big(\epsilon_{n-j},\epsilon_{n+h-k}\big)\\
+&amp;=&amp; \sum_{j=0}^\infty \psi_j\psi_{j+h} \sigma^2, \mbox{for $h\ge 0$}.
+\end{eqnarray}\]</span></p></li>
+<li><p>In order for this autocovariance function to exist, we need <span class="math">\[\sum_{j=0}^\infty \psi_j^2 &lt; \infty.\]</span></p></li>
+</ul>
 <p><br></p>
 <hr />
 <hr />
