@@ -14,6 +14,7 @@ output:
 csl: ecology.csl
 ---
 
+
 \newcommand\prob{\mathbb{P}}
 \newcommand\E{\mathbb{E}}
 \newcommand\var{\mathrm{Var}}
