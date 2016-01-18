@@ -99,6 +99,11 @@ $$\begin{eqnarray}
 
 * In order for this autocovariance function to exist, we need
 $$\sum_{j=0}^\infty \psi_j^2 < \infty.$$
+We may also require a stronger condition,
+$$\sum_{j=0}^\infty |\psi_j| < \infty.$$
+
+* The general MA(q) model that we defined in equation [M3] is a stationary, causal linear process.
+
 
 
 <br>
