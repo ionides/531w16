@@ -1,0 +1,433 @@
+---
+title: "3. Stationarity, white noise, and some basic time series models"
+author: "Edward Ionides"
+date: "1/14/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=3"
+    ]
+csl: ecology.csl
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\given{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+1. Define different concepts for stationarity.
+
+2. Define white noise.
+
+3. Use white noise to construct some basic time series models.
+
+<br>
+
+----------------------
+
+---------------
+
+## Definition: Weak stationarity and strict stationarity
+
+* A time series model which is both mean stationary and covariance stationary is called **weakly stationary**.
+
+* A time series model for which all joint distributions are invariant to shifts in time is called **strictly stationary**. 
+
+    + Formally, this means that for any collection of times $(t_1, t_2,\dots,t_K)$, the joint distribution of observations at these times should be the same as the joint distribution at $(t_1+\tau, t_2+\tau,\dots,t_K+\tau)$ for any $\tau$.
+
+    + For equally spaced observations, this becomes: for any collection of timepoints $n_1,\dots,n_K$, and for any lag $h$, the joint density function of $(X_{n_1},X_{n_2},\dots, X_{n_K})$ is the same as the joint density function of $(X_{n_1+h},X_{n_2+h},\dots, X_{n_K+h})$.
+
+    + In our general notation for densities, this strict stationarity requirement can be written as
+$$\begin{eqnarray}&&f_{X_{n_1},X_{n_2},\dots, X_{n_K}}(x_1,x_2,\dots,x_K)\\
+&&\quad\quad = f_{X_{n_1+h},X_{n_2+h},\dots, X_{n_K+h}}(x_1,x_2,\dots,x_K).
+\end{eqnarray}$$
+
+   + Strict stationarity implies weak stationarity (check this). Note that we only defined weak stationarity for equally spaced observations.
+
+<br>
+
+-------------
+
+------------
+
+### Question: How could we assess whether a weak stationary model is appropriate for a time series dataset?
+
+<br>
+
+-------------
+
+-----------
+
+Question: How could we assess whether a strictly stationary model is appropriate for a time series dataset?
+
+<br>
+
+------------
+
+-----------
+
+### Question: Is it usual for time series to be well modeled as stationary (either weakly or strictly)?
+
+ANSWER: It sometimes happens. However, systems often change over time, and that may be one of the things we are interested in.
+
+---------
+
+---------
+
+### Question: If data do not often show stationary behavior, why do many fundamental models have stationarity?
+
+<br>
+
+----------
+
+---------
+
+### Question: Is a stationary model appropriate for the time series below? Find arguments both ways, and try to reconcile them.
+
+```{r stationarity_sim, echo=FALSE}
+N <- 500
+times <- 1:N
+T1 <- 120
+T2 <- 37
+set.seed(73413)
+y <- sin(2*pi*(times/T1 + runif(1))) +   sin(2*pi*(times/T2 + runif(1))) + rnorm(N)
+x <- y[1:50]
+oldpars <- par(mfrow=c(1,2))
+plot(x,ty="l",xlab="")
+plot(y,ty="l",xlab="")
+par(oldpars)
+```
+
+---------------
+
+------------
+
+## White noise
+
+A time series model $\epsilon_{1:N}$ which is weakly stationary with 
+$$\begin{eqnarray}
+\E[\epsilon_n]&=& 0 \\
+\cov(\epsilon_m,\epsilon_n) &=& \left\{\begin{array}{ll}
+  \sigma^2, & \mbox{if $m=n$} \\
+   0, & \mbox{if $m\neq n$} \end{array}\right. ,
+\end{eqnarray}$$
+is said to be **white noise** with variance $\sigma^2$.
+
+* The "noise" is because there's no pattern, just random variation. If you listened to a realization of white noise as an audio file, you would hear a static sound.
+
+* The "white" is because all freqencies are equally represented. This will become clear when we do frequency domain analysis of time series.
+
+* Signal processing---sending and receiving signals on noisy channels---was a motivation for early time series analysis.
+
+<br>
+
+----------
+
+----------
+
+### Example: Gaussian white noise
+
+In time series analysis, a sequence of independent identically distributed (IID) Normal random variables with mean zero and variance $\sigma^2$ is known as **Gaussian white noise**. We write this model as
+$$ \epsilon_{1:N} \sim \mbox{IID } N[0,\sigma^2].$$
+ 
+<br>
+
+--------
+
+---------
+
+### Example: Binary white noise
+
+Let $\epsilon_{1:N}$ be IID with
+$$\begin{eqnarray}
+\epsilon_n = \left\{\begin{array}{ll}
+  1, & \mbox{with probability $1/2$} \\
+  -1, & \mbox{with probability $1/2$} \end{array}\right. .
+\end{eqnarray}$$
+We can check that $\E[\epsilon_n]=0$, $\var(\epsilon_n)=1$ and $\cov(\epsilon_m,\epsilon_n)=0$ for $m\neq n$. Therefore, $\epsilon_{1:N}$ is white noise. 
+
+Similarly, for any $p\in (0,1)$, we could have 
+$$\begin{eqnarray}
+\epsilon_n = \left\{\begin{array}{ll}
+  (1-p)/p, & \mbox{with probability $p$} \\
+  -1, & \mbox{with probability $1-p$} \end{array}\right. .
+\end{eqnarray}$$
+
+<br>
+
+--------
+
+---------
+
+
+### Example: Sinusoidal white noise 
+
+Let $\epsilon_n = \sin(2\pi n U)$, with a single draw $U\sim\mathrm{Uniform}[0,1]$ determining the time series model for all $n\in 1:N$.
+
+<br>
+
+**A**. Show that $\epsilon_{1:N}$ is weakly stationary, and is white noise!
+
+<br>
+
+**B**. Show that $\epsilon_{1:N}$ is NOT strictly stationary.
+
+<br>
+
+* These are exercises in working with sines and cosines. 
+
+* As well as providing a concrete example of a weakly stationary time series that is not strictly stationary, practice working with sines and cosines will come in handy later when we work in the frequency domain.
+
+* As a hint for B, consider the following plot of $\epsilon_{1:3}$ as a function of $U$.
+$\epsilon_1$ is shown as the black solid line; $\epsilon_2$ is the red dashed line; $\epsilon_3$ is the blue dot-dash line.
+
+```{r sinusoidal,echo=FALSE}
+np <- 500
+U <- seq(from=0,to=1,length=np)
+epsilon1 <- sin(2*pi*U)
+epsilon2 <- sin(2*pi*2*U)
+epsilon3 <- sin(2*pi*3*U)
+matplot(U,cbind(epsilon1,epsilon2,epsilon3),col=c("black","red","blue"),lty=c(1,2,4),ylab="",ty="l",xlab="U")
+abline(h=0,lty="dotted")
+abline(v=c(1/4,1/2,3/4),lty="dotted")
+
+```
+
+* Now we're going to use white noise as a building block for various other time series models.
+
+<br>
+
+---------
+
+--------
+
+### Reminder: why do we need time series models?
+
+* All statistical tests (i.e., whenever we use data to answer a question) rely on having a model for the data. The model is sometimes called the **assumptions** for the test.
+
+* If our model is wrong, then any conclusions drawn from it may be wront. Our error could be small and insignificant, or disastrous.
+ 
+* Time series data collected close in time are often more similar than a model with IID variation would predict. We need models that have this property, and we must work out how to test interesting hypotheses for these models.
+
+<br>
+
+----------
+
+---------
+
+## Autoregressive models
+
+### The AR(p) autoregressive model
+
+* The AR(p) model is
+<br><br>
+[M1] $\quad\quad \quad X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n$,
+<br><br>
+where $\{\epsilon_n\}$ is a white noise process. 
+
+
+* Often, we consider the **Gaussian AR(p)** model, where  $\{\epsilon_n\}$ is a Gaussian white noise process. 
+
+* M1 is a **stochastic difference equation**. It is a [difference equation (also known as a recurrence relation)](https://en.wikipedia.org/wiki/Recurrence_relation) since each time point is specified recursively in terms of previous time points. Stochastic just means random.
+
+* To complete the model, we need to **initialize** the solution to the stochastic difference equation. Supposing we want to specify a distribution for $X_{1:N}$, we have some choices in how to set up the **initial values**.
+
+    1. We can specify $X_{1:p}$ explicitly, to get the recursion started.
+
+    2. We can specify $X_{1-p:0}$ explicitly.
+
+    3. For either of these choices, we can define these initial values either to be additional parameters in the model (i.e., not random) or to be specified random variables.
+
+    4. If we want our model is strictly stationary, we must initialize so that $X_{1:p}$ have the proper joint distribution for this stationary model.
+
+* Let's investigate a particular Gaussian AR(1) process, as an exercise.
+<br><br>
+[M2] $\quad\quad \quad X_n = 0.6 X_{n-1}+ \epsilon_n$,
+<br><br>
+where $\epsilon_n\sim \mathrm{IID} N[0,1]$. We will initialize with $X_1\sim N[0,1.56^2]$.
+
+<br>
+
+----------
+
+---------
+
+### Simulating an autoregressive model 
+
+* Looking at simulated sample paths is a good way to get some intuition about a random process model. 
+
+* We will do this for the AR(1) model M2
+
+* One approach is to use the `arima.sim` function in R.
+
+```{r ar_arima_sim,fig.width=4}
+set.seed(123456789)
+ar1 <- arima.sim(list(ar=0.6),n=100,sd=1)
+plot(ar1,type="l")
+```
+
+* Does your intuition tell you that these data are evidence for a model with a linear trend?
+
+* The eye looks for patterns in data, and often finds them even when there is no strong statistical evidence. 
+
+* That is why we need statistical tests!
+
+* It is easy to see patterns even in white noise. Dependent models produce spurious patterns even more often.
+
+* Play with simulating different models with different seeds to train your intuition.
+
+* A direct approach to simulating model M2 is to write out the model equation explicitly.
+
+```{r ar_sim,fig.width=4}
+set.seed(123456789)
+N <- 100
+X <- numeric(N)
+X[1] <- rnorm(1,sd=1.56)
+for(n in 2:N) X[n] <- 0.6 * X[n-1] + rnorm(1)
+plot(X,type="l")
+```
+
+* This looks very similar to the `arima.sim` simulation, except for a difference near the start. Can you explain this? Hint: How does `arima.sim` initialize the simulation?
+
+<br>
+
+-------
+
+------
+
+### What are the advantages and disadvantages of `arima.sim` over the direct simulation method?
+
+<br>
+
+-------
+
+------
+
+### Exercise: Compute the autcovariance function for model M2.
+
+<br>
+
+-------
+
+--------
+
+## Moving average models
+
+### The MA(q) moving average model
+
+* The MA(q) model is
+<br><br>
+[M3] $\quad\quad \quad X_n =  \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}$,
+<br><br>
+where $\{\epsilon_n\}$ is a white noise process. 
+
+* To fully specify $X_{1:N}$ we must specify the joint distribution of $\epsilon_{1-q:N}$.
+
+* Often, we consider the **Gaussian MA(q)** model, where  $\{\epsilon_n\}$ is a Gaussian white noise process. 
+
+* Let's investigate a particular Gaussian MA(2) process, as an exercise.
+<br><br>
+[M4] $\quad\quad \quad X_n = \epsilon_n + 1.5\epsilon_{n-1}+\epsilon_{n-2}$,
+<br><br>
+where $\epsilon_n\sim \mathrm{IID} N[0,1]$.
+
+### Simulating a moving average model 
+
+* Let's simulate M4 using both the methods we tried for the autoregressive model
+
+```{r ma_sim}
+N <- 100
+set.seed(123456789)
+X1 <- arima.sim(list(ma=c(1.5,1)),n=N,sd=1)
+set.seed(123456789)
+epsilon <- rnorm(N+2)
+X2 <- numeric(N)
+for(n in 1:N) X2[n] <- epsilon[n+2]+1.5*epsilon[n+1]+epsilon[n]
+oldpars <- par(mfrow=c(1,2))
+plot(X1,type="l")
+plot(X2,type="l")
+par(oldpars)
+```
+
+* `X1` and `X2` look identical. We can check this
+```{r check}
+all(X1==X2)
+```
+
+* Perhaps you agree that the spurious evidence for a trend that we saw for the AR(1) model is still somewhat present for the MA(2) simulation.
+
+* We could be curious about what the underlying white noise process looks like
+
+```{r noise_sim,fig.width=4}
+N <- 100
+set.seed(123456789)
+epsilon <- rnorm(N)
+plot(epsilon,type="l")
+```
+
+* To me, the trend-like behavior is not visually apparent in the white noise that "drives" the AR and MA models.
+
+<br>
+
+---------
+
+--------
+
+
+<br>
