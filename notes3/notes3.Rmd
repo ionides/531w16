@@ -261,7 +261,7 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 
 * All statistical tests (i.e., whenever we use data to answer a question) rely on having a model for the data. The model is sometimes called the **assumptions** for the test.
 
-* If our model is wrong, then any conclusions drawn from it may be wront. Our error could be small and insignificant, or disastrous.
+* If our model is wrong, then any conclusions drawn from it may be wrong. Our error could be small and insignificant, or disastrous.
  
 * Time series data collected close in time are often more similar than a model with IID variation would predict. We need models that have this property, and we must work out how to test interesting hypotheses for these models.
 
@@ -275,7 +275,7 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 
 ### The AR(p) autoregressive model
 
-* The AR(p) model is
+* The order $p$ autoregressive model,  abbreviated to AR(p), is
 <br><br>
 [M1] $\quad\quad \quad X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n$,
 <br><br>
@@ -371,7 +371,7 @@ plot(X,type="l")
 
 ### The MA(q) moving average model
 
-* The MA(q) model is
+* The order $q$ moving average model, abbreviated to MA(q), is
 <br><br>
 [M3] $\quad\quad \quad X_n =  \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}$,
 <br><br>
@@ -448,12 +448,12 @@ $$ X_n = \sum_{k=1}^n\epsilon_k.$$
 
 * If data $\data{x_{1:N}}$ are modeled as a random walk, the value of $X_0$ is usually an unknown. Rather than introducing an unknown parameter to our model, we may initialize our model at time $t_1$ with $X_1=\data{x_1}$.
 
-* The **first difference** time series $\data{z_{2:N}$ is defined by
+* The **first difference** time series $\data{z_{2:N}}$ is defined by
 $$ \data{z_n}= \Delta \data{x_n} = \data{x_{n}}-\data{x_{n-1}}$$ 
 
 * From a time series of length $N$, we only get $N-1$ first differences. 
 
-* A random walk model for $\data{x_{1:N}}$ is essentially equivalent to a white noise model for $\data{z_{2:N}= \Delta \data{x_{2:N}}$, apart from the issue of initialization.
+* A random walk model for $\data{x_{1:N}}$ is essentially equivalent to a white noise model for $\data{z_{2:N}}= \Delta \data{x_{2:N}}$, apart from the issue of initialization.
 
 * The **random walk with drift** model is given by the difference equation
 <br><br>
@@ -520,7 +520,19 @@ acf(z)
 
 * This looks pretty close to the ACF of white noise. There is some evidence for a small nonzero autocorrelation at lags 0 and 1. 
 
-* Here, we have have a long time series ($N=`r N`$). For such a long time series, statistically significant effects may be practically insignificant. Why?
+* Here, we have have a long time series ($N=`r N`$). For such a long time series, statistically significant effects may be practically insignificant. 
+ 
+<br>
+
+---------
+
+--------
+
+### Question: Why may the length of the time series be relevant when considering practical versus statistical significance? 
+
+--------
+
+--------
 
 * It seems like the S&P 500 returns (centered, by subtracting the sample mean) may be a real-life time series well modeled by white noise.
 

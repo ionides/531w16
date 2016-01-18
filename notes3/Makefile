@@ -1,4 +1,4 @@
-default: html-docs
+default: r-scripts html-docs
 # default: r-scripts html-docs   to make both
 
 r-scripts: notes3.R
