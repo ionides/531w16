@@ -101,7 +101,7 @@ where $\{\epsilon_n, n=\dots,-2,-1,0,1,2,\dots\}$ is a white noise process, defi
 
 ----
 
-### Question: Is this weak stationary or strong stationary? Explain.
+### Question: When does the "stationary" here mean weak stationarity, and when does it mean strict stationary? 
 
 <br>
 
@@ -261,13 +261,13 @@ where $\{\epsilon_n\}$ is a white noise process. Using the backshift operator, w
 $$ X_n = \phi X_{n-1} + \epsilon_n + \theta \epsilon_{n-1}.$$
 
 1. Formally, we can write 
-$$   (1-\phi B)X_n = (1-\theta B)\epsilon_n,$$
+$$   (1-\phi B)X_n = (1+\theta B)\epsilon_n,$$
 which algebraically is equivalent to 
-$$X_n = \left(\frac{1-\theta B}{1-\phi B}\right)\epsilon_n.$$
+$$X_n = \left(\frac{1+\theta B}{1-\phi B}\right)\epsilon_n.$$
 We write this as
 $$X_n = g(B) \epsilon_n,$$
 where
-$$ g(x) = \left(\frac{1-\theta x}{1-\phi x}\right).$$
+$$ g(x) = \left(\frac{1+\theta x}{1-\phi x}\right).$$
 To make sense of $g(B)$ we need to work out the [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansion,
 $$g(x) = g_0 + g_1 x + g_2 x^2 + g_3 x^3 + \dots$$
 Do this either by hand or using your favorite math software. 

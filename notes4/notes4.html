@@ -98,8 +98,8 @@ img {
 <p><br></p>
 <hr />
 <hr />
-<div id="question-is-this-weak-stationary-or-strong-stationary-explain." class="section level3">
-<h3><span class="header-section-number">4.1.1</span> Question: Is this weak stationary or strong stationary? Explain.</h3>
+<div id="question-when-does-the-stationary-here-mean-weak-stationarity-and-when-does-it-mean-strict-stationary" class="section level3">
+<h3><span class="header-section-number">4.1.1</span> Question: When does the “stationary” here mean weak stationarity, and when does it mean strict stationary?</h3>
 <p><br></p>
 <hr />
 <hr />
@@ -186,7 +186,7 @@ img {
 <h3><span class="header-section-number">4.3.1</span> Exercise: Carry out the following steps to obtain the MA(<span class="math">\(\infty\)</span>) representation and the autocovariance function of the ARMA(1,1) model,</h3>
 <p><span class="math">\[ X_n = \phi X_{n-1} + \epsilon_n + \theta \epsilon_{n-1}.\]</span></p>
 <ol style="list-style-type: decimal">
-<li><p>Formally, we can write <span class="math">\[   (1-\phi B)X_n = (1-\theta B)\epsilon_n,\]</span> which algebraically is equivalent to <span class="math">\[X_n = \left(\frac{1-\theta B}{1-\phi B}\right)\epsilon_n.\]</span> We write this as <span class="math">\[X_n = g(B) \epsilon_n,\]</span> where <span class="math">\[ g(x) = \left(\frac{1-\theta x}{1-\phi x}\right).\]</span> To make sense of <span class="math">\(g(B)\)</span> we need to work out the <a href="https://en.wikipedia.org/wiki/Taylor_series">Taylor series</a> expansion, <span class="math">\[g(x) = g_0 + g_1 x + g_2 x^2 + g_3 x^3 + \dots\]</span> Do this either by hand or using your favorite math software.</p></li>
+<li><p>Formally, we can write <span class="math">\[   (1-\phi B)X_n = (1+\theta B)\epsilon_n,\]</span> which algebraically is equivalent to <span class="math">\[X_n = \left(\frac{1+\theta B}{1-\phi B}\right)\epsilon_n.\]</span> We write this as <span class="math">\[X_n = g(B) \epsilon_n,\]</span> where <span class="math">\[ g(x) = \left(\frac{1+\theta x}{1-\phi x}\right).\]</span> To make sense of <span class="math">\(g(B)\)</span> we need to work out the <a href="https://en.wikipedia.org/wiki/Taylor_series">Taylor series</a> expansion, <span class="math">\[g(x) = g_0 + g_1 x + g_2 x^2 + g_3 x^3 + \dots\]</span> Do this either by hand or using your favorite math software.</p></li>
 <li><p>From 1. we can get the MA(<span class="math">\(\infty\)</span>) representation. Then, we can apply the general formula for the autocovariance function of an MA(<span class="math">\(\infty\)</span>) process.</p></li>
 </ol>
 <p><br></p>
