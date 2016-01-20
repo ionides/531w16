@@ -1,0 +1,115 @@
+---
+title: "5. Parameter estimation and model identification for ARMA models"
+author: "Edward Ionides"
+date: "1/21/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=4"
+    ]
+csl: ecology.csl
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+1. Develop likelihood-based inference in the context of ARMA models.
+
+2. Discuss alternatives to likelihood-based parameter estimation.
+
+3. Investigate strategies for model selection, also known as model identification, in the context of ARMA models.
+
+<br>
+
+----------------------
+
+---------------
+
+## Background on likelihood-based inference
+
+* For any data $\data{x_{1:N}}$ and any probabilistic model $f_{X_{1:N}}(x_{1:N}\params\theta)$ we define the likelihood function to be
+$$ \lik(\theta) = f_{X_{1:N}}(\data{x_{1:N}}\params\theta).$$
+It is often convenient to work with the logarithm to base $e$ of the likelihood, which we write as
+$$\loglik(\theta) = \log \lik(\theta).$$
+
+* Using the likelihood function as a statistical tool is a very general technique, widely used since [Fisher (1922)](https://en.wikipedia.org/wiki/Likelihood_function).
+
+* Time series analysis involves various situations where we can, with sufficient care, compute the likelihood function and take advantage of the general framework of likelihood-based inference.
+
+* Computation of the likelihood function for ARMA models is not entirely straightforward. 
+
+    + Computationally efficient algorithms exist, using a state space model representation of ARMA models that will be developed later in this course. 
+
+    + For now, it is enough that software exists to evaluate and maximize the likelihood function for a Gaussian ARMA model. Our immediate task is to think about how to use that capability.
+
+* Before evaluation of the ARMA likelihood became routine, it was popular to use a method of moments estimator called **Yule-Walker** estimation. This is described by Shumway and Stoffer (Section 3.6) but is nowadays mostly of historical interest. 
+
+* There are occasionally time series situations where massively long data or massively complex models mean that it is computationally infeasible to work with the likelihood function. However, we are going to focus on the common situation where we can (with due care) work with the likelihood.
+
+
+
+
+
+------------
