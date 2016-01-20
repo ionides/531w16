@@ -77,4 +77,6 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 1](hw/hw01.html), due in class on 1/19. 
 
+* [Homework 2](hw/hw02.html), due in class on 1/26. 
+
 ---------
