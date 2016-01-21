@@ -71,6 +71,8 @@ img {
 <div id="TOC">
 <ul>
 <li><a href="#background-on-likelihood-based-inference"><span class="toc-section-number">4.1</span> Background on likelihood-based inference</a></li>
+<li><a href="#the-maximum-likelihood-estimator-mle"><span class="toc-section-number">4.2</span> The maximum likelihood estimator (MLE)</a></li>
+<li><a href="#standard-errors-for-the-mle"><span class="toc-section-number">4.3</span> Standard errors for the MLE</a></li>
 </ul>
 </div>
 
@@ -89,7 +91,8 @@ img {
 <div id="background-on-likelihood-based-inference" class="section level2">
 <h2><span class="header-section-number">4.1</span> Background on likelihood-based inference</h2>
 <ul>
-<li><p>For any data <span class="math">\({x_{1:N}^*}\)</span> and any probabilistic model <span class="math">\(f_{X_{1:N}}(x_{1:N}{\, ; \,}\theta)\)</span> we define the likelihood function to be <span class="math">\[ {\mathscr{L}}(\theta) = f_{X_{1:N}}({x_{1:N}^*}{\, ; \,}\theta).\]</span> It is often convenient to work with the logarithm to base <span class="math">\(e\)</span> of the likelihood, which we write as <span class="math">\[{\ell}(\theta) = \log {\mathscr{L}}(\theta).\]</span></p></li>
+<li><p>For any data <span class="math">\({x_{1:N}^*}\)</span> and any probabilistic model <span class="math">\(f_{X_{1:N}}(x_{1:N}{\, ; \,}\theta)\)</span> we define the likelihood function to be <span class="math">\[ {\mathscr{L}}(\theta) = f_{X_{1:N}}({x_{1:N}^*}{\, ; \,}\theta).\]</span></p></li>
+<li><p>It is often convenient to work with the logarithm to base <span class="math">\(e\)</span> of the likelihood, which we write as <span class="math">\[{\ell}(\theta) = \log {\mathscr{L}}(\theta).\]</span></p></li>
 <li><p>Using the likelihood function as a statistical tool is a very general technique, widely used since <a href="https://en.wikipedia.org/wiki/Likelihood_function">Fisher (1922)</a>.</p></li>
 <li><p>Time series analysis involves various situations where we can, with sufficient care, compute the likelihood function and take advantage of the general framework of likelihood-based inference.</p></li>
 <li><p>Computation of the likelihood function for ARMA models is not entirely straightforward.</p>
@@ -99,7 +102,61 @@ img {
 </ul></li>
 <li><p>Before evaluation of the ARMA likelihood became routine, it was popular to use a method of moments estimator called <strong>Yule-Walker</strong> estimation. This is described by Shumway and Stoffer (Section 3.6) but is nowadays mostly of historical interest.</p></li>
 <li><p>There are occasionally time series situations where massively long data or massively complex models mean that it is computationally infeasible to work with the likelihood function. However, we are going to focus on the common situation where we can (with due care) work with the likelihood.</p></li>
+<li><p>Likelihood-based inference (meaning statistical tools based on the likelihood function) provides tools for parameter estimation, standard errors, hypothesis tests and diagnosing model misspecification.</p></li>
+<li><p>Likelihood-based inference often (but not always) has favorable theoretical properties. Here, we are not especially concerned with the underlying theory of likelihood-based inference. On any practical problem, we can check the properties of a statistical procedure by simulation experiments.</p></li>
 </ul>
+</div>
+<div id="the-maximum-likelihood-estimator-mle" class="section level2">
+<h2><span class="header-section-number">4.2</span> The maximum likelihood estimator (MLE)</h2>
+<ul>
+<li><p>A maximum likelihood estimator (MLE) is <span class="math">\[ \hat\theta(x_{1:N}) = \arg\max_\theta f_{X_{1:N}}(x_{1:N}{\, ; \,}\theta),\]</span> where <span class="math">\(\arg\max_\theta g(\theta)\)</span> means a value of argument <span class="math">\(\theta\)</span> at which the maximum of the function <span class="math">\(g\)</span> is attained, so <span class="math">\(g\big(\arg\max_\theta g(\theta)\big) = \max_\theta g(\theta)\)</span>.</p></li>
+<li><p>If there are many values of <span class="math">\(\theta\)</span> giving the same maximum value of the likelihood, then an MLE still exists but is not unique.</p></li>
+<li><p>The maximum likelihood estimate (also known as the MLE) is <span class="math">\[\begin{eqnarray} {\theta^*} &amp;=&amp; \hat\theta({x_{1:N}^*})
+\\
+&amp;=&amp; \arg\max_\theta {\mathscr{L}}(\theta)
+\\
+&amp;=&amp; \arg\max_\theta {\ell}(\theta).
+\end{eqnarray}
+\]</span></p></li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+<div id="question-why-are-argmax_theta-mathscrltheta-and-argmax_theta-elltheta-the-same" class="section level3">
+<h3><span class="header-section-number">4.2.1</span> Question: Why are <span class="math">\(\arg\max_\theta {\mathscr{L}}(\theta)\)</span> and <span class="math">\(\arg\max_\theta {\ell}(\theta)\)</span> the same?</h3>
+<p><br></p>
+<hr />
+<hr />
+<p>We can write <span class="math">\(\hat\theta_{MLE}\)</span> and <span class="math">\({\theta_{MLE}^*}\)</span> if we are considering various alternative estimation methods. However, in this course, we will most often be using maximum likelihood estimation so we let <span class="math">\(\hat\theta\)</span> and <span class="math">\({\theta^*}\)</span> correspond to this approach.</p>
+<p><br></p>
+<hr />
+<hr />
+</div>
+</div>
+<div id="standard-errors-for-the-mle" class="section level2">
+<h2><span class="header-section-number">4.3</span> Standard errors for the MLE</h2>
+<ul>
+<li><p>As statisticians, it would be irresponsible to present an estimate without a measure of uncertainty!</p></li>
+<li><p>Usually, this means obtaining a confidence interval, or an approximate confidence interval.</p>
+<ul>
+<li><p>It is good to say <strong>approximate</strong> when you present something that is not exactly a confidence interval with the claimed coverage. For example, remind yourself of the definition of a 95% confidence interval.</p></li>
+<li><p>Saying “approximate” reminds you that there is some checking that could be done to assess how accurate the approximation is in your particular situation.</p></li>
+<li><p>It also helps to remind you that it may be interesting and relevant to explain why the interval you present is an approximate confidence interval rather than an exact one.</p></li>
+</ul></li>
+<li><p>There are three main approaches to estimating the statistical uncertainty in an MLE.</p></li>
+</ul>
+<ol style="list-style-type: decimal">
+<li><p>The Fisher information. This is computationally quick, but works well only when <span class="math">\(\hat\theta(X_{1:N})\)</span> is well approximated by a normal distribution.</p></li>
+<li><p>Profile likelihood estimation. This is a bit more computational effort, but generally is preferable to the Fisher information.</p></li>
+<li><p>A simulation study, also known as a bootstrap.</p>
+<ul>
+<li><p>If done carefully and well, this can be the best approach.</p></li>
+<li><p>A confidence interval is a claim about reproducibility. You claim, so far as your model is correct, that on 95% of realizations from the model, a 95% confidence interval you have constructed will cover the true value of the parameter.</p></li>
+<li><p>A simulation study can check this claim fairly directly, but requires the most effort.</p></li>
+<li><p>The simulation study takes time for you to develop and debug, time for you to explain, and time for the reader to understand and check what you have done. We usually carry out simulation studies to check our main conclusions only.</p></li>
+</ul></li>
+</ol>
+<hr />
 <hr />
 </div>
 

@@ -91,7 +91,8 @@ options(
 
 * For any data $\data{x_{1:N}}$ and any probabilistic model $f_{X_{1:N}}(x_{1:N}\params\theta)$ we define the likelihood function to be
 $$ \lik(\theta) = f_{X_{1:N}}(\data{x_{1:N}}\params\theta).$$
-It is often convenient to work with the logarithm to base $e$ of the likelihood, which we write as
+
+* It is often convenient to work with the logarithm to base $e$ of the likelihood, which we write as
 $$\loglik(\theta) = \log \lik(\theta).$$
 
 * Using the likelihood function as a statistical tool is a very general technique, widely used since [Fisher (1922)](https://en.wikipedia.org/wiki/Likelihood_function).
@@ -107,6 +108,86 @@ $$\loglik(\theta) = \log \lik(\theta).$$
 * Before evaluation of the ARMA likelihood became routine, it was popular to use a method of moments estimator called **Yule-Walker** estimation. This is described by Shumway and Stoffer (Section 3.6) but is nowadays mostly of historical interest. 
 
 * There are occasionally time series situations where massively long data or massively complex models mean that it is computationally infeasible to work with the likelihood function. However, we are going to focus on the common situation where we can (with due care) work with the likelihood.
+
+* Likelihood-based inference (meaning statistical tools based on the likelihood function) provides tools for parameter estimation, standard errors, hypothesis tests and diagnosing model misspecification. 
+
+* Likelihood-based inference often (but not always) has favorable theoretical properties. Here, we are not especially concerned with the underlying theory of likelihood-based inference. On any practical problem, we can check the properties of a statistical procedure by simulation experiments.
+
+
+## The maximum likelihood estimator (MLE)
+
+* A maximum likelihood estimator (MLE) is
+$$ \hat\theta(x_{1:N}) = \arg\max_\theta f_{X_{1:N}}(x_{1:N}\params\theta),$$
+where $\arg\max_\theta g(\theta)$ means a value of argument $\theta$ at which the maximum of the function $g$ is attained, so $g\big(\arg\max_\theta g(\theta)\big) = \max_\theta g(\theta)$.
+
+* If there are many values of $\theta$ giving the same maximum value of the likelihood, then an MLE still exists but is not unique.
+ 
+
+* The maximum likelihood estimate (also known as the MLE) is
+$$\begin{eqnarray} \data{\theta} &=& \hat\theta(\data{x_{1:N}})
+\\
+&=& \arg\max_\theta \lik(\theta)
+\\
+&=& \arg\max_\theta \loglik(\theta).
+\end{eqnarray}
+$$
+
+<br>
+
+-------
+
+------
+
+### Question: Why are $\arg\max_\theta \lik(\theta)$ and $\arg\max_\theta \loglik(\theta)$ the same?
+
+<br>
+
+-----
+
+-----
+
+We can write $\hat\theta_{MLE}$ and $\data{\theta_{MLE}}$ if we are considering various alternative estimation methods. However, in this course, we will most often be using maximum likelihood estimation so we let $\hat\theta$ and $\data{\theta}$ correspond to this approach.
+
+<br>
+
+-------
+
+------
+
+## Standard errors for the MLE
+
+* As statisticians, it would be irresponsible to present an estimate without a measure of uncertainty!
+
+* Usually, this means obtaining a confidence interval, or an approximate confidence interval. 
+
+    + It is good to say **approximate** when you present something that is not exactly a confidence interval with the claimed coverage. For example, remind yourself of the definition of a 95% confidence interval. 
+
+    + Saying "approximate" reminds you that there is some checking that could be done to assess how accurate the approximation is in your particular situation.
+
+    + It also helps to remind you that it may be interesting and relevant to explain why the interval you present is an approximate confidence interval rather than an exact one.
+
+* There are three main approaches to estimating the statistical uncertainty in an MLE.
+
+1. The Fisher information. This is computationally quick, but works well only when $\hat\theta(X_{1:N})$ is well approximated by a normal distribution.
+
+2. Profile likelihood estimation. This is a bit more computational effort, but generally is preferable to the Fisher information.
+
+3. A simulation study, also known as a bootstrap. 
+
+    + If done carefully and well, this can be the best approach.
+
+    + A confidence interval is a claim about reproducibility. You claim, so far as your model is correct, that on 95% of realizations from the model, a 95% confidence interval you have constructed will cover the true value of the parameter.
+
+    + A simulation study can check this claim fairly directly, but requires the most effort. 
+
+    + The simulation study takes time for you to develop and debug, time for you to explain, and time for the reader to understand and check what you have done. We usually carry out simulation studies to check our main conclusions only.
+
+
+----------
+
+
+
+
 
 
 
