@@ -73,6 +73,9 @@ img {
 <li><a href="#background-on-likelihood-based-inference"><span class="toc-section-number">4.1</span> Background on likelihood-based inference</a></li>
 <li><a href="#the-maximum-likelihood-estimator-mle"><span class="toc-section-number">4.2</span> The maximum likelihood estimator (MLE)</a></li>
 <li><a href="#standard-errors-for-the-mle"><span class="toc-section-number">4.3</span> Standard errors for the MLE</a></li>
+<li><a href="#likelihood-based-model-selection-and-model-diagnostics"><span class="toc-section-number">4.4</span> Likelihood-based model selection and model diagnostics</a></li>
+<li><a href="#implementing-likelihood-based-inference-for-arma-models-in-r"><span class="toc-section-number">4.5</span> Implementing likelihood-based inference for ARMA models in R</a></li>
+<li><a href="#assessing-the-numerical-correctness-of-evaluation-and-maximization-of-the-likelihood-function"><span class="toc-section-number">4.6</span> Assessing the numerical correctness of evaluation and maximization of the likelihood function</a></li>
 </ul>
 </div>
 
@@ -82,8 +85,9 @@ img {
 <p><big><big><big>Objectives</big></big></big></p>
 <ol style="list-style-type: decimal">
 <li><p>Develop likelihood-based inference in the context of ARMA models.</p></li>
-<li><p>Discuss alternatives to likelihood-based parameter estimation.</p></li>
+<li><p>Discuss maximum likelihood parameter estimation and alternative methods.</p></li>
 <li><p>Investigate strategies for model selection, also known as model identification, in the context of ARMA models.</p></li>
+<li><p>Work on practical computational approaches for implementing these methods.</p></li>
 </ol>
 <p><br></p>
 <hr />
@@ -127,7 +131,9 @@ img {
 <p><br></p>
 <hr />
 <hr />
-<p>We can write <span class="math">\(\hat\theta_{MLE}\)</span> and <span class="math">\({\theta_{MLE}^*}\)</span> if we are considering various alternative estimation methods. However, in this course, we will most often be using maximum likelihood estimation so we let <span class="math">\(\hat\theta\)</span> and <span class="math">\({\theta^*}\)</span> correspond to this approach.</p>
+<ul>
+<li>We can write <span class="math">\(\hat\theta_{MLE}\)</span> and <span class="math">\({\theta_{MLE}^*}\)</span> if we are considering various alternative estimation methods. However, in this course, we will most often be using maximum likelihood estimation so we let <span class="math">\(\hat\theta\)</span> and <span class="math">\({\theta^*}\)</span> correspond to this approach.</li>
+</ul>
 <p><br></p>
 <hr />
 <hr />
@@ -156,7 +162,57 @@ img {
 <li><p>The simulation study takes time for you to develop and debug, time for you to explain, and time for the reader to understand and check what you have done. We usually carry out simulation studies to check our main conclusions only.</p></li>
 </ul></li>
 </ol>
+<p><br></p>
 <hr />
+<hr />
+<div id="standard-errors-via-the-observed-fisher-information" class="section level3">
+<h3><span class="header-section-number">4.3.1</span> Standard errors via the observed Fisher information</h3>
+<ul>
+<li><p>We suppose that <span class="math">\(\theta\in{\mathbb{R}}^P\)</span> and so we can write <span class="math">\(\theta=\theta_{1:P}\)</span>.</p></li>
+<li><p>The <a href="https://en.wikipedia.org/wiki/Hessian_matrix">Hessian matrix</a> of a function is the matrix of its second partial derivatives. We write the Hessian matrix of the log likelihood function as <span class="math">\(\nabla^2{\ell}(\theta)\)</span>, a <span class="math">\(P\times P\)</span> matrix whose <span class="math">\((i,j)\)</span> element is <span class="math">\[ \big[\nabla^2{\ell}(\theta)\big]_{ij} =  \frac{\partial^2}{\partial\theta_i\partial\theta_j}{\ell}(\theta).\]</span></p></li>
+<li><p>The observed Fisher information is <span class="math">\[ {I^*} = - \nabla^2{\ell}({\theta^*}).\]</span></p></li>
+<li><p>A standard asymptotic approximation to the distribution of the MLE for large <span class="math">\(N\)</span> is <span class="math">\[ \hat\theta(X_{1:N}) \approx N[\theta, {{I^*}}^{-1}],\]</span> where <span class="math">\(\theta\)</span> is the true parameter value. This asserts that the MLE is asymptotically unbiased, with variance asymptotically attaining the Cramer-Rao lower bound. Thus, we say the MLE is <strong>asymptotically efficient</strong>.</p></li>
+<li><p>A corresponding approximate 95% confidence interval for <span class="math">\(\theta_p\)</span> is <span class="math">\[ {\theta_p^*} \pm 1.96 \big[{{I^*}}^{-1}\big]_{pp}^{1/2}.\]</span></p></li>
+<li><p>The R function <code>arima</code> computes standard errors for the MLE of an ARMA model in this way.</p></li>
+<li><p>We usually only have one time series, with some fixed <span class="math">\(N\)</span>, and so we cannot in practice take <span class="math">\(N\to\infty\)</span>. When our time series model is non-stationary it may not even be clear what it would mean to take <span class="math">\(N\to\infty\)</span>. These asymptotic results should be viewed as nice mathematical reasons to consider computing an MLE, but not a substitute for checking how the MLE behaves for our model and data.</p></li>
+</ul>
+<hr />
+</div>
+<div id="standard-errors-via-the-profile-likelihood" class="section level3">
+<h3><span class="header-section-number">4.3.2</span> Standard errors via the profile likelihood</h3>
+<ul>
+<li><p>Let’s consider the problem of obtaining a confidence interval for <span class="math">\(\theta_1\)</span>, the first component of <span class="math">\(\theta_{1:P}\)</span>.</p></li>
+<li><p>The <strong>profile log likelihood function</strong> of <span class="math">\(\theta_1\)</span> is defined to be <span class="math">\[ {\ell}_{\mathrm{profile}}(\theta_1) = \max_{\theta_{2:P}}{\ell}(\theta_{1:P}).\]</span> In general, the profile likelihood of one parameter is constructed by maximizing the likelihood function over all other parameters.</p></li>
+<li><p>Check that <span class="math">\(\max_{\theta_1}{\ell}_{\mathrm{profile}}(\theta_1) = \max_{\theta_{1:P}}{\ell}(\theta_{1:P})\)</span>. Maximizing the profile likelihood <span class="math">\({\ell}_{\mathrm{profile}}(\theta_1)\)</span> gives the MLE, <span class="math">\({\theta_1^*}\)</span>.</p></li>
+<li><p>An approximate 95% confidence interval for <span class="math">\(\theta_1\)</span> is given by <span class="math">\[ \{\theta_1 : {\ell}({\theta^*}) - {\ell}_{\mathrm{profile}}(\theta_1) &lt; 1.92.\]</span></p></li>
+<li><p>This is known as a profile likelihood confidence interval. The cutoff <span class="math">\(1.92\)</span> is derived using <a href="https://en.wikipedia.org/wiki/Likelihood-ratio_test#Distribution:_Wilks.27s_theorem">Wilks’s theorem</a>, which we will discuss in more detail when we develop likelihood ratio tests.</p></li>
+<li><p>Although the asymptotic justification of Wilks’s theorem is the same limit that justifies the Fisher information standard errors, profile likelihood confidence intervals tend to work better than Fisher information confidence intervals when <span class="math">\(N\)</span> is not so large and particularly when the log likelihood function is not close to quadratic near its maximum.</p></li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="bootstrap-methods-for-constructing-confidence-intervals" class="section level3">
+<h3><span class="header-section-number">4.3.3</span> Bootstrap methods for constructing confidence intervals</h3>
+<p><br></p>
+<hr />
+<hr />
+</div>
+</div>
+<div id="likelihood-based-model-selection-and-model-diagnostics" class="section level2">
+<h2><span class="header-section-number">4.4</span> Likelihood-based model selection and model diagnostics</h2>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="implementing-likelihood-based-inference-for-arma-models-in-r" class="section level2">
+<h2><span class="header-section-number">4.5</span> Implementing likelihood-based inference for ARMA models in R</h2>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="assessing-the-numerical-correctness-of-evaluation-and-maximization-of-the-likelihood-function" class="section level2">
+<h2><span class="header-section-number">4.6</span> Assessing the numerical correctness of evaluation and maximization of the likelihood function</h2>
 <hr />
 </div>
 
