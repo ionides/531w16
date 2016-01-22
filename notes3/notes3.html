@@ -74,7 +74,14 @@ img {
 <li><a href="#white-noise"><span class="toc-section-number">3.2</span> White noise</a></li>
 <li><a href="#autoregressive-models"><span class="toc-section-number">3.3</span> Autoregressive models</a></li>
 <li><a href="#moving-average-models"><span class="toc-section-number">3.4</span> Moving average models</a></li>
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
 <li><a href="#a-random-walk-model"><span class="toc-section-number">3.5</span> A random walk model</a></li>
+>>>>>>> ionides/master
+=======
+<li><a href="#a-random-walk-model"><span class="toc-section-number">3.5</span> A random walk model</a></li>
+>>>>>>> ionides/master
 </ul>
 </div>
 
@@ -200,7 +207,15 @@ img {
 <h3><span class="header-section-number">3.2.4</span> Reminder: why do we need time series models?</h3>
 <ul>
 <li><p>All statistical tests (i.e., whenever we use data to answer a question) rely on having a model for the data. The model is sometimes called the <strong>assumptions</strong> for the test.</p></li>
+<<<<<<< HEAD
+<<<<<<< HEAD
+<li><p>If our model is wrong, then any conclusions drawn from it may be wront. Our error could be small and insignificant, or disastrous.</p></li>
+=======
 <li><p>If our model is wrong, then any conclusions drawn from it may be wrong. Our error could be small and insignificant, or disastrous.</p></li>
+>>>>>>> ionides/master
+=======
+<li><p>If our model is wrong, then any conclusions drawn from it may be wrong. Our error could be small and insignificant, or disastrous.</p></li>
+>>>>>>> ionides/master
 <li><p>Time series data collected close in time are often more similar than a model with IID variation would predict. We need models that have this property, and we must work out how to test interesting hypotheses for these models.</p></li>
 </ul>
 <p><br></p>
@@ -213,7 +228,15 @@ img {
 <div id="the-arp-autoregressive-model" class="section level3">
 <h3><span class="header-section-number">3.3.1</span> The AR(p) autoregressive model</h3>
 <ul>
+<<<<<<< HEAD
+<<<<<<< HEAD
+<li><p>The AR(p) model is <br><br> [M1] <span class="math">\(\quad\quad \quad X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
+=======
 <li><p>The order <span class="math">\(p\)</span> autoregressive model, abbreviated to AR(p), is <br><br> [M1] <span class="math">\(\quad\quad \quad X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
+>>>>>>> ionides/master
+=======
+<li><p>The order <span class="math">\(p\)</span> autoregressive model, abbreviated to AR(p), is <br><br> [M1] <span class="math">\(\quad\quad \quad X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
+>>>>>>> ionides/master
 <li><p>Often, we consider the <strong>Gaussian AR(p)</strong> model, where <span class="math">\(\{\epsilon_n\}\)</span> is a Gaussian white noise process.</p></li>
 <li><p>M1 is a <strong>stochastic difference equation</strong>. It is a <a href="https://en.wikipedia.org/wiki/Recurrence_relation">difference equation (also known as a recurrence relation)</a> since each time point is specified recursively in terms of previous time points. Stochastic just means random.</p></li>
 <li><p>To complete the model, we need to <strong>initialize</strong> the solution to the stochastic difference equation. Supposing we want to specify a distribution for <span class="math">\(X_{1:N}\)</span>, we have some choices in how to set up the <strong>initial values</strong>.</p>
@@ -280,7 +303,15 @@ plot(X,type=&quot;l&quot;)</code></pre>
 <div id="the-maq-moving-average-model" class="section level3">
 <h3><span class="header-section-number">3.4.1</span> The MA(q) moving average model</h3>
 <ul>
+<<<<<<< HEAD
+<<<<<<< HEAD
+<li><p>The MA(q) model is <br><br> [M3] <span class="math">\(\quad\quad \quad X_n = \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
+=======
 <li><p>The order <span class="math">\(q\)</span> moving average model, abbreviated to MA(q), is <br><br> [M3] <span class="math">\(\quad\quad \quad X_n = \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
+>>>>>>> ionides/master
+=======
+<li><p>The order <span class="math">\(q\)</span> moving average model, abbreviated to MA(q), is <br><br> [M3] <span class="math">\(\quad\quad \quad X_n = \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
+>>>>>>> ionides/master
 <li><p>To fully specify <span class="math">\(X_{1:N}\)</span> we must specify the joint distribution of <span class="math">\(\epsilon_{1-q:N}\)</span>.</p></li>
 <li><p>Often, we consider the <strong>Gaussian MA(q)</strong> model, where <span class="math">\(\{\epsilon_n\}\)</span> is a Gaussian white noise process.</p></li>
 <li><p>Let’s investigate a particular Gaussian MA(2) process, as an exercise. <br><br> [M4] <span class="math">\(\quad\quad \quad X_n = \epsilon_n + 1.5\epsilon_{n-1}+\epsilon_{n-2}\)</span>, <br><br> where <span class="math">\(\epsilon_n\sim \mathrm{IID} N[0,1]\)</span>.</p></li>
@@ -323,6 +354,12 @@ plot(epsilon,type=&quot;l&quot;)</code></pre>
 <p><br></p>
 <hr />
 <hr />
+<<<<<<< HEAD
+<<<<<<< HEAD
+<p><br></p>
+=======
+=======
+>>>>>>> ionides/master
 </div>
 </div>
 <div id="a-random-walk-model" class="section level2">
@@ -421,6 +458,10 @@ acf(z)</code></pre>
 <p><br></p>
 <hr />
 <hr />
+<<<<<<< HEAD
+>>>>>>> ionides/master
+=======
+>>>>>>> ionides/master
 </div>
 </div>
 

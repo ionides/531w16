@@ -14,7 +14,14 @@ output:
 csl: ecology.csl
 ---
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
 
+>>>>>>> ionides/master
+=======
+
+>>>>>>> ionides/master
 \newcommand\prob{\mathbb{P}}
 \newcommand\E{\mathbb{E}}
 \newcommand\var{\mathrm{Var}}
@@ -262,7 +269,15 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 
 * All statistical tests (i.e., whenever we use data to answer a question) rely on having a model for the data. The model is sometimes called the **assumptions** for the test.
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+* If our model is wrong, then any conclusions drawn from it may be wront. Our error could be small and insignificant, or disastrous.
+=======
 * If our model is wrong, then any conclusions drawn from it may be wrong. Our error could be small and insignificant, or disastrous.
+>>>>>>> ionides/master
+=======
+* If our model is wrong, then any conclusions drawn from it may be wrong. Our error could be small and insignificant, or disastrous.
+>>>>>>> ionides/master
  
 * Time series data collected close in time are often more similar than a model with IID variation would predict. We need models that have this property, and we must work out how to test interesting hypotheses for these models.
 
@@ -276,7 +291,15 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 
 ### The AR(p) autoregressive model
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+* The AR(p) model is
+=======
 * The order $p$ autoregressive model,  abbreviated to AR(p), is
+>>>>>>> ionides/master
+=======
+* The order $p$ autoregressive model,  abbreviated to AR(p), is
+>>>>>>> ionides/master
 <br><br>
 [M1] $\quad\quad \quad X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n$,
 <br><br>
@@ -372,7 +395,15 @@ plot(X,type="l")
 
 ### The MA(q) moving average model
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+* The MA(q) model is
+=======
 * The order $q$ moving average model, abbreviated to MA(q), is
+>>>>>>> ionides/master
+=======
+* The order $q$ moving average model, abbreviated to MA(q), is
+>>>>>>> ionides/master
 <br><br>
 [M3] $\quad\quad \quad X_n =  \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}$,
 <br><br>
@@ -430,6 +461,13 @@ plot(epsilon,type="l")
 
 --------
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+
+<br>
+=======
+=======
+>>>>>>> ionides/master
 ## A random walk model
 
 * The **random walk** model is
@@ -569,3 +607,7 @@ acf(abs(z-mean(z)),lag.max=200)
 
 -------
 
+<<<<<<< HEAD
+>>>>>>> ionides/master
+=======
+>>>>>>> ionides/master
