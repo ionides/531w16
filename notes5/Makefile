@@ -1,13 +1,9 @@
-<<<<<<< HEAD
-default: html-docs
-=======
 default: r-scripts html-docs
->>>>>>> ionides/master
 # default: r-scripts html-docs   to make both
 
-r-scripts: notes3.R
+r-scripts: notes5.R
 
-html-docs: notes3.html
+html-docs: notes5.html
 
 %.html: %.Rmd
 	Rscript --vanilla -e "rmarkdown::render(\"$*.Rmd\",output_format=\"html_document\")"
