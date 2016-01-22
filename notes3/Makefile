@@ -1,5 +1,9 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 default: html-docs
+=======
+default: r-scripts html-docs
+>>>>>>> ionides/master
 =======
 default: r-scripts html-docs
 >>>>>>> ionides/master

@@ -15,6 +15,10 @@ csl: ecology.csl
 ---
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> ionides/master
 =======
 
 >>>>>>> ionides/master
@@ -266,7 +270,11 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 * All statistical tests (i.e., whenever we use data to answer a question) rely on having a model for the data. The model is sometimes called the **assumptions** for the test.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 * If our model is wrong, then any conclusions drawn from it may be wront. Our error could be small and insignificant, or disastrous.
+=======
+* If our model is wrong, then any conclusions drawn from it may be wrong. Our error could be small and insignificant, or disastrous.
+>>>>>>> ionides/master
 =======
 * If our model is wrong, then any conclusions drawn from it may be wrong. Our error could be small and insignificant, or disastrous.
 >>>>>>> ionides/master
@@ -284,7 +292,11 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 ### The AR(p) autoregressive model
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 * The AR(p) model is
+=======
+* The order $p$ autoregressive model,  abbreviated to AR(p), is
+>>>>>>> ionides/master
 =======
 * The order $p$ autoregressive model,  abbreviated to AR(p), is
 >>>>>>> ionides/master
@@ -384,7 +396,11 @@ plot(X,type="l")
 ### The MA(q) moving average model
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 * The MA(q) model is
+=======
+* The order $q$ moving average model, abbreviated to MA(q), is
+>>>>>>> ionides/master
 =======
 * The order $q$ moving average model, abbreviated to MA(q), is
 >>>>>>> ionides/master
@@ -446,9 +462,12 @@ plot(epsilon,type="l")
 --------
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 <br>
 =======
+=======
+>>>>>>> ionides/master
 ## A random walk model
 
 * The **random walk** model is
@@ -588,4 +607,7 @@ acf(abs(z-mean(z)),lag.max=200)
 
 -------
 
+<<<<<<< HEAD
+>>>>>>> ionides/master
+=======
 >>>>>>> ionides/master

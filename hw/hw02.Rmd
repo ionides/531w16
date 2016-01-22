@@ -20,6 +20,7 @@ Solutions for this homework can be hand-written or typed. Later in the course, w
 --------
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 **<big>Question 1.1</big>**. 
 
 **A**. Calculate the autocovariance function for the models M2 and M4 investigated in the notes. 
@@ -78,6 +79,8 @@ Use a definition of a confidence interval to explain how these lines do, or do n
 
 ----------------------
 =======
+=======
+>>>>>>> ionides/master
 **<big>Question 2.1</big>**. We investigate two ways to calculate the autocovariance function for an ARMA model. The instructions below help you work through the case of a causal AR(1) model,
 $$X_n = \phi X_{n-1} + \epsilon_n.$$
 where $\{\epsilon_n\}$ is white noise with variance $\sigma^2$, and $-1<\phi<1$. Assume the process is stationary, i.e., it is initialized with a random draw from its stationary distribution.
@@ -107,5 +110,9 @@ where $\{\epsilon_n\}$ is white noise with variance $\sigma^2$, and we use the i
 
 **<big>Reading</big>**. We have covered much of the material through to Section 3.4 of Shumway and Stoffer (Time Series Analysis and its Applications, 3rd edition). The course notes are intended to be self-contained, and additional reading is therefore optional. Reading this textbook will help to broaden your understanding of these topics. 
 
+<<<<<<< HEAD
+------------
+>>>>>>> ionides/master
+=======
 ------------
 >>>>>>> ionides/master
