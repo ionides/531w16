@@ -67,9 +67,9 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 3. [Stationarity, white noise, and some basic time series models](notes3/notes3.html). [(R script)](notes3/notes3.R)
 
-3. [Linear time series models and the algebra of ARMA models](notes4/notes4.html). [(R script)](notes4/notes4.R)
+4. [Linear time series models and the algebra of ARMA models](notes4/notes4.html). [(R script)](notes4/notes4.R)
 
-3. [Parameter estimation and model identification for ARMA models](notes5/notes5.html). [(R script)](notes5/notes5.R)
+5. [Parameter estimation and model identification for ARMA models](notes5/notes5.html). [(R script)](notes5/notes5.R)
 
 --------
 
