@@ -1,0 +1,279 @@
+---
+title: "5. Parameter estimation and model identification for ARMA models"
+author: "Edward Ionides"
+date: "1/21/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=4"
+    ]
+csl: ecology.csl
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+1. Develop likelihood-based inference in the context of ARMA models.
+
+2. Discuss maximum likelihood parameter estimation and alternative methods.
+
+3. Investigate strategies for model selection, also known as model identification, in the context of ARMA models.
+
+4. Work on practical computational approaches for implementing these methods.
+
+<br>
+
+----------------------
+
+---------------
+
+## Background on likelihood-based inference
+
+* For any data $\data{x_{1:N}}$ and any probabilistic model $f_{X_{1:N}}(x_{1:N}\params\theta)$ we define the likelihood function to be
+$$ \lik(\theta) = f_{X_{1:N}}(\data{x_{1:N}}\params\theta).$$
+
+* It is often convenient to work with the logarithm to base $e$ of the likelihood, which we write as
+$$\loglik(\theta) = \log \lik(\theta).$$
+
+* Using the likelihood function as a statistical tool is a very general technique, widely used since [Fisher (1922)](https://en.wikipedia.org/wiki/Likelihood_function).
+
+* Time series analysis involves various situations where we can, with sufficient care, compute the likelihood function and take advantage of the general framework of likelihood-based inference.
+
+* Computation of the likelihood function for ARMA models is not entirely straightforward. 
+
+    + Computationally efficient algorithms exist, using a state space model representation of ARMA models that will be developed later in this course. 
+
+    + For now, it is enough that software exists to evaluate and maximize the likelihood function for a Gaussian ARMA model. Our immediate task is to think about how to use that capability.
+
+* Before evaluation of the ARMA likelihood became routine, it was popular to use a method of moments estimator called **Yule-Walker** estimation. This is described by Shumway and Stoffer (Section 3.6) but is nowadays mostly of historical interest. 
+
+* There are occasionally time series situations where massively long data or massively complex models mean that it is computationally infeasible to work with the likelihood function. However, we are going to focus on the common situation where we can (with due care) work with the likelihood.
+
+* Likelihood-based inference (meaning statistical tools based on the likelihood function) provides tools for parameter estimation, standard errors, hypothesis tests and diagnosing model misspecification. 
+
+* Likelihood-based inference often (but not always) has favorable theoretical properties. Here, we are not especially concerned with the underlying theory of likelihood-based inference. On any practical problem, we can check the properties of a statistical procedure by simulation experiments.
+
+
+## The maximum likelihood estimator (MLE)
+
+* A maximum likelihood estimator (MLE) is
+$$ \hat\theta(x_{1:N}) = \arg\max_\theta f_{X_{1:N}}(x_{1:N}\params\theta),$$
+where $\arg\max_\theta g(\theta)$ means a value of argument $\theta$ at which the maximum of the function $g$ is attained, so $g\big(\arg\max_\theta g(\theta)\big) = \max_\theta g(\theta)$.
+
+* If there are many values of $\theta$ giving the same maximum value of the likelihood, then an MLE still exists but is not unique.
+ 
+
+* The maximum likelihood estimate (also known as the MLE) is
+$$\begin{eqnarray} \data{\theta} &=& \hat\theta(\data{x_{1:N}})
+\\
+&=& \arg\max_\theta \lik(\theta)
+\\
+&=& \arg\max_\theta \loglik(\theta).
+\end{eqnarray}
+$$
+
+<br>
+
+-------
+
+------
+
+### Question: Why are $\arg\max_\theta \lik(\theta)$ and $\arg\max_\theta \loglik(\theta)$ the same?
+
+<br>
+
+-----
+
+-----
+
+* We can write $\hat\theta_{MLE}$ and $\data{\theta_{MLE}}$ if we are considering various alternative estimation methods. However, in this course, we will most often be using maximum likelihood estimation so we let $\hat\theta$ and $\data{\theta}$ correspond to this approach.
+
+<br>
+
+-------
+
+------
+
+## Standard errors for the MLE
+
+* As statisticians, it would be irresponsible to present an estimate without a measure of uncertainty!
+
+* Usually, this means obtaining a confidence interval, or an approximate confidence interval. 
+
+    + It is good to say **approximate** when you present something that is not exactly a confidence interval with the claimed coverage. For example, remind yourself of the definition of a 95% confidence interval. 
+
+    + Saying "approximate" reminds you that there is some checking that could be done to assess how accurate the approximation is in your particular situation.
+
+    + It also helps to remind you that it may be interesting and relevant to explain why the interval you present is an approximate confidence interval rather than an exact one.
+
+* There are three main approaches to estimating the statistical uncertainty in an MLE.
+
+1. The Fisher information. This is computationally quick, but works well only when $\hat\theta(X_{1:N})$ is well approximated by a normal distribution.
+
+2. Profile likelihood estimation. This is a bit more computational effort, but generally is preferable to the Fisher information.
+
+3. A simulation study, also known as a bootstrap. 
+
+    + If done carefully and well, this can be the best approach.
+
+    + A confidence interval is a claim about reproducibility. You claim, so far as your model is correct, that on 95% of realizations from the model, a 95% confidence interval you have constructed will cover the true value of the parameter.
+
+    + A simulation study can check this claim fairly directly, but requires the most effort. 
+
+    + The simulation study takes time for you to develop and debug, time for you to explain, and time for the reader to understand and check what you have done. We usually carry out simulation studies to check our main conclusions only.
+
+<br>
+
+-------
+
+-------
+
+### Standard errors via the observed Fisher information
+
+* We suppose that $\theta\in\R^P$ and so we can write $\theta=\theta_{1:P}$.
+
+* The [Hessian matrix](https://en.wikipedia.org/wiki/Hessian_matrix) of a function is the matrix of its second partial derivatives. We write the Hessian matrix of the log likelihood function as $\nabla^2\loglik(\theta)$, a $P\times P$ matrix whose $(i,j)$ element is
+$$ \big[\nabla^2\loglik(\theta)\big]_{ij} =  \frac{\partial^2}{\partial\theta_i\partial\theta_j}\loglik(\theta).$$
+
+* The observed Fisher information is
+$$ \data{I} = - \nabla^2\loglik(\data{\theta}).$$
+
+* A standard asymptotic approximation to the distribution of the MLE for large $N$ is
+$$ \hat\theta(X_{1:N}) \approx N[\theta, {\data{I}}^{-1}],$$
+where $\theta$ is the true parameter value.
+This asserts that the MLE is asymptotically unbiased, with variance asymptotically attaining the Cramer-Rao lower bound. Thus, we say the MLE is **asymptotically efficient**.
+
+* A corresponding approximate 95% confidence interval for $\theta_p$ is
+$$ \data{\theta_p} \pm 1.96 \big[{\data{I}}^{-1}\big]_{pp}^{1/2}.$$
+
+* The R function `arima` computes standard errors for the MLE of an ARMA model in this way.
+
+* We usually only have one time series, with some fixed $N$, and so we cannot in practice take $N\to\infty$. When our time series model is non-stationary it may not even be clear what it would mean to take $N\to\infty$. These asymptotic results should be viewed as nice mathematical reasons to consider computing an MLE, but not a substitute for checking how the MLE behaves for our model and data. 
+
+
+----------
+
+### Standard errors via the profile likelihood
+
+* Let's consider the problem of obtaining a confidence interval for $\theta_1$, the first component of $\theta_{1:P}$. 
+
+* The **profile log likelihood function** of $\theta_1$ is defined to be 
+$$ \loglik_{\mathrm{profile}}(\theta_1) = \max_{\theta_{2:P}}\loglik(\theta_{1:P}).$$
+In general, the profile likelihood of one parameter is constructed by maximizing the likelihood function over all other parameters.
+
+* Check that $\max_{\theta_1}\loglik_{\mathrm{profile}}(\theta_1) = \max_{\theta_{1:P}}\loglik(\theta_{1:P})$. Maximizing the profile likelihood $\loglik_{\mathrm{profile}}(\theta_1)$ gives the MLE, $\data{\theta_1}$.
+
+* An approximate 95% confidence interval for $\theta_1$ is given by
+$$ \{\theta_1 : \loglik(\data{\theta}) - \loglik_{\mathrm{profile}}(\theta_1) < 1.92.$$
+
+* This is known as a profile likelihood confidence interval. The cutoff $1.92$ is derived using [Wilks's theorem](https://en.wikipedia.org/wiki/Likelihood-ratio_test#Distribution:_Wilks.27s_theorem), which we will discuss in more detail when we develop likelihood ratio tests.
+
+* Although the asymptotic justification of Wilks's theorem is the same limit that justifies the Fisher information standard errors, profile likelihood confidence intervals tend to work better than Fisher information confidence intervals when $N$ is not so large and particularly when the log likelihood function is not close to quadratic near its maximum.
+
+
+<br>
+
+-------
+
+-------
+
+### Bootstrap methods for constructing confidence intervals
+
+<br>
+
+-------
+
+-------
+
+## Likelihood-based model selection and model diagnostics
+
+<br>
+
+-------
+
+-------
+
+## Implementing likelihood-based inference for ARMA models in R
+
+<br>
+
+-------
+
+-------
+
+## Assessing the numerical correctness of evaluation and maximization of the likelihood function
+
+
+
+
+
+
+
+
+
+
+
+
+------------

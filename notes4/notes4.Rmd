@@ -101,7 +101,7 @@ where $\{\epsilon_n, n=\dots,-2,-1,0,1,2,\dots\}$ is a white noise process, defi
 
 ----
 
-### Question: Is this weak stationary or strong stationary? Explain.
+### Question: When does the "stationary" here mean weak stationarity, and when does it mean strict stationary? 
 
 <br>
 
@@ -167,7 +167,9 @@ $$\sum_{j=0}^\infty |\psi_j| < \infty.$$
 
 ----- 
 
-### Question: For what values of $\phi$ is the causal solution [M8.1] a convergent infinite sum, meaning that it converges to a random variable with finite variance? For what values is the non-causal solution [M8.2] a convergent infinite sum? 
+### Question: Assess the convergence of the infinite sums in [M8.1] and [M8.2].
+
+* For what values of $\phi$ is the causal solution [M8.1] a convergent infinite sum, meaning that it converges to a random variable with finite variance? For what values is the non-causal solution [M8.2] a convergent infinite sum? 
 
 <br>
 
@@ -175,7 +177,9 @@ $$\sum_{j=0}^\infty |\psi_j| < \infty.$$
 
 --------
 
-### Exercise: The linear process representation can be a convenient way to calculate autocovariance functions. Use the linear process representation in [M8.1], together with our expression for the autocovariance of the general linear process [M7], to get an expression for the autocovariance function of the AR(1) model.
+### Exercise: Using the MA($\infty$) representation to compute the autocovariance of an ARMA model
+
+* The linear process representation can be a convenient way to calculate autocovariance functions. Use the linear process representation in [M8.1], together with our expression for the autocovariance of the general linear process [M7], to get an expression for the autocovariance function of the AR(1) model.
 
 <br>
 
@@ -261,13 +265,13 @@ where $\{\epsilon_n\}$ is a white noise process. Using the backshift operator, w
 $$ X_n = \phi X_{n-1} + \epsilon_n + \theta \epsilon_{n-1}.$$
 
 1. Formally, we can write 
-$$   (1-\phi B)X_n = (1-\theta B)\epsilon_n,$$
+$$   (1-\phi B)X_n = (1+\theta B)\epsilon_n,$$
 which algebraically is equivalent to 
-$$X_n = \left(\frac{1-\theta B}{1-\phi B}\right)\epsilon_n.$$
+$$X_n = \left(\frac{1+\theta B}{1-\phi B}\right)\epsilon_n.$$
 We write this as
 $$X_n = g(B) \epsilon_n,$$
 where
-$$ g(x) = \left(\frac{1-\theta x}{1-\phi x}\right).$$
+$$ g(x) = \left(\frac{1+\theta x}{1-\phi x}\right).$$
 To make sense of $g(B)$ we need to work out the [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansion,
 $$g(x) = g_0 + g_1 x + g_2 x^2 + g_3 x^3 + \dots$$
 Do this either by hand or using your favorite math software. 
@@ -333,3 +337,124 @@ One answer to this question involves diagnosing model misspecification.
 ----------
 
 ---------
+ 
+## Reducible and irreducible ARMA models
+
+* The ARMA model can be viewed as a ratio of two polynomials,
+$$ X_n = \frac{\phi(B)}{\theta(B)} \epsilon_n.$$
+
+* If the two polynomials $\phi(x)$ and $\theta(x)$ share a common factor, it can be canceled out without changing the model. 
+
+* The [Fundamental theorem of algebra](https://en.wikipedia.org/wiki/Fundamental_theorem_of_algebra) tells us that every polynomial $\phi(x) = 1-\phi_1 x - \dots - \phi_p x^p$ of degree $p$ can be written in the form
+$$(1-x/\lambda_1) \times (1-x/\lambda_2) \times \dots \times (1-x/\lambda_p),$$
+where $\lambda_{1:p}$ are the $p$ roots of the polynomial, which may be real or complex valued.
+
+    + Note: The Taylor series expansion of $\phi(B)^{-1}$ is convergent if and only if $(1-B/\lambda_i)^{-1}$ has a convergent expansion for each $i\in 1:p$. This happens if $|\lambda_i|>1$ for each $i$, explaining where we get the requirement that roots of the AR polynomial all fall outside the unit circle for causality of an ARMA model.
+
+* The polynomials $\phi(x)$ and $\theta(x)$ share a common factor if, and only if, they share a common root. 
+
+* It is not clear, just from looking at the model equations, that
+$$ X_n = \frac{5}{6} X_{n-1} -  \frac{1}{6} X_{n-2} + \epsilon_n- \epsilon_{n-1}+\frac{1}{4} \epsilon_{n-2}$$
+is **exactly the same model** as
+$$ X_n = \frac{1}{3} X_{n-1} + \epsilon_n- \frac{1}{2}\epsilon_{n-1}.$$
+
+* To see this, you have to do the math! We see that the second of these equations is derived from the first by canceling out the common factor $(1-0.5B)$ in the ARMA model specification.
+```{r reducibility}
+list(AR_roots=polyroot(c(1,-5/6,1/6)),MA_roots=polyroot(c(1,-1,1/4)))
+```
+
+<br>
+
+---------
+
+--------
+
+## Deterministic skeletons: Using differential equations to study ARMA models
+
+
+* Non-random physical processes evolving through time have been modeled using differential equations ever since the ground-breaking work by [Newton(1687)](https://en.wikipedia.org/wiki/Philosophi%C3%A6_Naturalis_Principia_Mathematica).
+
+* We have to attend to the considerable amount of randomness (almost equivalent to unpredictability) that is  often present in data and systems we want to study. 
+
+* However, we want to learn a little bit from the extensive study of deterministic systems.
+
+* The **deterministic skeleton** of a time series model is the non-random process obtained by removing the randomness from a stochastic model. 
+
+* If the time series model is discrete-time, one may also define a continuous-time deterministic skeleton by replacing the discrete-time difference equation with a differential equation.
+
+* Sometimes, rather than deriving a deterministic skeleton from a stochastic time series model, we work in reverse: we add stochasticity to a deterministic model in order to obtain a model that can explain non-deterministic phenomena.
+
+### Example: oscillatory behavior modeled using an AR(2) process
+
+* In physics, a basic model for processes that oscillate (springs, pendulums, vibrating machine parts, etc) is simple harmonic motion. 
+
+* The differential equation for a simple harmonic motion process $x(t)$ is
+<br>
+<br>
+[M10] $\eqspace \frac{d^2}{dt^2} x(t) = -\omega^2 x(t)$.
+
+* This is a [second order linear differential equation with constant coefficients](https://en.wikipedia.org/wiki/Linear_differential_equation#Homogeneous_equations_with_constant_coefficients), which is fairly routine to solve. 
+
+* The solution method is very similar to the method for solving difference equations coming up elsewhere in time series analysis, so let's see how it is done.
+
+1. Look for solutions of the form $x(t)=e^{\lambda t}$. Substituting this into the differential equation [M10] we get
+$$ \lambda^2 e^{\lambda t} = -\omega^2 e^{\lambda t}.$$
+Canceling the term $e^{\lambda t}$, we see that this has two solutions, with
+$$ \lambda^2 = \pm \omega i,$$
+where $i=\sqrt{-1}$.
+
+2. The linearity of the differential equation means that if $x_1(t)$ and $x_2(t)$ are two solutions, then $Ax_1(t)+Bx_2(t)$ is also a solution for any $A$ and $B$. So, we have a general solution to [M10] given by
+$$ x(t) = A e^{i\omega t} + B e^{-i\omega t}.$$
+
+3. Using the two identities,
+$$\sin(\omega t) = \frac{1}{2}\big(e^{i\omega t} - e^{-i\omega t}\big), 
+\quad\quad 
+\cos(\omega t) = \frac{1}{2}\big(e^{i\omega t} + e^{-i\omega t}\big), 
+$$
+we can rewrite the general solution as
+$$ x(t) = A \sin(\omega t) + B\cos(\omega t),$$
+which can also be written as 
+$$ x(t) = A\sin(\omega t + \beta).$$
+For the solution in this form, $\omega$ is called the **frequency**, $A$ is called the **amplitude** of the oscillation and $\beta$ is called the **phase**. The frequency of the oscillation is determined by [M10], but the amplitude and phase are unspecfied constants. Initial conditions can be used to specify $A$ and $\beta$.
+
+* A discrete time version of [M10] is a deterministic linear difference equation, replacing $\frac{d^2}{dt^2}$ by the second difference operator, $\Delta^2 = (1-B)^2$. This corresponds to a deterministic model equation,
+$$\eqspace \Delta^2 x_n = - \omega^2 x_n.$$
+
+* Adding white noise, and expanding out $\Delta^2 = (1-B)^2$, we get a stochastic model,
+<br>
+<br>
+[M11] $\eqspace X_n = \frac{2X_{n-1}}{1+\omega^2} - \frac{X_{n-2}}{1+\omega^2}  + \epsilon_n$.
+<br><br>
+
+* It seems reasonable to hope that model [M11] would be a good candidate to describe systems that have semi-regular but somewhat eratic fluctuations, called **quasi-periodic** behavior. Such behavior is evident in business cycles or wild animal populations.
+
+* Let's look at a simulation from [M11] with $\omega=0.1$ and $\epsilon_n\sim \mbox{IID } N[0,1]$. From our exact solution to the deterministic skeleton, we expect that the **period** of the oscillations (i.e., the time for each completed oscillation) should be approximately $2\pi/\omega$.
+
+```{r quasi_periodic}
+omega <- 0.1
+ar_coefs <- c(2/(1+omega^2), - 1/(1+omega^2))
+set.seed(8395200)
+X <- arima.sim(list(ar=ar_coefs),n=500,sd=1)
+par(mfrow=c(1,2))
+plot(X)
+plot(ARMAacf(ar=ar_coefs,lag.max=500),type="l",ylab="ACF of X")
+```
+
+* Quasi-periodic fluctuations are said to be "phase locked" as long as the random peturbations are not able to knock the oscillations away from being close to their initial phase.
+
+* Eventually, the randomness should mean that the process is equally likely to have any phase, regardless of the initial phase.
+
+--------
+
+--------
+
+### Question: What is the timescale on which the simulated model shows phase locked behavior? 
+
+* Equivalently, on what timescale does the phase of the fluctuations lose memory of its initial phase?
+
+<br>
+
+--------
+
+-------
+

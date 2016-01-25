@@ -19,60 +19,33 @@ Solutions for this homework can be hand-written or typed. Later in the course, w
 
 --------
 
-**<big>Question 1.1</big>**. 
+**<big>Question 2.1</big>**. We investigate two ways to calculate the autocovariance function for an ARMA model. The instructions below help you work through the case of a causal AR(1) model,
+$$X_n = \phi X_{n-1} + \epsilon_n.$$
+where $\{\epsilon_n\}$ is white noise with variance $\sigma^2$, and $-1<\phi<1$. Assume the process is stationary, i.e., it is initialized with a random draw from its stationary distribution.
+Show your working for both the approaches A and B explained below. If you want an additional challenge, you can work through the AR(2) or ARMA(1,1) case instead.
 
-**A**. Calculate the autocovariance function for the models M2 and M4 investigated in the notes. 
+**A**. Using the stochastic difference equation to obtain a difference equation for the autocovariance function (ACF). Start by writing the ACF as
+$$\gamma_h = \cov(X_n,X_{n+h})= \cov(X_n, \phi X_{n+h-1} + \epsilon_{n+h}), \mbox{ for $h>0$}.$$
+Writing the right hand side in terms of $\gamma_{h-1}$ leads to an equation which is formally a [first order linear homogeneous recurrence relation with constant coefficients](https://en.wikipedia.org/wiki/Recurrence_relation#Linear_homogeneous_recurrence_relations_with_constant_coefficients). To solve such an equation, we look for solutions of the form
+$$\gamma_h = A\lambda^h.$$
+Substituting this general solution into the recurrence relation, together with an initial condition derived from explicitly computing $\gamma_0$, provides an approach to finding two equations that can be solved for the two unknowns, $A$ and $\lambda$.
 
-**B**. Check your work by comparing with the result of the R function `ARMAacf`.
+**B**. Via the MA($\infty$) representation. Construct a Taylor series expansion of $g(x)=(1-\phi x)^{-1}$ of the form
+$$g(x) = g_0 + g_1 x + g_2 x^2 + g_3 x^3 + \dots$$
+Do this either by hand or using your favorite math software (if you use software, please say what software you used and what you entered to get the output). 
+Use this Taylor series to write down the MA($\infty$) representation of an AR(1) model. Then, apply the general formula for the autocovariance function of an MA($\infty$) process.
 
-Recall the basic properties of covariance, $\cov(X,Y) = E\big[(X-\E[X])(Y-\E[Y])\big]$, following the convention that upper case letters are random variables and lower case letters are constants:
-
-P1. $\quad \cov(X,X)= \var(X)$,
-
-P2. $\quad \cov(X,Y)=\cov(Y,X)$,
-
-P3. $\quad \cov(aX,bY)= ab\,\cov(X,Y)$,
-
-P4. $\quad \cov\left(\sum_{m=1}^M X_m,\sum_{n=1}^N X_n\right)= \sum_{m=1}^M \sum_{n=1}^N \cov(X_m,X_n)$.
-
-Let $X_{1:N}$ be a covariance stationary time series model with autocovariance function $\gamma_h$ and constant mean function, $\mu_n=\mu$. Consider the sample mean as an estimator of $\mu$,
-$$\hat\mu(x_{1:N}) = \frac{1}{N}\sum_{n=1}^N x_n.$$
-Show how the basic properties of covariance can be used to derive the expression,
-$$\var\big(\hat\mu(X_{1:N})\big) = \frac{1}{N}\gamma_0 + \frac{2}{N^2}\sum_{h=1}^{N-1}(N-h)\gamma_h.$$
-
-
--------------------
-
-**<big>Question 1.2</big>**.  We investigate how R represents chance variation in the plot of the sample autocorrelation function produced by the `acf` function.  We seek to check what R actually does when it constructs the dashed horizontal lines in this plot. What approximation is being made? How should the lines be interpreted statistically?
-
-If you type `acf` in R, you get the source code for the acf function. You'll see that the plotting is done by a service function `plot.acf`. This service function is part of the package, and is not immediately accessible to you. Nevertheless, you can check the source code as follows:
-
-1.  Notice, either from the help documentation `?acf` or the last line of the source code `acf` that this function resides in the package `stats`.
-
-2. Now, you can access this namespace directly, to list the source code, by
-```
-stats:::plot.acf
-```
-
-3. Now we can see how the horizontal dashed lines are constructed. The critical line of code seems to be
-```
-clim0 <- if (with.ci) qnorm((1 + ci)/2)/sqrt(x$n.used)
-```
-This appears to correspond to a normal distribution approximation for the sample autocorrelation estimator, with mean zero and standard deviation $1/\sqrt{N}$.
-
-<br>
-
-**A**. Write an argument to justify the use of $1/\sqrt{N}$ as an approximation to the standard deviation of the sample autocorrelation estimator under the null hypothesis that the time series is a sequence of independent, identically distributed (IID) mean zero random variables. 
-
-<br>
-
-**B**. It is often asserted that the horizontal dashed lines on the sample ACF plot represent a confidence interval. For example, in the documentation produced by `?plot.acf` we read
-
-```
-ci: coverage probability for confidence interval.  Plotting of the confidence interval is suppressed if ‘ci’ is zero or negative.
-```
-
-Use a definition of a confidence interval to explain how these lines do, or do not, construct a confidence interval. 
+**C**. Check your work for the specific case of an AR(1) model with $\phi_1=0.6$ by comparing your formula with the result of the R function `ARMAacf`.
 
 
 ----------------------
+
+**<big>Question 2.2</big>** Compute the autocovariance function (ACF) of the random walk model. Specifically, find the ACF, $\gamma_{mn}=\cov(X_m,X_n)$, for the random walk model specified by 
+$$ X_{n} = X_{n-1}+\epsilon_n,$$
+where $\{\epsilon_n\}$ is white noise with variance $\sigma^2$, and we use the initial value $X_0=0$.
+
+-----------------
+
+**<big>Reading</big>**. We have covered much of the material through to Section 3.4 of Shumway and Stoffer (Time Series Analysis and its Applications, 3rd edition). The course notes are intended to be self-contained, and additional reading is therefore optional. Reading this textbook will help to broaden your understanding of these topics. 
+
+------------
