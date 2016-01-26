@@ -27,6 +27,9 @@ csl: ecology.csl
 \newcommand\eqspace{\quad\quad\quad}
 \newcommand\lik{\mathscr{L}}
 \newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
 
 Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
 Please share and remix noncommercially, mentioning its origin.  
@@ -192,9 +195,9 @@ $$
 
 ### Standard errors via the observed Fisher information
 
-* We suppose that $\theta\in\R^P$ and so we can write $\theta=\theta_{1:P}$.
+* We suppose that $\theta\in\R^D$ and so we can write $\theta=\theta_{1:D}$.
 
-* The [Hessian matrix](https://en.wikipedia.org/wiki/Hessian_matrix) of a function is the matrix of its second partial derivatives. We write the Hessian matrix of the log likelihood function as $\nabla^2\loglik(\theta)$, a $P\times P$ matrix whose $(i,j)$ element is
+* The [Hessian matrix](https://en.wikipedia.org/wiki/Hessian_matrix) of a function is the matrix of its second partial derivatives. We write the Hessian matrix of the log likelihood function as $\nabla^2\loglik(\theta)$, a $D\times D$ matrix whose $(i,j)$ element is
 $$ \big[\nabla^2\loglik(\theta)\big]_{ij} =  \frac{\partial^2}{\partial\theta_i\partial\theta_j}\loglik(\theta).$$
 
 * The observed Fisher information is
@@ -205,8 +208,8 @@ $$ \hat\theta(X_{1:N}) \approx N[\theta, {\data{I}}^{-1}],$$
 where $\theta$ is the true parameter value.
 This asserts that the MLE is asymptotically unbiased, with variance asymptotically attaining the Cramer-Rao lower bound. Thus, we say the MLE is **asymptotically efficient**.
 
-* A corresponding approximate 95% confidence interval for $\theta_p$ is
-$$ \data{\theta_p} \pm 1.96 \big[{\data{I}}^{-1}\big]_{pp}^{1/2}.$$
+* A corresponding approximate 95% confidence interval for $\theta_d$ is
+$$ \data{\theta_d} \pm 1.96 \big[{\data{I}}^{-1}\big]_{dd}^{1/2}.$$
 
 * The R function `arima` computes standard errors for the MLE of an ARMA model in this way.
 
@@ -217,16 +220,16 @@ $$ \data{\theta_p} \pm 1.96 \big[{\data{I}}^{-1}\big]_{pp}^{1/2}.$$
 
 ### Confidence intervals via the profile likelihood
 
-* Let's consider the problem of obtaining a confidence interval for $\theta_1$, the first component of $\theta_{1:P}$. 
+* Let's consider the problem of obtaining a confidence interval for $\theta_d$, the $d$th component of $\theta_{1:D}$. 
 
-* The **profile log likelihood function** of $\theta_1$ is defined to be 
-$$ \loglik_{\mathrm{profile}}(\theta_1) = \max_{\theta_{2:P}}\loglik(\theta_{1:P}).$$
+* The **profile log likelihood function** of $\theta_d$ is defined to be 
+$$ \profileloglik{d}(\theta_d) = \max_{\phi\in\R^D: \phi_d=\theta_d}\loglik(\phi).$$
 In general, the profile likelihood of one parameter is constructed by maximizing the likelihood function over all other parameters.
 
-* Check that $\max_{\theta_1}\loglik_{\mathrm{profile}}(\theta_1) = \max_{\theta_{1:P}}\loglik(\theta_{1:P})$. Maximizing the profile likelihood $\loglik_{\mathrm{profile}}(\theta_1)$ gives the MLE, $\data{\theta_1}$.
+* Check that $\max_{\theta_d}\profileloglik{d}(\theta_d) = \max_{\theta_{1:D}}\loglik(\theta_{1:D})$. Maximizing the profile likelihood $\profileloglik{d}(\theta_d)$ gives the MLE, $\data{\theta_d}$.
 
-* An approximate 95% confidence interval for $\theta_1$ is given by
-$$ \{\theta_1 : \loglik(\data{\theta}) - \loglik_{\mathrm{profile}}(\theta_1) < 1.92.$$
+* An approximate 95% confidence interval for $\theta_d$ is given by
+$$ \{\theta_d : \loglik(\data{\theta}) - \profileloglik{d}(\theta_d)\} < 1.92.$$
 
 * This is known as a profile likelihood confidence interval. The cutoff $1.92$ is derived using [Wilks's theorem](https://en.wikipedia.org/wiki/Likelihood-ratio_test#Distribution:_Wilks.27s_theorem), which we will discuss in more detail when we develop likelihood ratio tests.
 
@@ -300,7 +303,7 @@ Typically, we compute local coverage at $\theta=\data{\theta}$.
 
 ### Likelihood ratio tests for nested hypotheses
 
-* The whole parameter space on which the model is defined is $\Theta\subset\R^P$. 
+* The whole parameter space on which the model is defined is $\Theta\subset\R^D$. 
 
 * Suppose we have two **nested** hypotheses
 $$\begin{eqnarray}
@@ -308,7 +311,7 @@ H^{\langle 0\rangle} &:& \theta\in \Theta^{\langle 0\rangle},
 \\
 H^{\langle 1\rangle} &=& \theta\in \Theta^{\langle 1\rangle},
 \end{eqnarray}$$
-defined via two nested parameter subspaces, $\Theta^{\langle 0\rangle}\subset \Theta^{\langle 1\rangle}$, with respective dimensions $P^{\langle 0\rangle}< P^{\langle 1\rangle}\le P$.
+defined via two nested parameter subspaces, $\Theta^{\langle 0\rangle}\subset \Theta^{\langle 1\rangle}$, with respective dimensions $D^{\langle 0\rangle}< D^{\langle 1\rangle}\le D$.
 
 * We consider the log likelihood maximized over each of the hypotheses,
 $$\begin{eqnarray}
@@ -320,9 +323,9 @@ $$\begin{eqnarray}
 
 * A useful approximation asserts that, under the hypothesis $H^{\langle 0\rangle}$,
 $$ 
-\ell^{\langle 1\rangle} - \ell^{\langle 0\rangle} \approx (1/2) \chi^2_{P^{\langle 0\rangle}- P^{\langle 1\rangle},
+\ell^{\langle 1\rangle} - \ell^{\langle 0\rangle} \approx (1/2) \chi^2_{D^{\langle 1\rangle}- D^{\langle 0\rangle}},
 $$
-where $\chi^2_p$ is a chi-squared random variable on $p$ degrees of freedom and $\approx$ means "is approximately distributed as."
+where $\chi^2_d$ is a chi-squared random variable on $d$ degrees of freedom and $\approx$ means "is approximately distributed as."
 
 * We will call this the **Wilks approximation**.
 
@@ -342,10 +345,11 @@ where $\chi^2_p$ is a chi-squared random variable on $p$ degrees of freedom and 
 
 ### Exercise: Using a likelihood ratio test to construct profile likelihood confidence intervals
 
-* Recall the duality between hypothesis tests and confidence intervals,
-$$ \mbox{the estimated parameter $\data{\theta}$ does not lead us to reject a null hypothesis of $\theta=\theta^{\langle 0\rangle}$ at the 5\% level}$$
+* Recall the duality between hypothesis tests and confidence intervals:
+<br><br>
+The estimated parameter $\data{\theta}$ does not lead us to reject a null hypothesis of $\theta=\theta^{\langle 0\rangle}$ at the 5% level
 $$\Updownarrow$$
-$$\mbox{$\theta^{\langle 0\rangle}$ is in a 95\% confidence interval for $\theta$}$$
+$\theta^{\langle 0\rangle}$ is in a 95% confidence interval for $\theta$.
 
 * We can check what the 95\% cutoff is for a chi-squared distribution with one degree of freedom,
 ```{r chi_squared}
@@ -369,8 +373,8 @@ qchisq(0.95,df=1)
 * A more general approach is to compare likelihoods of different models by penalizing the likelihood of each model by a measure of its complexity. 
 
 * Akaike's information criterion **AIC** is given by
-$$ AIC = -2 \times \loglik(\data{\theta}) + 2P$$
-"Minus twise the maximized log likelihood plus twice the number of parameters."
+$$ AIC = -2 \times \loglik(\data{\theta}) + 2D$$
+"Minus twice the maximized log likelihood plus twice the number of parameters."
 
 * We are invited to select the model with the lowest AIC score.
 
@@ -386,7 +390,7 @@ $$ AIC = -2 \times \loglik(\data{\theta}) + 2P$$
 
 ### Exercise: Comparing AIC with likelihood ratio tests
 
-* Suppose we are in a situation in which we wish to choose between two nested hypotheses, with dimensions $P^{\langle 0\rangle}< P^{\langle 1\rangle}$. Suppose the Wilks approximation is valid.
+* Suppose we are in a situation in which we wish to choose between two nested hypotheses, with dimensions $D^{\langle 0\rangle}< D^{\langle 1\rangle}$. Suppose the Wilks approximation is valid.
 
 * Consider the strategy of selecting the model with the lowest AIC value. 
 
@@ -394,7 +398,7 @@ $$ AIC = -2 \times \loglik(\data{\theta}) + 2P$$
 
 * Find an expression for the size of this AIC test (i.e, the probability of rejecting the null hypothesis,  $H^{\langle 0\rangle}$, when this null hypothesis is true).
 
-* Evaluate this expression for $P^{\langle 1\rangle} - P^{\langle 0\rangle}=1$.
+* Evaluate this expression for $D^{\langle 1\rangle} - D^{\langle 0\rangle}=1$.
 
 <br>
 
@@ -462,6 +466,19 @@ plot(huron_depth~year,type="l")
 
 * Later, we will consider hypotheses of trend. For now, let's start by fitting a stationary ARMA$(p,q)$ model under the null hypothesis that there is no trend. This hypothesis, which asserts that nothing has substantially changed in this system over the last 150 years, is not entirely unreasonable from looking at the data.
 
+* We seek to fit a stationary Gaussian ARMA(p,q) model with parameter vector $\theta=(\ar_{1:p},\ma_{1:q},\mu,\sigma^2)$ given by
+$$ \ar(B)(X_n-\mu) = \ma(B) \epsilon_n,$$
+where 
+$$\begin{eqnarray}
+\mu &=& \E[X_n]
+\\
+\ar(x)&=&1-\ar_1 x-\dots -\ar_px^p,
+\\ 
+\ma(x)&=&1+\ma_1 x+\dots +\ma_qx^q, 
+\\
+\epsilon_n&\sim&\mathrm{ iid }\, N[0,\sigma^2].
+\end{eqnarray}$$
+
 * We need to decide where to start in terms of values of $p$ and $q$. Let's tabulate some AIC values for a range of different choices of $p$ and $q$.
 
 * In the code below, note the use of `kable` for formatting HTML tables when using Rmarkdown. The `"<b>"` and `""</b>"` tags in `dimnames` make the rownames boldface in HTML. By default, only column names are boldface in standard HTML.
@@ -517,20 +534,24 @@ AR_roots
 
 * However, the MA root is `r round(-1/coef(huron_arma21)["ma1"],2)`, showing that the fitted model is at the threshold of non-invertibility.
 
-* Is this non-invertibility a problem? Let's investigate a little, using profile and bootstrap methods. The claimed standard error on the MA1 coefficient, from the Fisher information approach used by `arima` is small. First, we can see if the profile likelihood of this parameter is in agreement.
+* Is this non-invertibility a problem? Let's investigate a little, using profile and bootstrap methods. The claimed standard error on the MA1 coefficient, from the Fisher information approach used by `arima` is small. 
+
+* First, we can see if the approximate confidence interval constructed using profile likelihood is in agreement with the approximate confidence interval constructed using the observed Fisher information. 
+
+* To do this, we need to maximize the ARMA likelihood while fixing the MA1 coefficient at a range of values. This can be done using `arima` as follows. Note that the `fixed` argument expects a vector of length $p+q+1$ corresponding to a concatenated vector $(\ar_{1:p},\ma_{1:q}, \mu)$. Somehow, the Gaussian white noise variance, $\sigma^2$, is not included in this representation. Parameters with `NA` entries in `fixed` are estimated.
 
 ```{r huron_profile}
 K <- 500
-theta1 <- seq(from=0.2,to=1.1,length=K)
+ma1 <- seq(from=0.2,to=1.1,length=K)
 profile_loglik <- rep(NA,K)
 for(k in 1:K){
    profile_loglik[k] <- logLik(arima(huron_depth,order=c(2,0,1),
-      fixed=c(NA,NA,theta1[k],NA)))
+      fixed=c(NA,NA,ma1[k],NA)))
 }
-plot(profile_loglik~theta1,ty="l")
+plot(profile_loglik~ma1,ty="l")
 ```
 
-### Question: Interpret the profile likelihood plot for $\theta_1$. 
+### Question: Interpret the profile likelihood plot for $\ma_1$. 
 
 * What do you conclude about the Fisher information confidence interval proposed by `arima`?
 

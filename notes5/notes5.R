@@ -48,13 +48,13 @@ AR_roots
 
 ## ----huron_profile-------------------------------------------------------
 K <- 500
-theta1 <- seq(from=0.2,to=1.1,length=K)
+ma1 <- seq(from=0.2,to=1.1,length=K)
 profile_loglik <- rep(NA,K)
 for(k in 1:K){
    profile_loglik[k] <- logLik(arima(huron_depth,order=c(2,0,1),
-      fixed=c(NA,NA,theta1[k],NA)))
+      fixed=c(NA,NA,ma1[k],NA)))
 }
-plot(profile_loglik~theta1,ty="l")
+plot(profile_loglik~ma1,ty="l")
 
 ## ----simA----------------------------------------------------------------
 set.seed(57892330)
@@ -76,5 +76,37 @@ for(j in 1:J){
 hist(theta[,"ma1"],freq=FALSE) 
 
 ## ----density-------------------------------------------------------------
-plot(density(theta[,"ma1"]),bw=0.1)
+plot(density(theta[,"ma1"],bw=0.05))
+
+## ----range---------------------------------------------------------------
+range(theta[,"ma1"])
+
+## ----parallel-setup,cache=FALSE------------------------------------------
+require(doParallel)
+registerDoParallel()
+
+## ----simB----------------------------------------------------------------
+J <- 1000
+huron_ar1 <- arima(huron_depth,order=c(1,0,0))
+params <- coef(huron_ar1)
+ar <- params[grep("^ar",names(params))]
+intercept <- params["intercept"]
+sigma <- sqrt(huron_ar1$sigma2)
+t1 <- system.time(
+  huron_sim <- foreach(j=1:J) %dopar% {
+     X_j <- arima.sim(list(ar=ar),n=length(huron_depth),sd=sigma)+intercept
+     try(coef(arima(X_j,order=c(2,0,1))))
+  }
+) 
+
+## ----out, cache=FALSE----------------------------------------------------
+sum(sapply(huron_sim, function(x) inherits(x,"try-error"))) 
+
+## ----histB, cache=FALSE--------------------------------------------------
+ma1 <- unlist(lapply(huron_sim,function(x) if(!inherits(x,"try-error"))x["ma1"] else NULL ))
+hist(ma1,breaks=50)  
+
+## ----repeated_aic,echo=FALSE---------------------------------------------
+require(knitr)
+kable(huron_aic_table,digits=2)
 

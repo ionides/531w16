@@ -25,6 +25,9 @@ csl: ecology.csl
 \newcommand\given{\, ; \,}
 \newcommand\transpose{\scriptsize{T}}
 \newcommand\eqspace{\quad\quad\quad}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+
 Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
 Please share and remix noncommercially, mentioning its origin.  
 ![CC-BY_NC](cc-by-nc.png)
@@ -87,7 +90,7 @@ options(
 
 * A **stationary causal linear process** is a time series models that can be written as
 <br><br>
-[M7] $\eqspace X_n = \mu + \psi_0\epsilon_n + \psi_1\epsilon_{n-1}+\psi_2\epsilon_{n-2}+\psi_3\epsilon_{n-3} + \psi_4\epsilon_{n-4}+\dots$
+[M7] $\eqspace X_n = \mu + g_0\epsilon_n + g_1\epsilon_{n-1}+g_2\epsilon_{n-2}+g_3\epsilon_{n-3} + g_4\epsilon_{n-4}+\dots$
 <br><br>
 where $\{\epsilon_n, n=\dots,-2,-1,0,1,2,\dots\}$ is a white noise process, defined for all integer timepoints, with variance $\var(\epsilon_n)=\sigma^2$.
 
@@ -116,15 +119,15 @@ where $\{\epsilon_n, n=\dots,-2,-1,0,1,2,\dots\}$ is a white noise process, defi
 * The autocovariance function is,
 $$\begin{eqnarray}
 \gamma_h &=& \cov\big(X_n,X_{n+h}\big)\\
-&=& \cov\left(\sum_{j=0}^\infty \psi_j\epsilon_{n-j},\sum_{k=0}^\infty \psi_k\epsilon_{n+h-k}\right)\\
-&=& \sum_{j=0}^\infty \sum_{k=0}^\infty  \psi_j \psi_k\cov\big(\epsilon_{n-j},\epsilon_{n+h-k}\big)\\
-&=& \sum_{j=0}^\infty \psi_j\psi_{j+h} \sigma^2, \mbox{for $h\ge 0$}.
+&=& \cov\left(\sum_{j=0}^\infty g_j\epsilon_{n-j},\sum_{k=0}^\infty g_k\epsilon_{n+h-k}\right)\\
+&=& \sum_{j=0}^\infty \sum_{k=0}^\infty  g_j g_k\cov\big(\epsilon_{n-j},\epsilon_{n+h-k}\big)\\
+&=& \sum_{j=0}^\infty g_jg_{j+h} \sigma^2, \mbox{for $h\ge 0$}.
 \end{eqnarray}$$
 
 * In order for this autocovariance function to exist, we need
-$$\sum_{j=0}^\infty \psi_j^2 < \infty.$$
+$$\sum_{j=0}^\infty g_j^2 < \infty.$$
 We may also require a stronger condition,
-$$\sum_{j=0}^\infty |\psi_j| < \infty.$$
+$$\sum_{j=0}^\infty |g_j| < \infty.$$
 
 * The MA(q) model that we defined in equation [M3] is an example of a stationary, causal linear process.
 
@@ -140,17 +143,17 @@ $$\sum_{j=0}^\infty |\psi_j| < \infty.$$
 
 * Recall the stochastic difference equation defining the AR(1) model,
 <br><br>
-[M8] $\eqspace X_n = \phi X_{n-1}+\epsilon_n$.
+[M8] $\eqspace X_n = \ar X_{n-1}+\epsilon_n$.
 <br><br>
 
 * This has a causal solution,
 <br><br>
-[M8.1] $\eqspace X_n = \sum_{j=0}^\infty \phi^j\epsilon_{n-j}$.
+[M8.1] $\eqspace X_n = \sum_{j=0}^\infty \ar^j\epsilon_{n-j}$.
 <br><br>
 
 * It also has a non-causal solution,
 <br><br>
-[M8.1] $\eqspace X_n = \sum_{j=0}^\infty \phi^{-j}\epsilon_{n+j}$.
+[M8.1] $\eqspace X_n = \sum_{j=0}^\infty \ar^{-j}\epsilon_{n+j}$.
 <br><br>
 
 <br>
@@ -169,7 +172,7 @@ $$\sum_{j=0}^\infty |\psi_j| < \infty.$$
 
 ### Question: Assess the convergence of the infinite sums in [M8.1] and [M8.2].
 
-* For what values of $\phi$ is the causal solution [M8.1] a convergent infinite sum, meaning that it converges to a random variable with finite variance? For what values is the non-causal solution [M8.2] a convergent infinite sum? 
+* For what values of $\ar$ is the causal solution [M8.1] a convergent infinite sum, meaning that it converges to a random variable with finite variance? For what values is the non-causal solution [M8.2] a convergent infinite sum? 
 
 <br>
 
@@ -209,29 +212,29 @@ $$(\alpha +\beta B)X_n = \alpha X_n + \beta BX_n = \alpha X_n + \beta X_{n-1}.$$
 
 * The AR, MA and linear process model equations can all be written in terms of polynomials in the backshift operator.
 
-* Write $\phi(x)$ for a polynomial of order $p$,
-$$\phi(x) = 1-\phi_1 x -\phi_2 x^2 -\dots -\phi_p x^p.$$
+* Write $\ar(x)$ for a polynomial of order $p$,
+$$\ar(x) = 1-\ar_1 x -\ar_2 x^2 -\dots -\ar_p x^p.$$
 The equation M1 for the AR(p) model can be rearranged to give
 $$
- X_n - \phi_1 X_{n-1}- \phi_2X_{n-2}-\dots-\phi_pX_{n-p} = \epsilon_n,
+ X_n - \ar_1 X_{n-1}- \ar_2X_{n-2}-\dots-\ar_pX_{n-p} = \epsilon_n,
 $$
 which is equivalent to
 <br><br>
-[M1$^\prime$] $\eqspace \phi(B) X_n = \epsilon_n$.
+[M1$^\prime$] $\eqspace \ar(B) X_n = \epsilon_n$.
 <br><br>
 
-* Similarly, writing $\theta(x)$ for a polynomial of order $q$,
-$$\theta(x) = 1+\theta_1 x +\theta_2 x^2 + \dots +\theta_q x^q,$$
+* Similarly, writing $\ma(x)$ for a polynomial of order $q$,
+$$\ma(x) = 1+\ma_1 x +\ma_2 x^2 + \dots +\ma_q x^q,$$
 the MA(q) equation M3 is equivalent to 
 <br><br>
-[M3$^\prime$] $\eqspace X_n = \theta(B) \epsilon_n$.
+[M3$^\prime$] $\eqspace X_n = \ma(B) \epsilon_n$.
 <br><br>
 
-* Additionally, if $\psi(x)$ is a function defined by the [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansion
-$$\psi(x)= \psi_0 + \psi_1 x + \psi_2 x^2 + \psi_3 x^3 + \psi_4 x^4 + \dots,$$
+* Additionally, if $g(x)$ is a function defined by the [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansion
+$$g(x)= g_0 + g_1 x + g_2 x^2 + g_3 x^3 + g_4 x^4 + \dots,$$
 we can write the stationary causal linear process equation [M7] as
 <br><br>
-[M7$^\prime$] $\eqspace X_n = \mu + \psi(B)\epsilon_n$.
+[M7$^\prime$] $\eqspace X_n = \mu + g(B)\epsilon_n$.
 <br><br>
 
 * Whatever skills you have acquired, or acquire during this course, about working with [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansions will help you understand AR and MA models, and ARMA models that combine both autoregressive and moving average features.
@@ -246,11 +249,11 @@ we can write the stationary causal linear process equation [M7] as
 
 * Putting together M1 and M3 suggests an **autoregressive moving average** ARMA(p,q) model given by
 <br><br>
-[M9] $\eqspace X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}$,
+[M9] $\eqspace X_n = \ar_1 X_{n-1}+\ar_2X_{n-2}+\dots+\ar_pX_{n-p} + \epsilon_n +\ma_1 \epsilon_{n-1} +\dots+\ma_q\epsilon_{n-q}$,
 <br><br>
 where $\{\epsilon_n\}$ is a white noise process. Using the backshift operator, we can write this more succinctly as
 <br><br>
-[M9$^\prime$] $\eqspace \phi(B) X_n = \theta(B) \epsilon_n$.
+[M9$^\prime$] $\eqspace \ar(B) X_n = \ma(B) \epsilon_n$.
 <br><br>
 
 * Experience with data analysis suggests that models with both AR and MA components often fit data better than a pure AR or MA process.
@@ -262,16 +265,16 @@ where $\{\epsilon_n\}$ is a white noise process. Using the backshift operator, w
 ------
 
 ### Exercise: Carry out the following steps to obtain the MA($\infty$) representation and the autocovariance function of the ARMA(1,1) model,
-$$ X_n = \phi X_{n-1} + \epsilon_n + \theta \epsilon_{n-1}.$$
+$$ X_n = \ar X_{n-1} + \epsilon_n + \ma \epsilon_{n-1}.$$
 
 1. Formally, we can write 
-$$   (1-\phi B)X_n = (1+\theta B)\epsilon_n,$$
+$$   (1-\ar B)X_n = (1+\ma B)\epsilon_n,$$
 which algebraically is equivalent to 
-$$X_n = \left(\frac{1+\theta B}{1-\phi B}\right)\epsilon_n.$$
+$$X_n = \left(\frac{1+\ma B}{1-\ar B}\right)\epsilon_n.$$
 We write this as
 $$X_n = g(B) \epsilon_n,$$
 where
-$$ g(x) = \left(\frac{1+\theta x}{1-\phi x}\right).$$
+$$ g(x) = \left(\frac{1+\ma x}{1-\ar x}\right).$$
 To make sense of $g(B)$ we need to work out the [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansion,
 $$g(x) = g_0 + g_1 x + g_2 x^2 + g_3 x^3 + \dots$$
 Do this either by hand or using your favorite math software. 
@@ -292,25 +295,25 @@ Do this either by hand or using your favorite math software.
 
 * **Invertibility** is about writing $\epsilon_n$ in terms of $\{X_n, X_{n-1}, X_{n-2},\dots\}$. 
 
-* To assess causality, we consider the convergence of the Taylor series expansion of $\theta(x)/\phi(x)$ in the ARMA representation
-$$ X_n = \frac{\theta(B)}{\phi(B)} \epsilon_n.$$
+* To assess causality, we consider the convergence of the Taylor series expansion of $\ma(x)/\ar(x)$ in the ARMA representation
+$$ X_n = \frac{\ma(B)}{\ar(B)} \epsilon_n.$$
 
-* To assess invertibility, we consider the convergence of the Taylor series expansion of $\phi(x)/\theta(x)$ in the inversion of the ARMA model given by
-$$ \epsilon_n = \frac{\phi(B)}{\theta(B)} X_n.$$
+* To assess invertibility, we consider the convergence of the Taylor series expansion of $\ar(x)/\ma(x)$ in the inversion of the ARMA model given by
+$$ \epsilon_n = \frac{\ar(B)}{\ma(B)} X_n.$$
 
 * Fortunately, there is a simple way to check causality and invertibility. We will state the result without proof.
 
     + The ARMA model is causal if the AR polynomial,
-$$ \phi(x) = 1-\phi_1 x - \phi_2 x^2 - \dots - \phi_p x^p$$
-has all its roots (i.e., solutions to $\phi(x)=0$) outside the unit circle in the complex plane. 
+$$ \ar(x) = 1-\ar_1 x - \ar_2 x^2 - \dots - \ar_p x^p$$
+has all its roots (i.e., solutions to $\ar(x)=0$) outside the unit circle in the complex plane. 
 
     + The ARMA model is invertible if the MA polynomial,
-$$ \theta(x) = 1+\theta_1 x + \theta_2 x^2 + \dots + \theta_q x^q$$
-has all its roots (i.e., solutions to $\theta(x)=0$) outside the unit circle in the complex plane. 
+$$ \ma(x) = 1+\ma_1 x + \ma_2 x^2 + \dots + \ma_q x^q$$
+has all its roots (i.e., solutions to $\ma(x)=0$) outside the unit circle in the complex plane. 
 
 * We can check the roots using the `polyroot` function in R. For example, consider the MA(2) model,
 $$ X_n = \epsilon_n + 2\epsilon_{n-1} + 2\epsilon_{n-2}.$$
-The roots to $\theta(x)= 1+2x+2x^2$ are
+The roots to $\ma(x)= 1+2x+2x^2$ are
 ```{r root}
 roots <- polyroot(c(1,2,2))
 roots
@@ -341,17 +344,17 @@ One answer to this question involves diagnosing model misspecification.
 ## Reducible and irreducible ARMA models
 
 * The ARMA model can be viewed as a ratio of two polynomials,
-$$ X_n = \frac{\phi(B)}{\theta(B)} \epsilon_n.$$
+$$ X_n = \frac{\ar(B)}{\ma(B)} \epsilon_n.$$
 
-* If the two polynomials $\phi(x)$ and $\theta(x)$ share a common factor, it can be canceled out without changing the model. 
+* If the two polynomials $\ar(x)$ and $\ma(x)$ share a common factor, it can be canceled out without changing the model. 
 
-* The [Fundamental theorem of algebra](https://en.wikipedia.org/wiki/Fundamental_theorem_of_algebra) tells us that every polynomial $\phi(x) = 1-\phi_1 x - \dots - \phi_p x^p$ of degree $p$ can be written in the form
+* The [Fundamental theorem of algebra](https://en.wikipedia.org/wiki/Fundamental_theorem_of_algebra) tells us that every polynomial $\ar(x) = 1-\ar_1 x - \dots - \ar_p x^p$ of degree $p$ can be written in the form
 $$(1-x/\lambda_1) \times (1-x/\lambda_2) \times \dots \times (1-x/\lambda_p),$$
 where $\lambda_{1:p}$ are the $p$ roots of the polynomial, which may be real or complex valued.
 
-    + Note: The Taylor series expansion of $\phi(B)^{-1}$ is convergent if and only if $(1-B/\lambda_i)^{-1}$ has a convergent expansion for each $i\in 1:p$. This happens if $|\lambda_i|>1$ for each $i$, explaining where we get the requirement that roots of the AR polynomial all fall outside the unit circle for causality of an ARMA model.
+    + Note: The Taylor series expansion of $\ar(B)^{-1}$ is convergent if and only if $(1-B/\lambda_i)^{-1}$ has a convergent expansion for each $i\in 1:p$. This happens if $|\lambda_i|>1$ for each $i$, explaining where we get the requirement that roots of the AR polynomial all fall outside the unit circle for causality of an ARMA model.
 
-* The polynomials $\phi(x)$ and $\theta(x)$ share a common factor if, and only if, they share a common root. 
+* The polynomials $\ar(x)$ and $\ma(x)$ share a common factor if, and only if, they share a common root. 
 
 * It is not clear, just from looking at the model equations, that
 $$ X_n = \frac{5}{6} X_{n-1} -  \frac{1}{6} X_{n-2} + \epsilon_n- \epsilon_{n-1}+\frac{1}{4} \epsilon_{n-2}$$
