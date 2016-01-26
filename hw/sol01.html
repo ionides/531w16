@@ -84,15 +84,13 @@ img {
 \hat{\gamma}_{h}\left(x_{1:N}\right)=\frac{1}{N}\sum_{n=1}^{N-h}\left(x_{n}-\hat{\mu}_{n}\right)\left(x_{n+h}-\hat{\mu}_{n+h}\right).
 \]</span> Here, we consider the null hypothesis where <span class="math">\(X_{1:N}\)</span> is IID with mean <span class="math">\(0\)</span> and standard deviation <span class="math">\(\sigma\)</span>. We therefore use the estimator <span class="math">\(\hat\mu_n=0\)</span> and the autocovariance function estimator becomes <span class="math">\[\begin{eqnarray}
 \hat{\gamma}_{h}\left(x_{1:N}\right)&amp;=&amp;\frac{1}{N}\sum_{n=1}^{N-h}x_{n}x_{n+h},
-\\
-\hat{\gamma}_{0}\left(x_{1:N}\right)&amp;=&amp;\frac{1}{N}\sum_{n=1}^{N-h}x_{n}^{2}.
-\end{eqnarray}\]</span> We let <span class="math">\(\sum_{n=1}^{N-h}X_{n}X_{n+h}=U\)</span> and <span class="math">\(\sum_{n=1}^{N-h}X_{n}^{2}=V\)</span>, and carry out a Taylor first order expansion of <span class="math">\[\hat\rho_h(X_{1:N}) = \frac{U}{V}\]</span> about <span class="math">\(({\mathbb{E}}[U],{\mathbb{E}}[V])\)</span>. This gives <span class="math">\[
+\end{eqnarray}\]</span> We let <span class="math">\(\sum_{n=1}^{N-h}X_{n}X_{n+h}=U\)</span> and <span class="math">\(\sum_{n=1}^{N}X_{n}^{2}=V\)</span>, and carry out a Taylor first order expansion of <span class="math">\[\hat\rho_h(X_{1:N}) = \frac{U}{V}\]</span> about <span class="math">\(({\mathbb{E}}[U],{\mathbb{E}}[V])\)</span>. This gives <span class="math">\[
 \hat{\rho}_{h}(X_{1:N})
 \approx\frac{{\mathbb{E}}\left(U\right)}{{\mathbb{E}}\left(V\right)}+\left(U-{\mathbb{E}}\left(U\right)\right)\left.\frac{\partial}{\partial U}\left(\frac{U}{V}\right)\right|_{\left({\mathbb{E}}\left(U\right),{\mathbb{E}}\left(V\right)\right)}+\left(V-{\mathbb{E}}\left(V\right)\right)\left.\frac{\partial}{\partial V}\left(\frac{U}{V}\right)\right|_{\left({\mathbb{E}}\left(U\right),{\mathbb{E}}\left(V\right)\right)}.
 \]</span> We have <span class="math">\[
 {\mathbb{E}}\left(U\right)=\sum_{n=1}^{N-h}{\mathbb{E}}\left(X_{n}\, X_{n+h}\right)=0,
-\]</span> and <span class="math">\[
-E\left(V\right)=\sum_{n=1}^{N}E\left(X_{n}^{2}\right)=N\sigma^{2},
+\]</span> <span class="math">\[
+{\mathbb{E}}\left(V\right)=\sum_{n=1}^{N}{\mathbb{E}}\left(X_{n}^{2}\right)=N\sigma^{2},
 \]</span> <span class="math">\[
 \frac{\partial}{\partial U}\left(\frac{U}{V}\right)=\frac{1}{V},
 \]</span> <span class="math">\[
@@ -104,13 +102,13 @@ E\left(V\right)=\sum_{n=1}^{N}E\left(X_{n}^{2}\right)=N\sigma^{2},
 \end{eqnarray}\]</span> This gives us an approximation, <span class="math">\[
 {\mathrm{Var}}\left(\hat{\rho}_{h}(X_{1:N})\right)\approx\frac{{\mathrm{Var}}\left(U\right)}{N^{2}\sigma^{4}}.
 \]</span> We can now compute <span class="math">\[\begin{eqnarray}
-{\mathrm{Var}}\left(U\right)&amp;=&amp;E\left[\left(\sum_{n=1}^{N-h}X_{n}X_{n+h}\right)^{2}\right]
+{\mathrm{Var}}\left(U\right)&amp;=&amp;{\mathbb{E}}\left[\left(\sum_{n=1}^{N-h}X_{n}X_{n+h}\right)^{2}\right]
 \\
 &amp;=&amp;{\mathbb{E}}\left[\sum_{n=1}^{N-h}X_{n}^{2}X_{n+h}^{2}\right]+2{\mathbb{E}}\left[\sum_{i=1}^{N-h-1}\sum_{j=i+1}^{N-h}X_{i}X_{i+h}X_{j}X_{j+h}\right]
 \end{eqnarray}\]</span> Since <span class="math">\(X_{1:N}\)</span> are i.i.d. and mean zero, the second sum has zero expectation and <span class="math">\[\begin{eqnarray}
 {\mathrm{Var}}\left(U\right)&amp;=&amp;{\mathbb{E}}\left[\sum_{n=1}^{N-h}X_{n}^{2}X_{n+h}^{2}\right]
 \\
-&amp;=&amp;\sum_{n=1}^{N-h}E\left(X_{n}^{2}\right)E\left(X_{n+h}^{2}\right)
+&amp;=&amp;\sum_{n=1}^{N-h}{\mathbb{E}}\left(X_{n}^{2}\right){\mathbb{E}}\left(X_{n+h}^{2}\right)
 \\
 &amp;=&amp;\left(N-h\right)\sigma^{4}
 \end{eqnarray}\]</span> Therefore, <span class="math">\[

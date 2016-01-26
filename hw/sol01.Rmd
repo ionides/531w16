@@ -40,10 +40,8 @@ $$
 Here, we consider the null hypothesis where $X_{1:N}$ is IID with mean $0$ and standard deviation $\sigma$. We therefore use the estimator $\hat\mu_n=0$ and the autocovariance function estimator becomes
 $$\begin{eqnarray}
 \hat{\gamma}_{h}\left(x_{1:N}\right)&=&\frac{1}{N}\sum_{n=1}^{N-h}x_{n}x_{n+h},
-\\
-\hat{\gamma}_{0}\left(x_{1:N}\right)&=&\frac{1}{N}\sum_{n=1}^{N-h}x_{n}^{2}.
 \end{eqnarray}$$
-We let $\sum_{n=1}^{N-h}X_{n}X_{n+h}=U$ and $\sum_{n=1}^{N-h}X_{n}^{2}=V$, and carry out a Taylor first order expansion of 
+We let $\sum_{n=1}^{N-h}X_{n}X_{n+h}=U$ and $\sum_{n=1}^{N}X_{n}^{2}=V$, and carry out a Taylor first order expansion of 
 $$\hat\rho_h(X_{1:N}) = \frac{U}{V}$$
 about $(\E[U],\E[V])$. This gives
 $$
@@ -54,9 +52,8 @@ We have
 $$
 \E\left(U\right)=\sum_{n=1}^{N-h}\E\left(X_{n}\, X_{n+h}\right)=0,
 $$
-and
 $$
-E\left(V\right)=\sum_{n=1}^{N}E\left(X_{n}^{2}\right)=N\sigma^{2},
+\E\left(V\right)=\sum_{n=1}^{N}\E\left(X_{n}^{2}\right)=N\sigma^{2},
 $$
 $$
 \frac{\partial}{\partial U}\left(\frac{U}{V}\right)=\frac{1}{V},
@@ -76,7 +73,7 @@ $$
 $$
 We can now compute
 $$\begin{eqnarray}
-\var\left(U\right)&=&E\left[\left(\sum_{n=1}^{N-h}X_{n}X_{n+h}\right)^{2}\right]
+\var\left(U\right)&=&\E\left[\left(\sum_{n=1}^{N-h}X_{n}X_{n+h}\right)^{2}\right]
 \\
 &=&\E\left[\sum_{n=1}^{N-h}X_{n}^{2}X_{n+h}^{2}\right]+2\E\left[\sum_{i=1}^{N-h-1}\sum_{j=i+1}^{N-h}X_{i}X_{i+h}X_{j}X_{j+h}\right]
 \end{eqnarray}$$
@@ -84,7 +81,7 @@ Since $X_{1:N}$ are i.i.d. and mean zero, the second sum has zero expectation an
 $$\begin{eqnarray}
 \var\left(U\right)&=&\E\left[\sum_{n=1}^{N-h}X_{n}^{2}X_{n+h}^{2}\right]
 \\
-&=&\sum_{n=1}^{N-h}E\left(X_{n}^{2}\right)E\left(X_{n+h}^{2}\right)
+&=&\sum_{n=1}^{N-h}\E\left(X_{n}^{2}\right)\E\left(X_{n+h}^{2}\right)
 \\
 &=&\left(N-h\right)\sigma^{4}
 \end{eqnarray}$$
