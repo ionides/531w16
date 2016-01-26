@@ -1,0 +1,48 @@
+---
+title: "Homework 3, due by midnight on Tues 2/2"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+-----------
+
+This is the first homework which we require to be submitted as an Rmarkdown (.Rmd) file which the GSI will compile into an HTML document. It involves some data analysis with ARMA models. Most of you will find that editing the Rmd file in Rstudio may be the simplest solution. Also, the Rmd source files for this homework and all the notes are on the class github site: if you see anything in the notes that you'd like to reproduce, you can take advantage of that. Opening the file [hw03.Rmd](hw03.Rmd) in Rstudio and editing it to produce your solution is one way to proceed.
+
+As mentioned in class, you will need to know some Latex to write equations in Rmarkdown. Many tutorials exist online, e.g. [http://www.latex-tutorial.com/tutorials](http://www.latex-tutorial.com/tutorials/). To see how Rmarkdown incorporates Latex equations, one approach is to identify equations in the notes that you would like to modify, and then dig out the Rmd source code from github.
+
+Your homework should be submitted as a single Rmd file on the Stats 531 Canvas site. You should receive an email from Canvas about the assignment. The GSI should be able to compile the Rmd file that you submit to HTML. Thus, any data you need to import should be read from an internet source. 
+
+If technical difficulties arise, please consult your peers, Dao or myself. I am grateful to receive emails about difficulties that arise, and hopefully also how they were overcome!
+
+--------
+
+**<big>Question 3.1</big>**. Try out some of the ARMA techniques studied in class on the Ann Arbor January Low temperature time series that we saw in Chapter 1 of the notes. Write a report as an Rmd file and submit this file on the class Canvas site. This is an open-ended assignment, but you're only expected to do what you can in a reasonable amount of time. Some advice follows.
+
+1.  You can read in the data with 
+```{r read_data, eval=FALSE}
+x <- read.table(file="http://ionides.github.io/531w16/intro/ann_arbor_weather.csv",header=TRUE)
+plot(Low~Year,data=x,type="l")
+```
+
+2.  Since we have not yet covered ARMA models with trend, you can work under a null hypothesis that there is no trend. That is preparation for considering trend later.
+
+3.  Your report should involve model equations and hypotheses, and should define the notation used. Please be careful to distinguish between symbols representing random variables (usually using capital letters) and numbers. You're welcome to follow the notation in the course notes, and if you deviate from this notation it is especially necessary to define the notation that you choose. 
+
+4.  You are advised to try a few things from the notes, spot something that catches your attention, and try a few more things to investigate it. Write up what you found, and you're finished!
+
+5.  For this homework, you can choose whether or not to include the R code in the HTML document. To tell Rmarkdown not to include the R code in the HTML document, use the `echo=FALSE` chunk option, e.g.,
+<pre><code>```{r chunk_without_code, echo=FALSE}
+cat("only the output of this code chunk will be printed\n")
+```</code></pre>
+Generally, you should only display the code in the HTML document if you think that, in your context, the helpfulness of showing the code outweighs the extra burden on the reader. Recall that the reader can work through the Rmd source file if necessary.
+
+
+-----------
