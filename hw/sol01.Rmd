@@ -1,0 +1,105 @@
+---
+title: "Solution to Homework 1"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+
+--------
+
+**<big>Question 1.1</big>**. 
+
+$$\begin{eqnarray}
+\var\left(\hat{\mu}\left(X_{1:N}\right)\right)&=&\var\left(\frac{1}{N}\sum_{n=1}^{N}X_{n}\right)
+\\
+&=&\frac{1}{N^{2}}\cov\left(\sum_{m=1}^{N}X_{m},\sum_{n=1}^{N}X_{n}\right)
+\\
+&=&\frac{1}{N^{2}}\sum_{m=1}^{N}\sum_{n=1}^{N}\cov\left(X_{m},X_{n}\right)
+\\
+&=&\frac{1}{N^{2}}\left(N\gamma_{0}+2\left(N-1\right)\gamma_{1}+\ldots+2\gamma_{N-1}\right)
+\\
+&=&\frac{1}{N}\gamma_{0}+\frac{1}{N^{2}}\sum_{h=1}^{N-1}\left(N-h\right)\gamma_{h}
+\end{eqnarray}$$
+
+-------------------
+
+**<big>Question 1.2</big>**.  
+By definition,
+$$
+\hat{\gamma}_{h}\left(x_{1:N}\right)=\frac{1}{N}\sum_{n=1}^{N-h}\left(x_{n}-\hat{\mu}_{n}\right)\left(x_{n+h}-\hat{\mu}_{n+h}\right).
+$$
+Here, we consider the null hypothesis where $X_{1:N}$ is IID with mean $0$ and standard deviation $\sigma$. We therefore use the estimator $\hat\mu_n=0$ and the autocovariance function estimator becomes
+$$\begin{eqnarray}
+\hat{\gamma}_{h}\left(x_{1:N}\right)&=&\frac{1}{N}\sum_{n=1}^{N-h}x_{n}x_{n+h},
+\\
+\hat{\gamma}_{0}\left(x_{1:N}\right)&=&\frac{1}{N}\sum_{n=1}^{N-h}x_{n}^{2}.
+\end{eqnarray}$$
+We let $\sum_{n=1}^{N-h}X_{n}X_{n+h}=U$ and $\sum_{n=1}^{N-h}X_{n}^{2}=V$, and carry out a Taylor first order expansion of 
+$$\hat\rho_h(X_{1:N}) = \frac{U}{V}$$
+about $(\E[U],\E[V])$. This gives
+$$
+\hat{\rho}_{h}(X_{1:N})
+\approx\frac{\E\left(U\right)}{\E\left(V\right)}+\left(U-\E\left(U\right)\right)\left.\frac{\partial}{\partial U}\left(\frac{U}{V}\right)\right|_{\left(\E\left(U\right),\E\left(V\right)\right)}+\left(V-\E\left(V\right)\right)\left.\frac{\partial}{\partial V}\left(\frac{U}{V}\right)\right|_{\left(\E\left(U\right),\E\left(V\right)\right)}.
+$$
+We have
+$$
+\E\left(U\right)=\sum_{n=1}^{N-h}\E\left(X_{n}\, X_{n+h}\right)=0,
+$$
+and
+$$
+E\left(V\right)=\sum_{n=1}^{N}E\left(X_{n}^{2}\right)=N\sigma^{2},
+$$
+$$
+\frac{\partial}{\partial U}\left(\frac{U}{V}\right)=\frac{1}{V},
+$$
+$$
+\frac{\partial}{\partial V}\left(\frac{U}{V}\right)=\frac{-U}{V^{2}}.
+$$
+Putting this together, we have
+$$\begin{eqnarray}
+\hat{\rho}_{h}(X_{1:N})&\approx&\frac{\E\left(U\right)}{\E\left(V\right)}+\frac{U}{\E\left(V\right)}-\frac{\left(V-\E\left(V\right)\right)\E(U)}{\E(V)^{2}}
+\\
+&=&\frac{U}{N\sigma^{2}}.
+\end{eqnarray}$$
+This gives us an approximation, 
+$$
+\var\left(\hat{\rho}_{h}(X_{1:N})\right)\approx\frac{\var\left(U\right)}{N^{2}\sigma^{4}}.
+$$
+We can now compute
+$$\begin{eqnarray}
+\var\left(U\right)&=&E\left[\left(\sum_{n=1}^{N-h}X_{n}X_{n+h}\right)^{2}\right]
+\\
+&=&\E\left[\sum_{n=1}^{N-h}X_{n}^{2}X_{n+h}^{2}\right]+2\E\left[\sum_{i=1}^{N-h-1}\sum_{j=i+1}^{N-h}X_{i}X_{i+h}X_{j}X_{j+h}\right]
+\end{eqnarray}$$
+Since $X_{1:N}$ are i.i.d. and mean zero, the second sum has zero expectation and 
+$$\begin{eqnarray}
+\var\left(U\right)&=&\E\left[\sum_{n=1}^{N-h}X_{n}^{2}X_{n+h}^{2}\right]
+\\
+&=&\sum_{n=1}^{N-h}E\left(X_{n}^{2}\right)E\left(X_{n+h}^{2}\right)
+\\
+&=&\left(N-h\right)\sigma^{4}
+\end{eqnarray}$$
+Therefore,
+$$
+\var\left(\hat{\rho}_{h}(X_{1:N})\right)\approx\frac{\left(N-h\right)}{N^{2}}
+$$
+When $n\rightarrow\infty$, $\var\left(\hat{\rho}_h(X_{1:N})\right)\rightarrow\frac{1}{N}$, justifying a standard deviation under the null hypothesis of $1/\sqrt{N}$.
+ 
+B. A 95% confidence interval is a function of the data that constructs a set which (under a spedified model) covers the true parameter with probability 0.95. 
+
+* Here, the interval $[-1/\sqrt{N},1/\sqrt{N}]$ does not depend on the data. For any given model, it therefore covers $\rho_h$ either with probability 1 or 0.  
+
+* One can mention that the interval $[\rho^*_h-1/\sqrt{N},\rho^*_h+1/\sqrt{N}]$ covers zero if and only if $\rho^*_h$ falls between the dashed lines. In this sense, the dashed lines have some meaning relevant to construction of a confidence interval with local coverage of 95% at $\rho_h=0$ for $N$ large. However, the lines really represent an acceptance region of a test under a null hypothesis of independence. This is a different thing from a confidence interval.
+
+
+
+----------------------

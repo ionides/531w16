@@ -77,7 +77,7 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 0](hw/hw00.html), due in class on 1/12. Setting up your computational environment.
 
-* [Homework 1](hw/hw01.html), due in class on 1/19. 
+* [Homework 1](hw/hw01.html), due in class on 1/19. [solution](hw/sol01.html).
 
 * [Homework 2](hw/hw02.html), due in class on 1/26. 
 
