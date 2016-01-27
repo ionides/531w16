@@ -1,0 +1,282 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx,fullpage}
+\pagestyle{plain}
+\headheight0in
+\headsep0in
+\topmargin -0.1in
+\textheight 9.0in
+\oddsidemargin -0.0in
+\textwidth 6.5in
+\baselineskip 3ex
+\renewcommand\baselinestretch{1}
+\parindent 0in
+\parskip 0.05in
+\def\bc{\begin{center}}
+\def\ec{\end{center}}
+\def\qskip{\vspace{0in}}
+\begin{document}
+\begin{center}
+{\bf Statistics 531/Econ 677\\
+
+Winter, 2007\\
+
+%Ed Ionides\\
+Midterm Exam}
+\end{center}
+
+We investigate over-crowding in the Emergency Room of the University of Michigan Hospital.
+The data, $x_t$, are hourly occupancy fractions for one year, starting July 1st 2005. Occupancy fraction is defined to be the mean number of patients in the ER during each hour  divided by the total number of beds available (the ER operates 24 hours a day, 7 days a week, 365 days a year).
+Note that the occupancy fraction, shown in Fig.~\ref{fig:er}, can exceed one.
+The purposes of investigating these data are to predict future occupancy, and to make progress toward relating ER overcrowding with other variables such as errors in medical procedures.
+\begin{figure}[h]
+\bc
+%\vspace{-0.5cm}
+\vspace{-1cm}
+\includegraphics[width=5in]{ER-um-05}
+%\vspace{-0.5cm}
+\vspace{-1cm}
+\ec
+\caption{Hourly occupancy fraction at the University of Michigan Emergency Room}\label{fig:er}
+\end{figure}
+
+{\bf SECTION A}. Fig.~\ref{fig:summary} shows a smoothed periodogram and an ACF of the data.
+\begin{figure}
+\vspace{-1cm}
+\includegraphics[width=3in,height=3in]{ER-um-spec-closeup}
+\includegraphics[width=3in,height=3in]{ER-um-acf}
+\vspace{-0.5cm}
+\caption{(A) Smoothed periodogram of $x_t$. (B) sample auto-covariance function of $x_t$}\label{fig:summary}
+\end{figure}
+
+A1. [1 point] What are the units of frequency in
+Fig.~\ref{fig:summary}A? Explain your reasoning.
+
+{\it From figure 2B, we see a strong daily cycle and small additional
+correlation at 7 days (1 week). The strong 1 cycle/day peak is
+evident at frequency 1 in Fig. 2A, so units must be
+cycles/day.}
+
+
+A2. [2 points] Explain how you can tell that the periodogram in
+Fig.~\ref{fig:summary}A has been truncated to exclude high
+frequencies (this is done to highlight the information about lower
+frequencies).
+
+{\it The highest frequency on a periodogram is 0.5 cycles per
+observation. This corresponds to 12 cycles per day. The axis has
+therefore been cut at frequency = 3 cycles per day.}
+
+
+A3. [3 points] Using Fig.~\ref{fig:summary}, can you reject a null
+hypothesis that there is no weekly pattern to occupancy fraction?
+Explain.
+
+{\it A confidence interval around the peak at frequency 1/7 cycles/day,
+constructed using the error bar in Fig. 2A, excludes the base of
+this peak. Thus, we can reject the null hypothesis that this peak is
+chance variation.}
+% to carry out an approximate hypothesis test
+%, at a significance level of 0.05,
+%of the null hypothesis that there is no weekly effect.
+
+\qskip
+
+%\vspace{2cm}
+
+{\bf SECTION B}.
+Fig.~\ref{fig:er} suggests that the occupancy could be modeled by a random process whose expected value $\mu_t$ is slowly varying with time.
+%B1. [2 points] Could this variation be an annual cycle? Explain.
+%\qskip
+The variation around the mean in  Fig.~\ref{fig:er} appears quite stable.
+ Thus, it may be reasonable to suppose that $x_t-\mu_t$ is stationary, where $\mu_t=E[x_t]$.
+We can estimate $\mu_t$ %by an estimate $\hat \mu_t$ found
+using local regression. This is done here using the R command \texttt{mu.hat=loess(x}$ \sim$ \texttt{time,span=0.5)\$fitted}. The estimate $\hat \mu_t$ of $\mu_t$ is shown in Fig.~\ref{fig:smo}.
+\begin{figure}[h]
+\bc
+\vspace{-1cm}
+\includegraphics[width=4.5in]{ER-um-smo}
+\vspace{-1cm}
+\ec
+\caption{Estimate $\hat\mu_t$ of the mean hourly occupancy fraction $\mu_t$.}\label{fig:smo}
+\end{figure}
+
+B1. [2 points] Briefly describe what ``local regression estimate''
+means.
+
+{\it A window around each time point is used to construct a regression
+estimate. Here, linear regression is carried out over all the data
+points falling into the window.}
+
+
+B2. [2 points] The dashed lines in Fig.~\ref{fig:smo} show an
+approximate 95\% confidence interval, constructed by adding $\pm
+2SE$ where $SE$ is the standard error on the estimate of the mean,
+as calculated by the local regression. Is this interval appropriate?
+Explain. You should be able to comment even without a detailed
+understanding of local regression.
+
+{\it
+We know from Fig. 2A that the time series has considerable
+autocorrelation. An ordinary regression estimate still gives a
+reasonable point estimate in this situation, but the resulting
+standard errors should not be trusted.
+}
+
+B3. [2 points] Could the data be consistent with a model where the
+mean is not varying with time, e.g. a stationary process? Say yes or
+no, and explain.
+
+{\it Yes. The low frequency behaviour could be part of a random,
+long-term pattern.
+}
+
+
+{\bf SECTION C}. We investigate the stationarity of the detrended occupancy fraction $y_t=x_t-\hat\mu_t$. In particular, we compare the two time intervals  August/September 2005 and March/April 2006.
+First, we fit an $ARIMA(1,0,1){\times}(1,0,1)_{24}$ model to the 61 days in August and September 2005. Below is the R output.
+
+%\newpage
+\begin{verbatim}
+arima(x = y[AugSep], order = c(1, 0, 1), seasonal = c(1, 0, 1))
+Coefficients:
+         ar1     ma1    sar1     sma1  intercept
+      0.9139  0.0403  0.9998  -0.9884    -0.0060
+s.e.  0.0114  0.0277  0.0002   0.0080     0.1354
+sigma^2 estimated as 0.006561:  log likelihood = 1568.48,  aic = -3124.96
+\end{verbatim}
+C1. [3 points] Write out the fitted model, carefully stating all the
+model assumptions.
+
+{\it
+The fitted model is
+\begin{eqnarray*}
+(1-0.9990B^{24})(1-0.9139B)(y_t + 0.006) =
+(1-0.9884B^{24})(1+0.0403B)w_t,
+\end{eqnarray*}
+where $w_t$ are independent Gaussian random variables with mean 0
+and variance 0.006561.
+}
+
+\begin{figure}[ht]
+\vspace{-1cm}
+\includegraphics[width=3in,height=2.5in]{ER-resid-acf}
+\includegraphics[width=3in,height=2.5in]{ER-qqnorm}
+\vspace{-0.5cm}
+\caption{ Investigation of the residuals from fitting an $ARIMA(1,0,1){\times}(1,0,1)_{24}$ model to August/September. (A) Sample ACF. (B) normal quantile plot.}\label{fig:diag}
+\end{figure}
+C2. [3 points] What do you conclude from the diagnostic plots in
+Fig.~\ref{fig:diag}? Also, explain at least one relevant property
+that is NOT checked by these diagnostic plots, and describe how you
+could check it.
+
+{\it
+From the QQ-plot in B, we conclude that the distribution of the
+residuals is close to normal, which supports the normality
+assumption about $w_t$. From A, we conclude that the residuals
+appear to be uncorrelated. None of these diagnostics check for the
+stationarity of the process. One could check this by looking at the
+time plot of the residuals to see if there is any trend or pattern left and
+to see if the variability around the mean appears to be constant.
+Autocovariance stationarity could also be checked showing that the
+sample autocovariance function was similar at different intervals of
+the series.
+}
+
+%\newpage
+
+C3. [2 points] Based on  Fig.~\ref{fig:diag} and the R model output
+above,  $ARIMA(1,0,1){\times}(0,1,1)_{24}$ was considered to be an
+acceptable model. Explain the reasoning.
+
+{\it
+Fig. 4 is evidence that an $ARIMA(1,0,1)\times(1,0,1)$ fits well.
+The estimate for the seasonal AR1 parameter, $\Phi_1$ from the R output is very close to 1. When
+$\Phi_{1}=1$, an $ARIMA(1,0,1)\times(1,0,1)_{24}$ is equal to
+an $ARIMA(1,0,1)\times(0,1,1)_{24}$, so this
+should be  an aceptable (and slightly simpler) model as well.
+}
+
+C4. [2 points] A comparison of various models is presented in
+Table~\ref{tab:aic}. What do you conclude from the AIC values in
+Table~\ref{tab:aic}, together with the previous value of -3124.96
+for $ARIMA(1,0,1){\times}(1,0,1)_{24}$?
+
+{\it
+We conclude from tables that an $ARIMA(1,0,0)\times(0,1,1)_{24}$
+seems to be preferable, with the smallest AIC in both periods. We
+cannot compare the AIC values in the tables with -3124.96 because
+the data have been transformed, i.e. differences have been taken.}
+
+\begin{table}[ht]
+A.\begin{tabular}{c|rrr}
+$p\setminus q$ &     0 &    1 &    2 \\
+\hline
+ 0&     NA &-1612.9 &-2258.7\\
+ 1&-3060.0 &-3058.8 &-3057.2\\
+ 2&-3058.8 &-3057.1 &-3055.2\\
+3&-3057.2 &-3054.8 &-3059.1
+\end{tabular}
+\hspace{0.5in}
+B. \begin{tabular}{c|rrr}
+ $p\setminus q$ &     0 &    1 &    2 \\
+\hline
+ 0&     NA &-1168.5 &-1844.2\\
+ 1&-2944.9 &-2944.4 &-2943.2\\
+ 2&-2944.5 &-2943.1 &-2941.3\\
+3 &-2943.2 &-2941.3 &-2939.8
+\end{tabular}
+\caption{AIC values from fitting $ARIMA(p,0,q){\times}(0,1,1)_{24}$ models to (A) August/September 2005, (B) March/April 2006.}\label{tab:aic}
+\end{table}
+
+%\newpage
+Below is the R output from fitting an $ARIMA(1,0,0){\times}(0,1,1)_{24}$ model to August/September 2005 and March/April 2006.
+\begin{verbatim}
+arima(x = y[AugSep], order = c(1, 0, 0), seasonal = c(0, 1, 1))
+Coefficients:
+         ar1     sma1
+      0.9195  -1.0000
+s.e.  0.0104   0.0197
+sigma^2 estimated as 0.006496:  log likelihood = 1533,  aic = -3060
+\end{verbatim}
+\begin{verbatim}
+arima(x = y[MarApr], order = c(1, 0, 0), seasonal = c(0, 1, 1))
+Coefficients:
+         ar1     sma1
+      0.9436  -1.0000
+s.e.  0.0088   0.0341
+sigma^2 estimated as 0.007036:  log likelihood = 1475.46,  aic = -2944.92
+\end{verbatim}
+
+
+C5. [4 points] Show how to carry out an approximate hypothesis test that the AR1 component is the same for August/September 2005 and March/April 2006 in the context of an
+ $ARIMA(1,0,0){\times}(0,1,1)_{24}$ model.
+Explain what your approximations are for this test. How good do you
+think these approximations are, and how could you check? Note: since
+you are not provided with statistical tables, you are not required
+to calculate a p-value.
+
+{\it
+Letting $\phi_1$ and $\phi_2$ be the AR1 coefficients for the first and second intervals, we wish to test the hypothesis 
+\begin{eqnarray*}
+H_0: \phi_1 &=& \phi_2\\
+H_1: \phi_1 &\neq& \phi_2.
+\end{eqnarray*}
+Since we know that, asymptotically, $\hat{\phi}_i \sim
+N(\phi_i,\sigma^2_{\phi_i})$, a test statistic that can be
+used (and is available from the R output above) is
+\begin{eqnarray*}
+Z &=& \frac{\hat{\phi}_1 - \hat{\phi}_2}{\sqrt{\hat{\sigma}^2_{\phi 1} + \hat{\sigma}^2_{\phi 2}}},\\
+\end{eqnarray*}
+where $\hat{\sigma}_{\phi_i} = s.e.(\hat{\phi}_i)$. Here, we would
+have to rely on the central limit theorem for the MLE and on the
+MLEs being uncorrelated for the 2 time intervals. The statistic
+comes out to be
+\begin{eqnarray*}
+z &=& \frac{0.9195 - 0.9436}{\sqrt{0.0104^2 + 0.0088^2}} = -1.769\\
+\end{eqnarray*}
+This is within the acceptance region $\pm 1.96$, so we cannot reject the null hypothesis at the 5\% level.
+ The test seems to be based in enough data for the
+asymptotic approximation to be useful. One could check this and the
+assumed correlation by simulating from the fitted model and checking
+what the actual p-value is for some confidence level.
+}
+\end{document}

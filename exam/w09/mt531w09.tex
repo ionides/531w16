@@ -1,0 +1,215 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx,fullpage}
+\pagestyle{plain}
+\headheight0in
+\headsep0in
+\topmargin -0.1in
+\textheight 9.0in
+\oddsidemargin -0.0in
+\textwidth 6.5in
+\baselineskip 3ex
+\renewcommand\baselinestretch{1}
+\parindent 0in
+\parskip 0.1in
+\def\bc{\begin{center}}
+\def\ec{\end{center}}
+\def\qskip{\vspace{1.5in}}
+\def\qspace{\vspace{1.5in}}
+\begin{document}
+\begin{center}
+{\bf Statistics 531/Econ 677\\
+
+Winter, 2009\\
+
+Ed Ionides\\
+\vspace{7 mm}
+Name: \hrulefill UMID \#: \hrulefill\\
+\vspace{7 mm}
+Midterm Exam}
+\end{center}
+{\bf There are 3 sections (A, B and C) containing a total of 10 questions worth 23 points. Points will be awarded for clearly explained and accurate answers. You may use the course textbook, the course notes and a calculator.
+
+%Note that the exam includes R code and corresponding unedited R output. This would be poor style in a project report, but is necessary here since one of the goals of the exam is to review the process of carrying out data analysis for time series.
+
+}
+\begin{center}
+\renewcommand{\arraystretch}{2}
+\begin{tabular}{||c|c|c||}
+\hline
+\hline
+{Section} & {Points} & {Score}\\
+\hline
+\hline
+A & 7 & \\
+\hline
+B & 8 & \\
+\hline
+C & 8 & \\
+\hline
+\hline
+Total & 23 &  \\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\newpage
+
+We investigate the monthly number mumps cases reported in New York City,
+ from January 1928 to June 1972. 
+During this period, before the introduction of a vaccine, mumps was a common childhood disease to which almost all children were exposed.
+Because mumps displays a characteristic rash it is fairly easily diagnosed. Mumps is a reportable disease, meaning that doctors have  a legal obligation to report any cases they encounter.
+This dataset therefore gives an opportunity to study disease transmission and maybe learn lessons relevant to diseases of current concern such as bird flu, SARS or HIV/AIDS.
+The data, which we shall denote by $\{x_t,t=1,2,\dots\}$, are graphed in Fig.~\ref{fig:data}.
+
+
+\begin{figure}[h]
+\bc
+%\vspace{-0.7cm}
+\vspace{-1cm}
+\includegraphics[width=6in]{mumps}
+%\vspace{-0.5cm}
+\vspace{-1.8cm}
+\ec
+\caption{Monthly mumps reports, $x_t$, in New York City from January 1928 to June 1972.}\label{fig:data}
+\end{figure}
+
+
+
+\noindent {\bf Section A. Spectral analysis}. We seek to interpret the estimated spectum in Fig.~\ref{fig:spec} and in particular the features labeled (1) through (5).
+
+
+\begin{figure}[h]
+\bc\vspace{-1cm}
+\includegraphics[width=6in,height=2.5in]{mumps-spec}
+\ec\vspace{-1cm}
+\caption{An estimated spectral density for $x_t$, calculated via \texttt{spectrum(x,spans=c(3,5,7))}.}\label{fig:spec}
+\end{figure}
+
+A1. [2 points] What are the units of frequency in Fig.~\ref{fig:spec}? Explain how you reach your answer.
+
+\vspace{1in}
+
+\newpage
+
+A2. [3 points] One might expect mumps to have annual seasonality. 
+One might also expect mumps to have long term cycles as the
+population of suscpetible children (those without immunity)
+replenishes after previous outbreaks. 
+%Is there evidence for this?
+%Over what timespan? As part of your answer, 
+Discuss the interpretation of the 5 spectral peaks labeled (1) through (5) in Fig.~\ref{fig:spec}. You do not have to discuss here whether these peaks are statistically significant, which is question A3 below.
+
+\vspace{5in}
+
+A3. [2 points] Comment on the statistical significance of these five peaks. You are not expected to present formal tests, but you should say what your opinion is and why.
+
+\vspace{2in}
+
+\newpage
+
+\noindent {\bf Section B. ARIMA analysis}. We try fitting an
+$ARIMA(3,0,0)\times(0,1,1)_{12}$ model. Call this model M1. The output from {\texttt{M1=arima(x,order=c(3,0,0),seasonal=c(0,1,1))}} is
+\vspace{-3mm}
+\begin{verbatim}
+         ar1      ar2      ar3     sma1
+      1.2032  -0.3025  -0.0632  -0.8841
+s.e.  0.0439   0.0674   0.0442   0.0231
+
+sigma^2 estimated as 12881:  log likelihood = -3220.76,  aic = 6451.51
+\end{verbatim}
+
+Another possibility is to model %$y_t=\log(x_t)$, 
+$\log(x_t)$, again using 
+$ARIMA(3,0,0)\times(0,1,1)_{12}$. Call this model M2. The output from 
+\texttt{M2=arima(log(x),order=c(3,0,0),seasonal=c(0,1,1))}
+is
+\vspace{-3mm}
+\begin{verbatim}
+         ar1     ar2      ar3     sma1
+      0.9197  0.1577  -0.1710  -0.8080
+s.e.  0.0434  0.0592   0.0438   0.0285
+
+sigma^2 estimated as 0.03632:  log likelihood = 117.48,  aic = -224.96
+\end{verbatim}
+
+B1. [2 points] Can the above analysis determine whether a log
+transformation is appropriate? Explain.
+
+\vspace{2in}
+
+A table comparing AIC values for various
+$ARIMA(i,0,j)\times(0,1,1)_{12}$ models for $\log(x_t)$ is given below:
+
+\begin{tabular}{crrrrr}
+AR $\setminus$ MA & 0 & 1 & 2& 3& 4\\
+  0&        NA  &312.7628 &  92.7453  &-42.91403 &-131.8598\\
+1& -213.9453 &-211.9458 &-224.4315 &-227.35447 &-225.5215\\
+2& -211.9459 &-212.5350 &-236.8260 &-223.70594 &-224.7305\\
+3& -224.9618 &-237.9834 &-236.1537 &-234.41349 &-232.4061\\
+4& -229.8224 &-221.1222 &-236.4941 &-235.21621 &-239.7320\\
+\end{tabular}
+
+B2. [2 points] The software gave no error messages while computing this
+table. Is there any reason to suspect that the numeric
+maximization of the likelihood is less than adequate?
+
+\qspace
+
+\newpage
+B3. [4 points] Discuss briefly what you learn from the AIC table shown, in terms of developing a suitable model for these data.
+Explain briefly why AIC may not be the only criterion
+considered when selecting a model, and list some other analyses that you would carry out to determine and defent a choice of model.
+
+\vspace{5in}
+
+\noindent {\bf Section C. Diagnostic analysis}. Fig.~\ref{fig:diag} contains six diagnostic plots, three for each of models M1 and M2.
+
+C1. [2 points] Explain carefully the meaning of the dashed line in sample
+ACF plots produced by R, for example in Fig.~\ref{fig:diag}(a1). [Here, you are asked to explain the statistical method; later parts will ask you to interpret the results in the context of the data and models under investigation.]
+
+\vspace{2in}
+
+%\newpage
+
+
+\begin{figure}[h]\vspace{-0.5cm}
+\includegraphics[width=3in,height=2.5in]{m1-resid}
+\hfill\includegraphics[width=3in,height=2.5in]{m2-resid}
+
+\includegraphics[width=3in,height=2.5in]{m1-qq}
+\hfill\includegraphics[width=3in,height=2.5in]{m2-qq}
+
+\includegraphics[width=3in,height=2.5in]{m1-resid2}
+\hfill\includegraphics[width=3in,height=2.5in]{m2-resid2}
+
+\caption{
+Some diagnostic plots. (a1) and (a3) show the sample ACF
+for the residuals and absolute values of the residuals
+respectively for model M1. (a2) is a normal quantile plot of the residuals for M1.
+(b1,b2,b3) are the equivalent diagnostic plots for M2.
+}\label{fig:diag}
+\end{figure}
+
+%\newpage
+\clearpage
+
+C2. [2 points] Compare (a1) and (b1) in Fig.~\ref{fig:diag}. What does this
+tell you about models M1 and M2?
+
+%\qspace
+\vspace{2.5in}
+
+
+C3. [2 points] Compare (a2) and (b2) in Fig.~\ref{fig:diag}. What does this
+tell you about models M1 and M2?
+
+%\qspace
+\vspace{2.5in}
+
+C4. [2 points] Compare (a3) and (b3) in Fig.~\ref{fig:diag}. What does this
+tell you about models M1 and M2? In particular, what do you learn about the appropriateness of an assumption that the white noise process driving the ARIMA model is independent and identically distributed?
+
+%\qspace
+\vspace{2.5in}
+
+\end{document}
