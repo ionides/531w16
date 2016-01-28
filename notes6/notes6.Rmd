@@ -1,0 +1,337 @@
+---
+title: "6. Extending the ARMA model: Seasonality and trend"
+author: "Edward Ionides"
+date: "1/28/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=6"
+    ]
+csl: ecology.csl
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+* Monthly time series often exhibit seasonal variation. January data are similar to observations at a different January, etc.
+
+* Many time series exhibit a trend.
+
+* We wish to extend the theoretical and practical elegance of the ARMA framework to cover these situations.
+
+<br>
+
+----------------------
+
+---------------
+
+## Seasonal autoregressive moving average (SARMA) models
+
+* A general SARMA$(p,q)\times(P,Q)_{12}$ model for monthly data is
+<br>
+<br>
+[S1] $\eqspace \ar(B)\AR(B^{12}) (X_n-\mu) = \ma(B)\MA(B^{12}) \epsilon_n$,
+<br>
+<br>
+where $\{\epsilon_n\}$ is a white noise process and
+$$\begin{eqnarray}
+\mu &=& \E[X_n]
+\\
+\ar(x)&=&1-\ar_1 x-\dots -\ar_px^p,
+\\ 
+\ma(x)&=&1+\ma_1 x+\dots +\ma_qx^q, 
+\\
+\AR(x)&=&1-\AR_1 x-\dots -\AR_px^P,
+\\ 
+\MA(x)&=&1+\MA_1 x+\dots +\MA_qx^Q.
+\end{eqnarray}$$
+
+* We see that a SARMA model is a special case of an ARMA model, where the AR and MA polynomials are factored into a **monthly** polynomial in $B$ and an **annual** polynomial in $B^{12}$.
+
+* Thus, everything we learned about ARMA models (including assessing causality, invertibility and reducibility) also applies to SARMA. 
+
+* One could write a SARMA model for some **period** other than 12. For example, a  SARMA$(p,q)\times(P,Q)_{4}$ model could be appropriate for quarterly data. In principle, a SARMA$(p,q)\times(P,Q)_{52}$ model could be appropriate for weekly data, though in practice ARMA and SARMA may not work so well for higher frequency data. 
+
+* Consider the following two models:
+<br>
+<br>
+[S2] $\eqspace X_n = 0.5 X_{n-1} + 0.25 X_{n-12} + \epsilon_n$,
+<br>
+<br>
+[S3] $\eqspace X_n = 0.5 X_{n-1} + 0.25 X_{n-12} - 0.125 X_{n-13} + \epsilon_n$,
+<br>
+<br>
+
+---------
+
+--------
+
+### Question: Which of [S2] and/or [S3] is a SARMA model? 
+
+<br>
+
+--------
+
+-------
+
+### Question: Why do we assume a multiplicative structure in [S1]?
+
+* What theoretical and practical advantages (or disadvantages) arise from requiring that an ARMA model for seasonal behavior has polynomials that can be factored as a product of a monthly polynomial and an annual polynomial?
+
+<br>
+
+----------
+
+---------
+
+### Fitting a SARMA model
+
+* Let's do this for the full, monthly, version of the Lake Huron data described in [Section 5.5](http://ionides.github.io/531w16/notes5/notes5.html#implementing-likelihood-based-inference-for-arma-models-in-r).
+
+* First, we'll revisit reading in the data.
+
+```{r data_file}
+system("head huron_depth.csv",intern=TRUE)
+```
+
+```{r read_data}
+dat <- read.table(file="huron_depth.csv",sep=",",header=TRUE)
+dat$Date <- strptime(dat$Date,"%m/%d/%Y")
+dat$year <- as.numeric(format(dat$Date, format="%Y"))
+dat$month <- as.numeric(format(dat$Date, format="%m"))
+head(dat)
+huron_depth <- dat$Average
+time <- dat$year + dat$month/12 # Note: we treat December 2011 as time 2012.0, etc
+plot(huron_depth~time,type="l")
+```
+
+* Now, we get to fit a model. Based on our previous analysis, we'll go with AR(1) for the annual polynomial. Let's try ARMA(1,1) for the monthly part. In other words, we seek to fit the model
+$$ (1-\AR_1 B^{12})(1-\ar_1 B) X_n = (1+\ma_1 B)\epsilon_n.$$
+```{r sarima}
+huron_sarma11x10 <- arima(huron_depth,
+   order=c(1,0,1),
+   seasonal=list(order=c(1,0,0),period=12)
+)
+huron_sarma11x10
+```
+
+* Residual analysis is similar to what we've seen for non-seasonal ARMA models.
+
+* We look for residual correlations at lags corresonding to multiples of the period (here, 12, 24, 36, ...) for misspecified annual dependence.
+
+```{r residuals}
+acf(resid(huron_sarma11x10))
+```
+
+-------
+
+--------
+
+### Question: What do you conclude from this residual analysis? What would you do next?
+
+<br>
+
+---------
+
+-------
+
+
+## ARMA models for differenced data
+
+* Applying a difference operation to the data can make it look more stationary and therefore more appropriate for ARMA modeling.
+
+* This can be viewed as a **transformation to stationarity**
+
+* We can transform the data $\data{x_{1:N}}$ to $\data{y_{2:N}}$ 
+$$ \data{y_n} = \Delta \data{x_n} = \data{x_n}-\data{x_{n-1}}.$$
+
+* Then, an ARMA(p,q) model $Y_{2:N}$ for the differenced data $\data{y_{2:N}}$ is called an **integrated autoregressive moving average** model for $\data{x_{1:N}}$ and is written as ARIMA(p,1,q).
+
+* Formally, the ARIMA(p,d,q) model with intercept $\mu$ for $X_{1:N}$ is
+<br>
+<br>
+[S4] $\eqspace \ar(B)\big( (1-B)^d X_n-\mu) = \ma(B) \epsilon_n$,
+<br>
+<br>
+where $\{\epsilon_n\}$ is a white noise process; $\ar(x)$ and $\ma(x)$ are the ARMA polynomials defined previously.
+
+* It is unusual to fit an ARIMA model with $d>1$.
+
+* We see that an ARIMA(p,1,q) model is almost a special case of an ARMA(p+1,q) model with a **unit root** to the AR(p+1) polynomial.
+
+<br>
+
+------
+
+-----
+
+### Question: why "almost" not "exactly" in the previous statement?
+
+<br>
+
+---------
+
+-------
+
+### Why fit an ARIMA model?
+
+* There are two reasons to fit an ARIMA(p,1,q) model
+
+1. You may really think that modeling the differences is a natural approach for your data. The S&P 500 stock market index analysis in [Section 3.5](http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model) is an example of this, as long as you remember to first apply a logarithmic transform to the data.
+
+2. Differencing often makes data look "more stationary" and perhaps it will then look stationary enough to justify applying the ARMA machinery.
+
+* We should be cautious about this second reason. It can lead to poor model specifications and hence poor forecasts or other conclusions.
+
+* The second reason was more compelling in the 1970s and 1980s. With limited computing power and the existence of computationally convenient (but statistically inefficient) ARMA algorithms, it makes sense to force as many data analyses as possible into the ARMA framework.
+
+<br>
+
+---------
+
+--------
+
+### Question: What is the trend of the ARIMA(p,1,q) model? 
+
+* Hint: recall that the ARIMA(p,1,q) model specification for $X_{1:N}$ implies that 
+$Y_n = (1-B)X_n$ is a stationary, causal, invertible ARMA(p,q) process with mean $\mu$.
+Now take expectations of both sides of the difference equation.
+
+<br>
+
+-------
+
+-------
+
+### Question: What is the trend of the ARIMA(p,d,q) model, for general $d$?
+
+<br>
+
+--------
+
+-------
+
+
+
+
+## Modeling trend with ARMA noise.
+
+* A general **signal plus noise** model is
+<br>
+<br>
+[S5] $\eqspace   X_n = \mu_n + \eta_n$,
+<br>
+<br>
+where $\{\eta_n\}$ is a stationary, mean zero stochastic process, and $\mu_n$ is the mean function. 
+
+* If, in addition, $\{\eta_n\}$ is uncorrelated, then we have a **signal plus white noise** model. The usual linear trend regression model fitted by least squares in [Section 2.4](http://ionides.github.io/531w16/trend/trend.html#estimating-a-trend-by-least-squares) corresponds to a signal plus white noise model.
+
+* We can say **signal plus colored noise** if we wish to emphasize that we're not assuming white noise.
+
+* Here, **signal** and **trend** are used interchangeably. In other words, we are assuming a deterministic signal. 
+
+* At this point, it is natural for us to consider a signal plus ARMA(p,q) noise model, where ${\eta_n\}$ is a stationary, causal, invertible ARMA(p,q) process with mean zero.
+
+* As well as the $p+q+1$ parameters in the ARMA(p,q) model, there will usually be unknown  parameters in the mean function. In this case, we can write
+$$ \mu_n = \mu_n(\beta)$$
+where $\beta$ is a vector of unknown paramters, $\beta\in\R^K$.
+
+* We write $\theta$ for a vector of all the $p+q+1+K$ parameters, so 
+$$\theta = (\ar_{1:p},\ma_{1:q},\sigma^2,\beta).$$
+
+<br>
+
+-------
+
+------
+
+### Linear regression with ARMA errors
+
+* When the trend function has a linear specification,
+$$\mu_n = \sum_{k=1}^K Z_{n,k}\beta_k,$$
+the **signal plus ARMA noise** model is known as **linear regression with ARMA errors**.
+
+* Writing $X$ for a column vector of $X_{1:N}$, $\mu$ for a column vector of $\mu_{1:N}$, $\eta$ for a column vector of $\eta_{1:N}$, and $Z$ for the $N\times K$ matrix with $(n,k)$ entry $Z_{n,k}$, we have a general linear regression model with correlated ARMA errors,
+$$ X = Z\beta + \eta.$$
+
+* Maximum likelihood estimation of $\theta = (\ar_{1:p},\ma_{1:q},\sigma^2,\beta)$ is a nonlinear optimization problem. Fortunately, `arima` in R can do it for us, though as usual we should look out for signs of numerical problems. 
+
+* Data analysis for a linear regression with ARMA errors model, using the framework of likelihood-based inference, is therefore procedurally similar to fitting an ARMA model. 
+
+* This is a powerful technique, since the covariate matrix $Z$ can include other time series. We can evaluate associations between different time series. With appropriate care (since **association is not causation**) we can draw inferences about mechanistic relationships between dynamic processes.
+
+<br>
+
+----------
+
+---------
+
+
+
