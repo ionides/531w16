@@ -252,6 +252,14 @@ where $\{\epsilon_n\}$ is a white noise process; $\ar(x)$ and $\ma(x)$ are the A
 
 * The second reason was more compelling in the 1970s and 1980s. With limited computing power and the existence of computationally convenient (but statistically inefficient) ARMA algorithms, it makes sense to force as many data analyses as possible into the ARMA framework.
 
+* ARIMA analysis is relatively simple to do. It has been a foundational component of time series analysis since the publication of the influential book "Time Series Analysis" by Box and Jenkins (1st edition, 1970) which developed and popularized ARIMA modeling. A practical approach is:
+
+1. Do a competent ARIMA analysis.
+
+2. Identify potential limitations in this analysis and remedy them using more advanced methods.
+
+3. Assess whether you have in fact learned anything from (2) that goes beyond (1).
+
 <br>
 
 ---------
@@ -278,7 +286,23 @@ Now take expectations of both sides of the difference equation.
 
 -------
 
+## The SARIMA$(p,d,q)\times(P,D,Q)$ model
 
+* Combining integration of ARMA models with seasonality, we can write a general SARIMA$(p,d,q)\times(P,D,Q)_{12}$ model for nonstationary monthly data, given by 
+<br>
+<br>
+[S5] $\eqspace \ar(B)\AR(B^{12}) \big((1-B)^d(1-B^{12})^D X_n-\mu) = \ma(B)\MA(B^{12}) \epsilon_n$,
+<br>
+<br>
+where $\{\epsilon_n\}$ is a white noise process, the intercept $\mu$ is the mean of the differenced process $\{(1-B)^d(1-B^{12})^D X_n\}$, and we have ARMA polynomials $\ar(x)$, $\AR(x)$, $\ma(x)$, $\MA(x)$ as in model [S1].
+
+* The SARIMA$(0,1,1)\times(0,1,1)_{12}$ model has often been used for forecasting monthly time series in economics and business. It is sometimes called the **airline model** after a data analysis by Box and Jenkins (1970).
+
+<br>
+
+---------
+
+-------
 
 
 ## Modeling trend with ARMA noise.
@@ -286,7 +310,7 @@ Now take expectations of both sides of the difference equation.
 * A general **signal plus noise** model is
 <br>
 <br>
-[S5] $\eqspace   X_n = \mu_n + \eta_n$,
+[S6] $\eqspace   X_n = \mu_n + \eta_n$,
 <br>
 <br>
 where $\{\eta_n\}$ is a stationary, mean zero stochastic process, and $\mu_n$ is the mean function. 
@@ -333,5 +357,67 @@ $$ X = Z\beta + \eta.$$
 
 ---------
 
+### Example: Looking for evidence of systematic trend in the depth of Lake Huron
+
+* Let's restrict ourselves to annual data, say the January depth. 
 
 
+```{r data_subset}
+monthly_dat <- subset(dat, month==1)
+huron <- monthly_dat$Average
+year <- monthly_dat$year
+plot(x=year,y=huron,type="l")
+```
+
+* Visually, there seems some evidence for a decreasing trend, but there are also considerable fluctuations. 
+
+* Let's test for a trend, using a regression model with Gaussian AR(1) errors. We have previously found that this is a reasonable model for these data.
+
+* First, let's fit a null model.
+
+```{r h0_fit}
+fit0 <- arima(huron,order=c(1,0,0))
+fit0
+```
+
+* Now, we can compare with a linear trend model.
+
+```{r h1_fit}
+fit1 <- arima(huron,order=c(1,0,0),xreg=year)
+fit1
+```
+
+* To talk formally about these results, we'd better write down a model and some hypotheses. Writing the data as $\data{x_{1:N}}$, collected at years $t_{1:N}$, the model we have fitted is
+$$ (1-\ar_1 B)(X_n - \mu - \beta t_n) = \epsilon_n,$$
+where $\{\epsilon_n\}$ is Gaussian white noise with variance $\sigma^2$. Our null model is
+$$ H^{\langle 0\rangle}: \beta=0,$$
+and our alternative hypothesis is
+$$ H^{\langle 1\rangle}: \beta\neq 0.$$
+
+<br>
+
+-------
+
+-------
+
+### Question: How do we test $H^{\langle 0\rangle}$ against $H^{\langle 1\rangle}$?
+
+* Construct two different tests using the R output above.
+
+* Which test do you prefer, and why?
+
+* How would you check whether your preferred test is indeed better?
+
+<br>
+
+---------
+
+-------
+
+### Question: What other supplementary analysis analysis could you do to strengthen your conclusions?
+
+<br>
+
+-------
+
+----------
