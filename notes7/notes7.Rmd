@@ -1,0 +1,270 @@
+---
+title: "7. Introduction to time series analysis in the frequency domain"
+author: "Edward Ionides"
+date: "2/2/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=7"
+    ]
+csl: ecology.csl
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+* This course emphasizes time domain analysis of time series, but we also want to be able to present and interpret the frequency domain properties of our time series models and data.
+
+1. Looking at the frequency components present in our data can help to identify appropriate models.
+
+2. Looking at the frequency components present in our models can help to assess whether they are doing a good job of describing our data.
+
+<br>
+
+----------------------
+
+---------------
+
+## What is the spectrum of a time series model?
+
+* We're going to start by reviewing eigenvectors and eigenvalues of covariance matrices. This eigen decomposition also arises elsewhere in Statistics, such as the principle component analysis technique in multivariate analysis.
+
+* A univariate time series model is a vector-valued random variable $X_{1:N}$ which we suppose has a covariance matrix $V$ which is an $N\times N$ matrix with entries $V_{mn}=\cov(X_m,X_n)$.
+
+* $V$ is a non-negative definite symmetric matrix, and [therefore](https://en.wikipedia.org/wiki/Eigendecomposition_of_a_matrix#Real_symmetric_matrices) has $N$ non-negative eigenvalues $\lambda_1,\dots,\lambda_N$ with corresponding eigenvectors $\ev_1,\dots,\ev_N$ such that
+$$ V \ev_n = \lambda_n \ev_n.$$
+
+* A basic property of these eigenvectors is that they are orthogonal, i.e.,
+$$ \ev_m^\transpose \ev_n = 0 \mbox{ if $m\neq n$}.$$
+
+* We may work with **normalized** eigenvectors that are scaled such that $\ev_n^\transpose \ev_n = 1$.
+
+* We can also check that the components of $X$ in the directions of different eigenvectors are uncorrelated. Since $\cov(AX,BX)=A\cov(X,X)B^\transpose$, we have
+$$\begin{eqnarray}
+\cov(\ev_m^\transpose X, \ev_n^\transpose X) &=& \ev_m^\transpose \cov(X,X) \ev_n
+\\
+&=& \ev_m^\transpose V \ev_n
+\\
+&=&\lambda_n \ev_m^\transpose \ev_n 
+&=& \left\{\begin{array}{ll} 
+\lambda_n & \mbox{if $m=n$} \\ 0 & \mbox{if $m\neq n$}
+\end{array}\right.
+\end{eqnarray}$$
+Here, we have supposed that the eigenvectors are normalized.
+
+* Thus, if we knew $V$, we could work with correlated data by converting it to its components in the directions of the eigenvectors.
+
+* Let's see how to do that for a stationary time series model, say 100 observations from an AR(1) model with autoregressive coefficient 0.8.
+
+```{r eigen}
+N <- 100
+phi <- 0.8
+sigma <- 1
+V <- matrix(NA,N,N)
+for(m in 1:N) for(n in 1:N) V[m,n] <- sigma^2 * phi^abs(m-n) / (1-phi^2)
+V_eigen <- eigen(V,symmetric=TRUE)
+oldpars <- par(mfrow=c(1,2))
+matplot(V_eigen$vectors[,1:5],type="l")
+matplot(V_eigen$vectors[,6:9],type="l")
+par(oldpars)
+```
+
+* We see that the eigenvectors, plotted as functions of time, look like sine wave oscillations.
+
+* The eigenvalues are
+```{r evals}
+round(V_eigen$values[1:9],2)
+```
+
+* We see that the eigenvalues are decreasing. For this model, the components of $X_{1:N}$ with highest variance correspond to long-period oscillations.
+
+* Are the sinusoidal eigenvetors a special feature of this particular time series model, or something more general?
+
+<br>
+
+--------
+
+-------
+
+### The eigenvectors for a long stationary time series model
+
+* Suppose $\{X_n,-\infty<n<\infty\}$ has a stationary autocovariance function $\gamma_h$.
+
+* We write $\Gamma$ for the infinite matrix with entries
+$$ \Gamma_{m,n} = h_{m-n} \quad mbox{for all integers $m$ and $n$}.$$
+
+* An infinite eigenvector is a sequence $\ev=\{\ev_n, -\infty<n<\infty\}$ with corresponding eigenvalue $\lambda$ such that
+$$\Gamma \ev = \lambda \ev,$$
+or, writing out the matrix multiplication explicitly,
+$$\sum_{n=-\infty}^\infty \Gamma_{m,n} \ev_n = \lambda \ev_m\quad \mbox{for all $m$}.$$
+
+* Now, let's look for a sinusoidal solution, $\ev_n = e^{i\omega n}$. Then,
+$$\begin{eqnarray}
+\sum_{n=-\infty}^\infty \Gamma_{m,n} \ev_n 
+&=& \sum_{n=-\infty}^\infty \gamma_{m-n} \ev_n 
+\\
+&=& \sum_{h=-\infty}^\infty \gamma_{h}  \ev_{m-h} \quad \mbox{setting $h=m-n$}
+\\
+&=& \sum_{h=-\infty}^\infty \gamma_{h}  e^{i\omega(m-h)}
+\\
+&=& e^{i\omega m} \sum_{h=-\infty}^\infty \gamma_{h}  e^{-i\omega h}
+\\
+&=& \ev_m \lambda \mbox{ for } \lambda= \sum_{h=-\infty}^\infty \gamma_{h}  e^{-i\omega h}
+\end{eqnarray}$$
+
+* This calculation shows that 
+$$\ev_n(\omega) = e^{i\omega n}$$ 
+is an eigenvector for $\Gamma$ for any choice of $\omega$. The corresponding eigenvalue function,
+$$\lambda(\omega)= \sum_{h=-\infty}^\infty \gamma_{h}  e^{-i\omega h},$$
+is called the **spectral density function**.  It is calculated as the **Fourier transform** of $\gamma_h$ at *frequency* $\omega$.
+
+* It was convenient to do this calculation with complex exponentials. However, writing
+$$ e^{i\omega n} = \cos(\omega n) + i \sin(\omega n)$$
+we see that the real and imaginary parts of this calculation in fact give us two real eigenvectors, $\cos(\omega n)$ and $\sin(\omega n)$.
+
+* Assuming that this computation for an infinite sum represents a limit of increasing dimension for finite matrices, we have found that the eigenfunctions for any long, stationary time series model are approximately sinusoidal.
+
+* For the finite time series situation, we only expect $N$ eigenvectors for a time series of length $N$. We have one eigenvector for $\omega=0$, two eigenvectors corresponding to sine and cosine functions with frequency
+$$\omega_{n]} = 2\pi n/N, \mbox{ for $0<n<N/2$},$$
+and, if $N$ is even,  a final eigenvector with frequency
+$$\omega_{(N/2)} = \pi.$$
+
+* The **frequency components** of $X_{1:N}$ are the components in the directions of these eigenvectors. Specifically, we write
+$$\begin{eqnarray}
+C_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
+\\
+S_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\sin(\omega_n k) \mbox{ for $0\le n\le N/2$}.
+\end{eqnarray}$$
+
+* Here, we have made a decision to introduce a normalizing constant of $1/\sqrt{N}$. There are various choices about signs and factors of $2\pi$, $\sqrt{2\pi}$ and $\sqrt{N}$ that can---and are---made in the definition of the Fourier transform in various situations. One should try to be consistent, and also be careful: the `fft` command in R, for example, doesn't include this constant.
+
+* Similarly, the **frequency components** of data $\data{x_{1:N}$ are 
+$$\begin{eqnarray}
+\data{c_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{x_k}\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
+\\
+\data{s_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{x_k}\sin(\omega_n k) \mbox{ for $0\le n\le N/2$}.
+\end{eqnarray}$$
+
+* The frequency components of the data are often written as real and imaginary parts of the **discrete Fourier transform**,
+$$\begin{eqnarray}
+\data{d_n} &=& \frac{1}{\sqrt{N}} \sum_{k=1}^N \data{x_k} e^{2\pi i n/N}
+\\
+&=&\data{c_n} + i\data{s_n}
+\end{eqnarray}$$
+
+
+* The first frequency component, $C_0$, is something of a special case, since it has mean $\mu=\E[X_n]$ whereas the other components have mean zero.
+
+* Since the frequency components $(C_{1:N/2},S_{1:N/2})$ are asymptotically uncorrelated, and are constructed as a sum of a large number of terms, it may not be surprising that a central limit theorem applies, giving an asymptotic justification of the following normal approximation:
+
+<br>
+
+------
+
+------
+
+### Normal approximation for the frequency components
+
+* $(C_{1:N/2},S_{1:N/2})$ are approximately independent, mean zero, Normal random variables with
+$$ \var(C_n) = \var(S_n) = 1/2 \lambda(\omega_n).$$
+
+* Moving to the frequency domain (i.e., transforming the data to its frequency components) has **decorrelated** the data. Statistical techniques based on assumptions of independence become applicable. 
+
+* It follows from the normal approximation that 
+$$ C_n^2 + S_n^2 \approx \lambda(\omega_n) \frac{\chi^2_2}{2},$$
+where $\chi^2_2$ is a chi-squared random variable on two degrees of freedom.
+
+* Taking logs, we have
+$$ \log\big(C_n^2 + S_n^2 \big) \approx \log \lambda(\omega_n) + \log(\chi^2_2/2).$$
+
+* These results motivate consideration of the **periodogram**,
+$$ I_n = \data{c_n}^2 + \data{s_n}^2 = \big|  \data{d_n}\big|^2$$
+as an estimator of the spectral density. 
+
+* $\log I_n$ can be modeled as an estimator of the log spectral density with independent, identically distributed errors. 
+
+* We see from the normal approximation that a signal-plus-white-noise model is appropriate for estimating the log spectral density using the log periodogram. 
+
+<br>
+
+--------
+
+-------
+
+### Interpreting the spectral density as a power spectrum
+
+* The power of a wave is proportional to the square of its amplitude. 
+
+* The spectral density gives the mean square amplitude of the components at each frequency, and therefore gives the expected power.
+
+* The spectral density function can therefore be called the **power spectrum**.
+
+------------------
