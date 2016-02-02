@@ -152,6 +152,7 @@ Let's look at some data I downloaded from [weather-warehouse.com](https://weathe
 
 ```{r weather_data}
 x <- read.table(file="ann_arbor_weather.csv",header=1)
+
 ```
 
 Here, I'm using R Markdown to combine source code with text. This gives a nice way to generate statistical analysis that is 

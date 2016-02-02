@@ -197,16 +197,18 @@ $$\omega_{n]} = 2\pi n/N, \mbox{ for $0<n<N/2$},$$
 and, if $N$ is even,  a final eigenvector with frequency
 $$\omega_{(N/2)} = \pi.$$
 
-* The **frequency components** of $X_{1:N}$ are the components in the directions of these eigenvectors. Specifically, we write
+* These sine and cosine vectors are called the **Fourier basis**.
+
+## Frequency components of the data and their representation via the Fourier transform
+
+* The **frequency components** of $X_{1:N}$ are the components in the directions of these eigenvectors. Equivalently, we could say they are the representation of $X_{1:N}$ in the Fourier basis. Specifically, we write
 $$\begin{eqnarray}
 C_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
 \\
 S_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\sin(\omega_n k) \mbox{ for $0\le n\le N/2$}.
 \end{eqnarray}$$
 
-* Here, we have made a decision to introduce a normalizing constant of $1/\sqrt{N}$. There are various choices about signs and factors of $2\pi$, $\sqrt{2\pi}$ and $\sqrt{N}$ that can---and are---made in the definition of the Fourier transform in various situations. One should try to be consistent, and also be careful: the `fft` command in R, for example, doesn't include this constant.
-
-* Similarly, the **frequency components** of data $\data{x_{1:N}$ are 
+* Similarly, the **frequency components** of data $\data{x_{1:N}}$ are 
 $$\begin{eqnarray}
 \data{c_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{x_k}\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
 \\
@@ -219,6 +221,10 @@ $$\begin{eqnarray}
 \\
 &=&\data{c_n} + i\data{s_n}
 \end{eqnarray}$$
+
+* Here, we have made a decision to introduce a normalizing constant of $1/\sqrt{N}$. There are various choices about signs and factors of $2\pi$, $\sqrt{2\pi}$ and $\sqrt{N}$ that can---and are---made in the definition of the Fourier transform in various situations. One should try to be consistent, and also be careful: the `fft` command in R, for example, doesn't include this constant. 
+
+* `fft` is an implementation of the fast Fourier transform algorithm, which enables computation of all the frequency components with order $N\log(N)$ computation. At first consideration, computing the frequency components appears to require a matrix multiplication involving order $N^3$ additions and multiplications. When $N=10^3$ or $N=10^4$ this difference becomes important!
 
 
 * The first frequency component, $C_0$, is something of a special case, since it has mean $\mu=\E[X_n]$ whereas the other components have mean zero.
@@ -268,3 +274,146 @@ as an estimator of the spectral density.
 * The spectral density function can therefore be called the **power spectrum**.
 
 ------------------
+
+---------------
+
+### Question: compute the spectrum of an AR(1) model.
+
+<br>
+
+-------
+
+-------
+
+### Question: compute the spectrum of the MA(q) moving mean,
+$$ X_n = \frac{1}{q+1} \sum_{k=0}^q \epsilon_{n-k}.$$
+
+<br>
+
+-------
+
+-------
+
+### Review question: how would you demonstrate the correctness of the identity,
+$$ e^{i\omega} = \cos(\omega)+i\,\sin(\omega).$$
+
+<br>
+
+------
+
+------
+
+## Some data analysis examples
+
+### Michigan winters revisited
+
+* Recall the Ann Arbor January weather data,
+
+```{r weather_data_file}
+system("head ann_arbor_weather.csv",intern=TRUE)
+```
+
+```{r weather_data}
+x <- read.table(file="ann_arbor_weather.csv",header=TRUE)
+head(x)
+low <- x$Low
+```
+
+* We have to deal with the NA measurement for 1955. A simple approach is to replace the NA by the mean.
+
+     + What other approaches can you think of for dealing with this missing observation?
+
+     + What are the strengths and weaknesses of these approaches?
+
+```{r replace_na}
+low[is.na(low)] <- mean(low, na.rm=TRUE)
+```
+
+```{r periodogram}
+spectrum(low, main="Unsmoothed periodogram")
+```
+
+* To smooth, we use the default periodogram smoother in R
+
+<br>
+
+-------
+
+-------
+
+### Question: how does R smooth?
+
+* What is the default periodogram smoother in R?
+
+* How should we use it?
+
+* Why is that default chosen?
+
+<br>
+
+---------
+
+---------
+
+```{r smoothed_periodogram}
+spectrum(low,spans=c(3,5,3), main="Smoothed periodogram",ylim=c(15,100))
+```
+
+* Another way to estimate the spectrum is to fit an AR(p) model with $p$ selected by AIC.
+
+```{r ar_periodogram}
+spectrum(low,method="ar", main="Spectrum estimated via AR model picked by AIC")
+```
+
+* Since this time series is well modeled by white noise, we could fit a signal plus white noise model. This might be a more sensitive way to look for a trend.
+
+* Let's try some low-order polynomial trend specifications.
+
+```{r poly_fit}
+lm0 <- lm(Low~1,data=x)
+lm1 <- lm(Low~Year,data=x)
+lm2 <- lm(Low~Year+I(Year^2),data=x)
+lm3 <- lm(Low~Year+I(Year^2)+I(Year^3),data=x)
+poly_aic <- matrix( c(AIC(lm0),AIC(lm1),AIC(lm2),AIC(lm3)), nrow=1,
+   dimnames=list("<b>AIC</b>", paste("order",0:3)))
+require(knitr)
+kable(poly_aic,digits=1)
+```
+
+* Still no evidence suggesting anything other than a white noise model.
+
+* Now, let's remind ourselves what the data look like.
+
+```{r plot_jan_temp,fig.width=5}
+plot(Low~Year,data=x,type="l")
+```
+
+* Our eye may see a trend, and recall that it looks a bit like the global temperature trend.
+
+* Let's try fitting global temperature as an explanatory variable.
+
+```{r read_glob_temp}
+y <- read.table("Global_Temperature.txt",header=TRUE)
+global_temp <- y$Annual[y$Year %in% x$Year]
+lm_global <- lm(Low~global_temp,data=x)
+AIC(lm_global)
+```
+
+* Got it! We have an explantion of the trend that makes scientific sense. However, the model is prefered by AIC but is not quite statistically significant tested against a null of white noise via the t-statistic for the estimated coefficient:
+
+```{r glob_temp_fit}
+summary(lm_global)
+```
+
+* Perhaps we now have a reasonable understanding of Ann Arbor January low temperatures: random, white noise, variation around the global mean temperature trend.
+
+* With noisy data, uncovering what is going on can take careful data analysis together with scientific reasoning.
+
+* What could we do to improve the signal to noise ratio in this analysis?
+
+
+<br>
+
+-----------
+
+---------

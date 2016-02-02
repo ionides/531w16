@@ -71,7 +71,9 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 5. [Parameter estimation and model identification for ARMA models](notes5/notes5.html). [(R script)](notes5/notes5.R)
 
-6. [Extending the ARMA model: Seasonality and trend](notes6/notes6.html). [(R script)](notes5/notes5.R)
+6. [Extending the ARMA model: Seasonality and trend](notes6/notes6.html). [(R script)](notes6/notes6.R)
+
+6. [Introduction to the frequency domain](notes7/notes7.html). [(R script)](notes7/notes7.R)
 
 --------
 
