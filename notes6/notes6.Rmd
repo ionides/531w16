@@ -113,7 +113,7 @@ $$\begin{eqnarray}
 \MA(x)&=&1+\MA_1 x+\dots +\MA_qx^Q.
 \end{eqnarray}$$
 
-* We see that a SARMA model is a special case of an ARMA model, where the AR and MA polynomials are factored into a **monthly** polynomial in $B$ and an **annual** polynomial in $B^{12}$.
+* We see that a SARMA model is a special case of an ARMA model, where the AR and MA polynomials are factored into a **monthly** polynomial in $B$ and an **annual** polynomial in $B^{12}$. The annual polynomial is also called the **seasonal** polynomial.
 
 * Thus, everything we learned about ARMA models (including assessing causality, invertibility and reducibility) also applies to SARMA. 
 

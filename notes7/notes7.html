@@ -72,7 +72,7 @@ img {
 <ul>
 <li><a href="#what-is-the-spectrum-of-a-time-series-model"><span class="toc-section-number">7.1</span> What is the spectrum of a time series model?</a></li>
 <li><a href="#frequency-components-of-the-data-and-their-representation-via-the-fourier-transform"><span class="toc-section-number">7.2</span> Frequency components of the data and their representation via the Fourier transform</a></li>
-<li><a href="#some-data-analysis-examples"><span class="toc-section-number">7.3</span> Some data analysis examples</a></li>
+<li><a href="#some-data-analysis-using-the-frequency-domain"><span class="toc-section-number">7.3</span> Some data analysis using the frequency domain</a></li>
 </ul>
 </div>
 
@@ -233,8 +233,8 @@ S_n &amp;=&amp; \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\sin(\omega_n k) \mbox{ for $0
 <hr />
 </div>
 </div>
-<div id="some-data-analysis-examples" class="section level2">
-<h2><span class="header-section-number">7.3</span> Some data analysis examples</h2>
+<div id="some-data-analysis-using-the-frequency-domain" class="section level2">
+<h2><span class="header-section-number">7.3</span> Some data analysis using the frequency domain</h2>
 <div id="michigan-winters-revisited" class="section level3">
 <h3><span class="header-section-number">7.3.1</span> Michigan winters revisited</h3>
 <ul>
@@ -350,7 +350,7 @@ lm_global &lt;- lm(Low~global_temp,data=x)
 AIC(lm_global)</code></pre>
 <pre><code>## [1] 779.8877</code></pre>
 <ul>
-<li>Got it! We have an explantion of the trend that makes scientific sense. However, the model is prefered by AIC but is not quite statistically significant tested against a null of white noise via the t-statistic for the estimated coefficient:</li>
+<li>Got it! We have an explantion of the trend that makes scientific sense. However, the model is prefered by AIC but is not quite statistically significant viewed as a 2-sided test against a null of white noise via a t-statistic for the estimated coefficient:</li>
 </ul>
 <pre class="r"><code>summary(lm_global)</code></pre>
 <pre><code>## 
@@ -372,11 +372,30 @@ AIC(lm_global)</code></pre>
 ##   (1 observation deleted due to missingness)
 ## Multiple R-squared:  0.02623,    Adjusted R-squared:  0.01754 
 ## F-statistic: 3.017 on 1 and 112 DF,  p-value: 0.08515</code></pre>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="question-is-a-2-sided-test-or-a-1-sided-test-more-reasonable-here" class="section level3">
+<h3><span class="header-section-number">7.3.3</span> Question: is a 2-sided test or a 1-sided test more reasonable here?</h3>
 <ul>
-<li><p>Perhaps we now have a reasonable understanding of Ann Arbor January low temperatures: random, white noise, variation around the global mean temperature trend.</p></li>
+<li>What is the p-value for the 1-sided test?</li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+<ul>
+<li><p>Perhaps we now have a satisfactory understanding of Ann Arbor January low temperatures: random, white noise, variation around the global mean temperature trend.</p></li>
 <li><p>With noisy data, uncovering what is going on can take careful data analysis together with scientific reasoning.</p></li>
 <li><p>What could we do to improve the signal to noise ratio in this analysis?</p></li>
 </ul>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="question-why-might-you-expect-the-estimated-coefficient-to-be-statistically-insignificant-in-this-analysis-even-if-the-model-with-global-mean-temperature-plus-trend-is-correct" class="section level3">
+<h3><span class="header-section-number">7.3.4</span> Question: Why might you expect the estimated coefficient to be statistically insignificant in this analysis, even if the model with global mean temperature plus trend is correct?</h3>
+<p>Hint: notice the standard error on the coefficient, together with consideration of possible values of the coefficient in a scientifically plausible model.</p>
 <p><br></p>
 <hr />
 <hr />
