@@ -27,3 +27,17 @@ huron_sarma11x10
 ## ----residuals-----------------------------------------------------------
 acf(resid(huron_sarma11x10))
 
+## ----data_subset---------------------------------------------------------
+monthly_dat <- subset(dat, month==1)
+huron <- monthly_dat$Average
+year <- monthly_dat$year
+plot(x=year,y=huron,type="l")
+
+## ----h0_fit--------------------------------------------------------------
+fit0 <- arima(huron,order=c(1,0,0))
+fit0
+
+## ----h1_fit--------------------------------------------------------------
+fit1 <- arima(huron,order=c(1,0,0),xreg=year)
+fit1
+

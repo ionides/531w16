@@ -118,9 +118,11 @@ $$\begin{eqnarray}
 \lambda_n & \mbox{if $m=n$} \\ 0 & \mbox{if $m\neq n$}
 \end{array}\right.
 \end{eqnarray}$$
-Here, we have supposed that the eigenvectors are normalized.
+For the last equality, we have supposed that the eigenvectors are normalized.
 
-* Thus, if we knew $V$, we could work with correlated data by converting it to its components in the directions of the eigenvectors.
+* Thus, if we knew $V$, we could convert the model to a representation where the observable random variables are uncorrelated. 
+
+* Specifically, we could transform the data into its components in the directions of the eigenvectors of the model. An uncorrelated (or, in the Gaussian case, independent) model would then become appropriate for this transformation of the data.
 
 * Let's see how to do that for a stationary time series model, say 100 observations from an AR(1) model with autoregressive coefficient 0.8.
 
@@ -146,7 +148,7 @@ round(V_eigen$values[1:9],2)
 
 * We see that the eigenvalues are decreasing. For this model, the components of $X_{1:N}$ with highest variance correspond to long-period oscillations.
 
-* Are the sinusoidal eigenvetors a special feature of this particular time series model, or something more general?
+* Are the sinusoidal eigenvectors a special feature of this particular time series model, or something more general?
 
 <br>
 
@@ -159,7 +161,7 @@ round(V_eigen$values[1:9],2)
 * Suppose $\{X_n,-\infty<n<\infty\}$ has a stationary autocovariance function $\gamma_h$.
 
 * We write $\Gamma$ for the infinite matrix with entries
-$$ \Gamma_{m,n} = h_{m-n} \quad mbox{for all integers $m$ and $n$}.$$
+$$ \Gamma_{m,n} = h_{m-n} \quad \mbox{for all integers $m$ and $n$}.$$
 
 * An infinite eigenvector is a sequence $\ev=\{\ev_n, -\infty<n<\infty\}$ with corresponding eigenvalue $\lambda$ such that
 $$\Gamma \ev = \lambda \ev,$$
@@ -193,7 +195,7 @@ we see that the real and imaginary parts of this calculation in fact give us two
 * Assuming that this computation for an infinite sum represents a limit of increasing dimension for finite matrices, we have found that the eigenfunctions for any long, stationary time series model are approximately sinusoidal.
 
 * For the finite time series situation, we only expect $N$ eigenvectors for a time series of length $N$. We have one eigenvector for $\omega=0$, two eigenvectors corresponding to sine and cosine functions with frequency
-$$\omega_{n]} = 2\pi n/N, \mbox{ for $0<n<N/2$},$$
+$$\omega_{n} = 2\pi n/N, \mbox{ for $0<n<N/2$},$$
 and, if $N$ is even,  a final eigenvector with frequency
 $$\omega_{(N/2)} = \pi.$$
 

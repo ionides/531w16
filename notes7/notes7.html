@@ -107,8 +107,9 @@ img {
 &amp;=&amp; \left\{\begin{array}{ll} 
 \lambda_n &amp; \mbox{if $m=n$} \\ 0 &amp; \mbox{if $m\neq n$}
 \end{array}\right.
-\end{eqnarray}\]</span> Here, we have supposed that the eigenvectors are normalized.</p></li>
-<li><p>Thus, if we knew <span class="math">\(V\)</span>, we could work with correlated data by converting it to its components in the directions of the eigenvectors.</p></li>
+\end{eqnarray}\]</span> For the last equality, we have supposed that the eigenvectors are normalized.</p></li>
+<li><p>Thus, if we knew <span class="math">\(V\)</span>, we could convert the model to a representation where the observable random variables are uncorrelated.</p></li>
+<li><p>Specifically, we could transform the data into its components in the directions of the eigenvectors of the model. An uncorrelated (or, in the Gaussian case, independent) model would then become appropriate for this transformation of the data.</p></li>
 <li><p>Let’s see how to do that for a stationary time series model, say 100 observations from an AR(1) model with autoregressive coefficient 0.8.</p></li>
 </ul>
 <pre class="r"><code>N &lt;- 100
@@ -130,7 +131,7 @@ matplot(V_eigen$vectors[,6:9],type=&quot;l&quot;)</code></pre>
 <pre><code>## [1] 24.59 23.44 21.73 19.70 17.57 15.51 13.61 11.91 10.42</code></pre>
 <ul>
 <li><p>We see that the eigenvalues are decreasing. For this model, the components of <span class="math">\(X_{1:N}\)</span> with highest variance correspond to long-period oscillations.</p></li>
-<li><p>Are the sinusoidal eigenvetors a special feature of this particular time series model, or something more general?</p></li>
+<li><p>Are the sinusoidal eigenvectors a special feature of this particular time series model, or something more general?</p></li>
 </ul>
 <p><br></p>
 <hr />
@@ -139,7 +140,7 @@ matplot(V_eigen$vectors[,6:9],type=&quot;l&quot;)</code></pre>
 <h3><span class="header-section-number">7.1.1</span> The eigenvectors for a long stationary time series model</h3>
 <ul>
 <li><p>Suppose <span class="math">\(\{X_n,-\infty&lt;n&lt;\infty\}\)</span> has a stationary autocovariance function <span class="math">\(\gamma_h\)</span>.</p></li>
-<li><p>We write <span class="math">\(\Gamma\)</span> for the infinite matrix with entries <span class="math">\[ \Gamma_{m,n} = h_{m-n} \quad mbox{for all integers $m$ and $n$}.\]</span></p></li>
+<li><p>We write <span class="math">\(\Gamma\)</span> for the infinite matrix with entries <span class="math">\[ \Gamma_{m,n} = h_{m-n} \quad \mbox{for all integers $m$ and $n$}.\]</span></p></li>
 <li><p>An infinite eigenvector is a sequence <span class="math">\({u}=\{{u}_n, -\infty&lt;n&lt;\infty\}\)</span> with corresponding eigenvalue <span class="math">\(\lambda\)</span> such that <span class="math">\[\Gamma {u}= \lambda {u},\]</span> or, writing out the matrix multiplication explicitly, <span class="math">\[\sum_{n=-\infty}^\infty \Gamma_{m,n} {u}_n = \lambda {u}_m\quad \mbox{for all $m$}.\]</span></p></li>
 <li><p>Now, let’s look for a sinusoidal solution, <span class="math">\({u}_n = e^{i\omega n}\)</span>. Then, <span class="math">\[\begin{eqnarray}
 \sum_{n=-\infty}^\infty \Gamma_{m,n} {u}_n 
@@ -156,7 +157,7 @@ matplot(V_eigen$vectors[,6:9],type=&quot;l&quot;)</code></pre>
 <li><p>This calculation shows that <span class="math">\[{u}_n(\omega) = e^{i\omega n}\]</span> is an eigenvector for <span class="math">\(\Gamma\)</span> for any choice of <span class="math">\(\omega\)</span>. The corresponding eigenvalue function, <span class="math">\[\lambda(\omega)= \sum_{h=-\infty}^\infty \gamma_{h}  e^{-i\omega h},\]</span> is called the <strong>spectral density function</strong>. It is calculated as the <strong>Fourier transform</strong> of <span class="math">\(\gamma_h\)</span> at <em>frequency</em> <span class="math">\(\omega\)</span>.</p></li>
 <li><p>It was convenient to do this calculation with complex exponentials. However, writing <span class="math">\[ e^{i\omega n} = \cos(\omega n) + i \sin(\omega n)\]</span> we see that the real and imaginary parts of this calculation in fact give us two real eigenvectors, <span class="math">\(\cos(\omega n)\)</span> and <span class="math">\(\sin(\omega n)\)</span>.</p></li>
 <li><p>Assuming that this computation for an infinite sum represents a limit of increasing dimension for finite matrices, we have found that the eigenfunctions for any long, stationary time series model are approximately sinusoidal.</p></li>
-<li><p>For the finite time series situation, we only expect <span class="math">\(N\)</span> eigenvectors for a time series of length <span class="math">\(N\)</span>. We have one eigenvector for <span class="math">\(\omega=0\)</span>, two eigenvectors corresponding to sine and cosine functions with frequency <span class="math">\[\omega_{n]} = 2\pi n/N, \mbox{ for $0&lt;n&lt;N/2$},\]</span> and, if <span class="math">\(N\)</span> is even, a final eigenvector with frequency <span class="math">\[\omega_{(N/2)} = \pi.\]</span></p></li>
+<li><p>For the finite time series situation, we only expect <span class="math">\(N\)</span> eigenvectors for a time series of length <span class="math">\(N\)</span>. We have one eigenvector for <span class="math">\(\omega=0\)</span>, two eigenvectors corresponding to sine and cosine functions with frequency <span class="math">\[\omega_{n} = 2\pi n/N, \mbox{ for $0&lt;n&lt;N/2$},\]</span> and, if <span class="math">\(N\)</span> is even, a final eigenvector with frequency <span class="math">\[\omega_{(N/2)} = \pi.\]</span></p></li>
 <li><p>These sine and cosine vectors are called the <strong>Fourier basis</strong>.</p></li>
 </ul>
 </div>

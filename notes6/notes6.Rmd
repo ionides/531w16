@@ -291,7 +291,8 @@ Now take expectations of both sides of the difference equation.
 * Combining integration of ARMA models with seasonality, we can write a general SARIMA$(p,d,q)\times(P,D,Q)_{12}$ model for nonstationary monthly data, given by 
 <br>
 <br>
-[S5] $\eqspace \ar(B)\AR(B^{12}) \big((1-B)^d(1-B^{12})^D X_n-\mu) = \ma(B)\MA(B^{12}) \epsilon_n$,
+[S5] $\eqspace \ar(B)\AR(B^{12}) \big((1-B)^d(1-B^{12})^D X_n-\mu)$<br>
+$\eqspace \hspace{2in} = \ma(B)\MA(B^{12}) \epsilon_n$,
 <br>
 <br>
 where $\{\epsilon_n\}$ is a white noise process, the intercept $\mu$ is the mean of the differenced process $\{(1-B)^d(1-B^{12})^D X_n\}$, and we have ARMA polynomials $\ar(x)$, $\AR(x)$, $\ma(x)$, $\MA(x)$ as in model [S1].
@@ -321,7 +322,7 @@ where $\{\eta_n\}$ is a stationary, mean zero stochastic process, and $\mu_n$ is
 
 * Here, **signal** and **trend** are used interchangeably. In other words, we are assuming a deterministic signal. 
 
-* At this point, it is natural for us to consider a signal plus ARMA(p,q) noise model, where ${\eta_n\}$ is a stationary, causal, invertible ARMA(p,q) process with mean zero.
+* At this point, it is natural for us to consider a signal plus ARMA(p,q) noise model, where $\{\eta_n\}$ is a stationary, causal, invertible ARMA(p,q) process with mean zero.
 
 * As well as the $p+q+1$ parameters in the ARMA(p,q) model, there will usually be unknown  parameters in the mean function. In this case, we can write
 $$ \mu_n = \mu_n(\beta)$$
@@ -414,7 +415,7 @@ $$ H^{\langle 1\rangle}: \beta\neq 0.$$
 
 -------
 
-### Question: What other supplementary analysis analysis could you do to strengthen your conclusions?
+### Question: What other supplementary analysis could you do to strengthen your conclusions?
 
 <br>
 
