@@ -1,0 +1,264 @@
+---
+title: "8. Smoothing in the time and frequency domains"
+author: "Edward Ionides"
+date: "2/4/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=8"
+    ]
+csl: ecology.csl
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+* Estimating a nonparametric trend from a time series is known as smoothing. We will review some standard smoothing methods.
+
+* We can also smooth the periodogram to estimate a spectral density.
+
+* Many smoothers can be represented as linear filters. We will see that the statistical properties of linear filters for dependent (time-domain) stationary models can be conveniently studied in the frequency domain. 
+
+<br>
+
+----------------------
+
+---------------
+
+## A motivating example
+
+* The economy fluctuates between periods of rapid expansion and periods of slower growth or contraction. 
+
+* High unemployment is one of the most visible signs of a dysfunctional economy, in which labor is under-utilized, leading to hardships for many individuals and communities.
+
+* Economists, politicians, businesspeople and the general public therefore have an interest in understanding fluctuations in unemployment.
+
+* Economists try to distinguish between fundamental structural changes in the economy and the shorter-term cyclical booms and busts that appear to be a natural part of capitalist business activity.
+
+* [Monthly unemployment figures](http://data.bls.gov/timeseries/LNU04000000) for the USA are published by the Bureau of Labor Statistics. Measuring unemployment has subtleties, which should be acknowledged but are not the focus of our current exploration.
+
+```{r data_unadj}
+system("head unadjusted_unemployment.csv",intern=TRUE)
+U1 <- read.table(file="unadjusted_unemployment.csv",sep=",",header=TRUE)
+head(U1)
+```
+
+* The data are in a table, and we want a time series. Here's one way to do that.
+
+```{r reshape}
+u1 <- t(as.matrix(U1[2:13]))
+dim(u1) <- NULL
+date <- seq(from=1948,length=length(u1),by=1/12)
+plot(date,u1,type="l",ylab="Percent unemployment (unadjusted)")
+```
+ 
+```{r test}
+plot(u1)
+```
+
+* We see seasonal variation, and perhaps we see business cycles on top of a slower trend.
+
+* The seasonal variation looks like an additive effect, say an annual fluctation with amplitude around 1 percentage point. For many purposes, we may prefer to look at a measure of [monthly seasonally adjusted unemployment](http://data.bls.gov/timeseries/LNS14000000), which the Bureau of Labor Statistics also provides. 
+
+```{r data_adj}
+U2 <- read.table(file="adjusted_unemployment.csv",sep=",",header=TRUE)
+u2 <- t(as.matrix(U2[2:13]))
+dim(u2) <- NULL
+plot(date,u1,type="l",ylab="percent",col="red")
+lines(date,u2,type="l")
+title("Unemployment. Raw (black) and seasonally adjusted (red)")
+```
+ 
+* As statisticians, we may be curious about how the Bureau of Labor Statistics adjusts the data, and whether this might introduce any artifacts that a careful statistician should be aware of.
+
+* Let's look at what the adjustment does to the smoothed periodogram.
+
+* To help R figure out units for plotting the spectrum, we're going to put our time series in the `ts` class. 
+
+
+```{r adjustment_spectrum}
+u1_ts <- ts(u1,start=1948,frequency=12)
+u2_ts <- ts(u2,start=1948,frequency=12)
+spectrum(ts.union(u1_ts,u2_ts),spans=c(3,5,3),main="Unemployment. Raw (black) and seasonally adjusted (red)")
+```
+
+----------
+
+---------
+
+### Question: What are the x-axis units?
+
+<br>
+
+------
+
+------
+
+### Question: Comment on what you learn from comparing these smoothed periodograms.
+
+<br>
+
+-----
+
+-----
+
+
+* Note: the `ts` class can also be useful for helping R choose other plotting options in a way appriate for time series. For example, 
+```{r plot.ts}
+plot(u1_ts)
+```
+
+* Note: For a report, we should add units to plots. Also, extra details (like `bandwith` in the periodogram plot) should be explained or removed.
+
+## The transfer function (or frequency response function) of a smoother
+
+* The ratio of the periodograms of the smoothed and unsmoothed time series is called the **transfer function** or **frequency response function** of the smoother.
+
+* We can infer the frequency response of the smoother used by Bureau of Labor Statistics to deseasonalize the unemployment data.
+
+```{r bls_filter}
+s <- spectrum(ts.union(u1_ts,u2_ts),plot=FALSE)
+```
+
+* We need to figure out how to extract the bits we need from `s`
+
+```{r s_names}
+names(s)
+```
+
+```{r s_spec_dim}
+dim(s$spec)
+```
+
+```{r s_transfer}
+plot(s$freq,s$spec[,2]/s$spec[,1],type="l",log="y",
+  ylab="frequency ratio", xlab="frequency",  
+  main="frequency response (dashed lines at 0.9 and 1.1)")
+abline(h=c(0.9,1.1),lty="dashed",col="red")
+```
+
+<br>
+
+------
+
+------
+
+### Question: What do you learn from this frequency response plot?
+
+
+<br>
+
+--------
+
+-------
+
+### Loess smoothing
+
+* Loess is a **Local linear regression** approach (perhaps an acronym for LOcally EStimated Surface?)
+
+* The basic idea is quite simple: at each point in time, we carry out a linear regression (e.g., fit a constant, linear or quadratic polynomial) using only points close in time. Thus, we can imagine a moving window of points included in the regression.
+
+
+* `loess` is an R implementation, with the fraction of points included in the moving window being scaled by the `span` argument. 
+
+* Let's choose a value of the span that visually separates long term trend from business cycle.
+
+```{r loess}
+u1_loess <- loess(u1~date,span=0.5)
+plot(date,u1,type="l",col="red")
+lines(u1_loess$x,u1_loess$fitted,type="l")
+```
+
+* Now, we can compute the frequency response function for what we have done.
+
+```{r loess_transfer}
+s2 <- spectrum(ts.union(
+  u1_ts,ts(u1_loess$fitted,start=1948,frequency=12)),
+  plot=FALSE)
+plot(s2$freq,s2$spec[,2]/s$spec[,1],type="l",log="y",
+  ylab="frequency ratio", xlab="frequency", xlim=c(0,1.5),
+  main="frequency response (dashed line at 1.0)")
+abline(h=1,lty="dashed",col="red")
+```
+
+<br>
+
+------
+
+-------
+
+### Question: Describe the frequency domain behavior of this filter.
+
+<br>
+
+--------
+
+-------

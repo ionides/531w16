@@ -73,6 +73,7 @@ img {
 <li><a href="#what-is-the-spectrum-of-a-time-series-model"><span class="toc-section-number">7.1</span> What is the spectrum of a time series model?</a></li>
 <li><a href="#frequency-components-of-the-data-and-their-representation-via-the-fourier-transform"><span class="toc-section-number">7.2</span> Frequency components of the data and their representation via the Fourier transform</a></li>
 <li><a href="#some-data-analysis-using-the-frequency-domain"><span class="toc-section-number">7.3</span> Some data analysis using the frequency domain</a></li>
+<li><a href="#units-of-frequency-and-period"><span class="toc-section-number">7.4</span> Units of frequency and period</a></li>
 </ul>
 </div>
 
@@ -401,6 +402,20 @@ AIC(lm_global)</code></pre>
 <hr />
 <hr />
 </div>
+</div>
+<div id="units-of-frequency-and-period" class="section level2">
+<h2><span class="header-section-number">7.4</span> Units of frequency and period</h2>
+<ul>
+<li><p>It is always good practice to be explicit about the units of quantities. For frequency domain analysis we can consider various options for units of frequency.</p></li>
+<li><p>For a frequency component corresponding to <span class="math">\(\sin(2\pi\omega n)\)</span> or <span class="math">\(\cos(2\pi\omega n)\)</span>, we say that the frequency is <span class="math">\(\omega\)</span> <strong>cycles per unit time</strong>.</p></li>
+<li><p>If the time series consists of equally spaced observations with $<em>{n}-t</em>{n-1}=$years, we say that the frequency is <span class="math">\(\omega/\Delta\)</span> <strong>cycles per year</strong>.</p></li>
+<li><p>For a frequency component corresponding to <span class="math">\(\sin(\nu t)\)</span> or <span class="math">\(\cos(\nu t)\)</span>, we say that the frequency is <span class="math">\(\nu\)</span> <strong>radians per unit time</strong>.</p></li>
+<li><p>The <strong>period</strong> of an oscillation is the time for one cycle. So, when frequency is measured in cycles per time, we have <span class="math">\[ \mbox{period} = \frac{1}{\mbox{frequency}}.\]</span> Thus, for a frequency component corresponding to <span class="math">\(\sin(2\pi\omega n)\)</span> or <span class="math">\(\cos(2\pi\omega n)\)</span>, the period is <span class="math">\(1/\omega\)</span> observation intervals.</p></li>
+<li><p>When the observation intervals have constant time length (years, seconds, etc) we should use those units for the period.</p></li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
 </div>
 
 

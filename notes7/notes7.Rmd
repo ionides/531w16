@@ -446,3 +446,28 @@ Hint: notice the standard error on the coefficient, together with consideration 
 ------
 
 ------
+
+## Units of frequency and period
+
+* It is always good practice to be explicit about the units of quantities. For frequency domain analysis we can consider various options for units of frequency.
+
+* For a frequency component corresponding to  $\sin(2\pi\omega n)$ or $\cos(2\pi\omega n)$, we say that the frequency is $\omega$ **cycles per unit time**.
+
+* If the time series consists of equally spaced observations with $\t_{n}-t_{n-1}=\Delta $years, we say that the frequency is $\omega/\Delta$ **cycles per year**. 
+
+* For a frequency component corresponding to  $\sin(\nu t)$ or $\cos(\nu t)$, we say that the frequency is $\nu$ **radians per unit time**.
+
+* The **period** of an oscillation is the time for one cycle. So, when frequency is measured in cycles per time, we have
+$$ \mbox{period} = \frac{1}{\mbox{frequency}}.$$
+Thus, for a frequency component corresponding to  $\sin(2\pi\omega n)$ or $\cos(2\pi\omega n)$, the period is $1/\omega$ observation intervals.
+
+* When the observation intervals have constant time length (years, seconds, etc) we should use those units for the period.
+
+<br>
+
+---------
+
+---------
+
+
+

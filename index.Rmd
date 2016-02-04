@@ -73,7 +73,10 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 6. [Extending the ARMA model: Seasonality and trend](notes6/notes6.html). [(R script)](notes6/notes6.R)
 
-6. [Introduction to the frequency domain](notes7/notes7.html). [(R script)](notes7/notes7.R)
+7. [Introduction to the frequency domain](notes7/notes7.html). [(R script)](notes7/notes7.R)
+
+
+8. [Smoothing in the time and frequency domains](notes8/notes8.html). [(R script)](notes8/notes8.R)
 
 --------
 
