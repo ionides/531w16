@@ -161,7 +161,7 @@ round(V_eigen$values[1:9],2)
 * Suppose $\{X_n,-\infty<n<\infty\}$ has a stationary autocovariance function $\gamma_h$.
 
 * We write $\Gamma$ for the infinite matrix with entries
-$$ \Gamma_{m,n} = h_{m-n} \quad \mbox{for all integers $m$ and $n$}.$$
+$$ \Gamma_{m,n} = \gamma_{m-n} \quad \mbox{for all integers $m$ and $n$}.$$
 
 * An infinite eigenvector is a sequence $\ev=\{\ev_n, -\infty<n<\infty\}$ with corresponding eigenvalue $\lambda$ such that
 $$\Gamma \ev = \lambda \ev,$$
@@ -207,14 +207,14 @@ $$\omega_{(N/2)} = \pi.$$
 $$\begin{eqnarray}
 C_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
 \\
-S_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\sin(\omega_n k) \mbox{ for $0\le n\le N/2$}.
+S_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\sin(\omega_n k) \mbox{ for $1\le n\le N/2$}.
 \end{eqnarray}$$
 
 * Similarly, the **frequency components** of data $\data{x_{1:N}}$ are 
 $$\begin{eqnarray}
 \data{c_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{x_k}\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
 \\
-\data{s_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{x_k}\sin(\omega_n k) \mbox{ for $0\le n\le N/2$}.
+\data{s_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{x_k}\sin(\omega_n k) \mbox{ for $1\le n\le N/2$}.
 \end{eqnarray}$$
 
 * The frequency components of the data are often written as real and imaginary parts of the **discrete Fourier transform**,
@@ -226,12 +226,14 @@ $$\begin{eqnarray}
 
 * Here, we have made a decision to introduce a normalizing constant of $1/\sqrt{N}$. There are various choices about signs and factors of $2\pi$, $\sqrt{2\pi}$ and $\sqrt{N}$ that can---and are---made in the definition of the Fourier transform in various situations. One should try to be consistent, and also be careful: the `fft` command in R, for example, doesn't include this constant. 
 
-* `fft` is an implementation of the fast Fourier transform algorithm, which enables computation of all the frequency components with order $N\log(N)$ computation. At first consideration, computing the frequency components appears to require a matrix multiplication involving order $N^3$ additions and multiplications. When $N=10^3$ or $N=10^4$ this difference becomes important!
+* `fft` is an implementation of the fast Fourier transform algorithm, which enables computation of all the frequency components with order $N\log(N)$ computation. At first consideration, computing the frequency components appears to require a matrix multiplication involving order $N^2$ additions and multiplications. When $N=10^5$ or $N=10^6$ this difference becomes important!
 
 
 * The first frequency component, $C_0$, is something of a special case, since it has mean $\mu=\E[X_n]$ whereas the other components have mean zero.
 
-* Since the frequency components $(C_{1:N/2},S_{1:N/2})$ are asymptotically uncorrelated, and are constructed as a sum of a large number of terms, it may not be surprising that a central limit theorem applies, giving an asymptotic justification of the following normal approximation:
+* In practice, we subtract a mean before computing the periodogram, which is equivalent to removing the frequency component for frequency zero.
+
+* The frequency components $(C_{0:N/2},S_{1:N/2})$ are asymptotically uncorrelated. They are constructed as a sum of a large number of terms, with the usual  $1/\sqrt{N}$ scaling for a central limit theorem. So, it may not be surprising that a central limit theorem applies, giving asymptotic justification for the following normal approximation. 
 
 <br>
 
@@ -242,11 +244,14 @@ $$\begin{eqnarray}
 ### Normal approximation for the frequency components
 
 * $(C_{1:N/2},S_{1:N/2})$ are approximately independent, mean zero, Normal random variables with
-$$ \var(C_n) = \var(S_n) = 1/2 \lambda(\omega_n).$$
+$$ \var(C_n) = \var(S_n) \approx 1/2 \lambda(\omega_n).$$
+
+* $C_0\big/ \sqrt{N}$ is approximately Normal, mean $\mu$, independent of $(C_{1:N/2},S_{1:N/2})$, with
+$$\var(C_0\big/ \sqrt{N}) \approx \lambda(0)\big/ N.$$
 
 * Moving to the frequency domain (i.e., transforming the data to its frequency components) has **decorrelated** the data. Statistical techniques based on assumptions of independence become applicable. 
 
-* It follows from the normal approximation that 
+* It follows from the normal approximation that, for $1\le n\le N/2$,
 $$ C_n^2 + S_n^2 \approx \lambda(\omega_n) \frac{\chi^2_2}{2},$$
 where $\chi^2_2$ is a chi-squared random variable on two degrees of freedom.
 
@@ -357,15 +362,69 @@ spectrum(low, main="Unsmoothed periodogram")
 
 ---------
 
+
 ```{r smoothed_periodogram}
 spectrum(low,spans=c(3,5,3), main="Smoothed periodogram",ylim=c(15,100))
 ```
 
-* Another way to estimate the spectrum is to fit an AR(p) model with $p$ selected by AIC.
+<br>
+
+------
+
+------
+
+### More details on computing and smoothing the periodogram
+
+* To see what R actually does to compute and smooth the periodogram, type `?spectrum`. 
+
+* This will lead you to type `?spec.pgram`.
+
+* You will see that, by default, R removes a linear trend, fitted by least squares. This may often be a sensible thing to do. Why?
+
+* You will see that R then multiplies the data by a quantity called a [**taper**](https://en.wikipedia.org/wiki/Window_function), computed by `spec.taper`. 
+
+   + The taper smooths the ends of the time series and removes high-frequency artifacts arising from an abrupt start and end to the time series.
+
+   + Formally, from the perspective of the Fourier transform, the time series takes the value zero outside the observed time points $1:N$. The sudden jump to and from zero at the start and end produces unwanted effects in the frequency domain.
+
+   + The default taper in R smooths the first and last $p=0.1$ fraction of the time points, by modifying the detrended data $\data{y_{1:N}}$ to tapered version $\data{z_{1:N}}$ defined by
+$$ \data{z_n} = \left\{
+\begin{array}{ll}
+\data{y_n} \big(1-\cos(\pi n/Np)\big)/2 & \mbox{ if $n< Np$ }
+\\
+\data{y_n}  & \mbox{ if $Np \le n \le N(1-p)$ }
+\\
+\data{y_n} \big(1-\cos(\pi [N+1-n]/Np)\big)/2 & \mbox{ if $N(1-p)<n< N$ }
+\end{array}\right.
+$$
+
+```{r taper_plot}
+plot(spec.taper(rep(1,100)),type="l",
+  main="Default taper in R for a time series of length 100")
+abline(v=c(10,90),lty="dotted",col="red")
+```
+
+<br>
+
+------
+
+-----
+
+### Spectral density estimation by fitting a model
+
+* Another standard way to estimate the spectrum is to fit an AR(p) model with $p$ selected by AIC.
 
 ```{r ar_periodogram}
 spectrum(low,method="ar", main="Spectrum estimated via AR model picked by AIC")
 ```
+
+<br>
+
+------
+
+-----
+
+### Fitting a signal plus white noise model
 
 * Since this time series is well modeled by white noise, we could fit a signal plus white noise model. This might be a more sensitive way to look for a trend.
 

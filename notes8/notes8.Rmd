@@ -120,10 +120,6 @@ date <- seq(from=1948,length=length(u1),by=1/12)
 plot(date,u1,type="l",ylab="Percent unemployment (unadjusted)")
 ```
  
-```{r test}
-plot(u1)
-```
-
 * We see seasonal variation, and perhaps we see business cycles on top of a slower trend.
 
 * The seasonal variation looks like an additive effect, say an annual fluctation with amplitude around 1 percentage point. For many purposes, we may prefer to look at a measure of [monthly seasonally adjusted unemployment](http://data.bls.gov/timeseries/LNS14000000), which the Bureau of Labor Statistics also provides. 
@@ -262,3 +258,92 @@ abline(h=1,lty="dashed",col="red")
 --------
 
 -------
+
+## Extracting business cycles: A band pass filter
+
+* For the unemployment data, high frequency variation might be considered "noise" and low frequency variation might be considered trend.
+
+* A band of mid-range frequencies might be considered to correspond to the business cycle.
+
+* Let's build a smoothing operation in the time domain to extract business cycles, and then look at its frequency response function.
+
+```{r cycles,fig.height=6}
+u_low <- ts(loess(u1~date,span=0.5)$fitted,start=1948,frequency=12)
+u_hi <- ts(u1 - loess(u1~date,span=0.1)$fitted,start=1948,frequency=12)
+u_cycles <- u1 - u_hi - u_low
+plot(ts.union(u1, u_low,u_hi,u_cycles),
+  main="Decomposition of unemployment as trend + noise + cycles")
+```
+
+```{r freq_response}
+spec_cycle <- spectrum(ts.union(u1_ts,u_cycles),
+  spans=c(3,3),
+  plot=FALSE)
+freq_response_cycle <- spec_cycle$spec[,2]/spec_cycle$spec[,1]
+plot(spec_cycle$freq,freq_response_cycle,
+  type="l",log="y",
+  ylab="frequency ratio", xlab="frequency", xlim=c(0,1.2), ylim=c(5e-6,1.1),
+  main="frequency response (dashed line at 1.0)")
+abline(h=1,lty="dashed",col="red")  
+
+```
+
+--------
+
+--------
+
+
+### Question: Describe the frequencies (and corresponding periods) that this decomposition identifies as business cycles
+
+* Note: Usually, we should specify units for frequency and period. Here, the units are omitted to give you an exercise!
+
+* To help answer this question, let's add some lines to the previous plot
+
+```{r show_range}
+cut_fraction <- 0.5
+plot(spec_cycle$freq,freq_response_cycle,
+  type="l",log="y",
+  ylab="frequency ratio", xlab="frequency", xlim=c(0,0.9), ylim=c(1e-4,1.1),
+  main=paste("frequency response, showing region for ratio >", cut_fraction))
+abline(h=1,lty="dashed",col="blue")  
+freq_cycles <- range(spec_cycle$freq[freq_response_cycle>cut_fraction]) 
+abline(v=freq_cycles,lty="dashed",col="blue") 
+abline(h=cut_fraction,lty="dashed",col="blue")
+```
+
+```{r print_range}
+kable(matrix(freq_cycles,nrow=1,dimnames=list("frequency",c("low","hi"))),digits=3)
+```
+
+<br>
+
+-------
+
+------
+
+### Question: So far as we have opinions on business cycles, use them to criticize this decomposition.
+
+<br>
+
+
+-----
+
+-------
+
+## Common smoothers in R
+
+* Above, we have used the **local regression smoother** `loess` but there are other options.
+
+* Our immediate goal is to get practical experience using a smoother and then statistically assessing what we have done. 
+
+* You can learn about alternative smoothers, and try them out, if you like.
+
+* `ksmooth` is a [**kernel smoother**](https://en.wikipedia.org/wiki/Kernel_smoother).  The default periodogram smoother in `spectrum` is also a kernel smoother.
+
+* `smooth.spline` is a [**spline smoother**](https://en.wikipedia.org/wiki/Smoothing_spline).
+
+<br>
+
+-------
+
+------
