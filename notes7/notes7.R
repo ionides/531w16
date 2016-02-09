@@ -36,6 +36,11 @@ spectrum(low, main="Unsmoothed periodogram")
 ## ----smoothed_periodogram------------------------------------------------
 spectrum(low,spans=c(3,5,3), main="Smoothed periodogram",ylim=c(15,100))
 
+## ----taper_plot----------------------------------------------------------
+plot(spec.taper(rep(1,100)),type="l",
+  main="Default taper in R for a time series of length 100")
+abline(v=c(10,90),lty="dotted",col="red")
+
 ## ----ar_periodogram------------------------------------------------------
 spectrum(low,method="ar", main="Spectrum estimated via AR model picked by AIC")
 

@@ -390,11 +390,11 @@ spectrum(low,spans=c(3,5,3), main="Smoothed periodogram",ylim=c(15,100))
    + The default taper in R smooths the first and last $p=0.1$ fraction of the time points, by modifying the detrended data $\data{y_{1:N}}$ to tapered version $\data{z_{1:N}}$ defined by
 $$ \data{z_n} = \left\{
 \begin{array}{ll}
-\data{y_n} \big(1-\cos(\pi n/Np)\big)/2 & \mbox{ if $n< Np$ }
+\data{y_n} \big(1-\cos(\pi n/Np)\big)/2 & \mbox{ if $1\le n< Np$ }
 \\
 \data{y_n}  & \mbox{ if $Np \le n \le N(1-p)$ }
 \\
-\data{y_n} \big(1-\cos(\pi [N+1-n]/Np)\big)/2 & \mbox{ if $N(1-p)<n< N$ }
+\data{y_n} \big(1-\cos(\pi [N+1-n]/Np)\big)/2 & \mbox{ if $N(1-p)<n\le N$ }
 \end{array}\right.
 $$
 

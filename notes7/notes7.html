@@ -316,11 +316,11 @@ head(x)</code></pre>
 <li><p>Formally, from the perspective of the Fourier transform, the time series takes the value zero outside the observed time points <span class="math">\(1:N\)</span>. The sudden jump to and from zero at the start and end produces unwanted effects in the frequency domain.</p></li>
 <li><p>The default taper in R smooths the first and last <span class="math">\(p=0.1\)</span> fraction of the time points, by modifying the detrended data <span class="math">\({y_{1:N}^*}\)</span> to tapered version <span class="math">\({z_{1:N}^*}\)</span> defined by <span class="math">\[ {z_n^*} = \left\{
 \begin{array}{ll}
-{y_n^*} \big(1-\cos(\pi n/Np)\big)/2 &amp; \mbox{ if $n&lt; Np$ }
+{y_n^*} \big(1-\cos(\pi n/Np)\big)/2 &amp; \mbox{ if $1\le n&lt; Np$ }
 \\
 {y_n^*}  &amp; \mbox{ if $Np \le n \le N(1-p)$ }
 \\
-{y_n^*} \big(1-\cos(\pi [N+1-n]/Np)\big)/2 &amp; \mbox{ if $N(1-p)&lt;n&lt; N$ }
+{y_n^*} \big(1-\cos(\pi [N+1-n]/Np)\big)/2 &amp; \mbox{ if $N(1-p)&lt;n\le N$ }
 \end{array}\right.
 \]</span></p></li>
 </ul>

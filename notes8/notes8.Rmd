@@ -330,6 +330,45 @@ kable(matrix(freq_cycles,nrow=1,dimnames=list("frequency",c("low","hi"))),digits
 
 -------
 
+### Question: Criticizing the construction of the blue dashed lines
+
+* Why do the blue dashed lines in the above figure not meet exactly on the frequency response curve? 
+
+* What could or should be done to improve this?
+
+
+<br>
+
+
+-----
+
+-------
+
+### Looking for business cycles
+
+* We can plot just the lower frequencies of a smoothed periodogram for the raw unemployment data, to zoom in on the frequencies around the business cycle frequency.
+
+* Standard periodogram smoothers use the same smoothing bandwidth across all frequencies. This may not always be appropriate. Why?
+
+* Sometimes in practice we want to use less smoothing when we are focusing on low frequency behaviors.
+
+```{r zoomed_spectrum}
+s1 <- spectrum(u1_ts,spans=c(3),plot=FALSE)
+plot(s1,xlim=c(0,0.7),ylim=c(1e-2,max(s1$spec)))
+```
+
+-----
+
+-----
+
+### Question: Comment on the evidence for and against the concept of a business cycle in the above figure.
+
+<br>
+
+-------
+
+-----
+
 ## Common smoothers in R
 
 * Above, we have used the **local regression smoother** `loess` but there are other options.
@@ -341,6 +380,14 @@ kable(matrix(freq_cycles,nrow=1,dimnames=list("frequency",c("low","hi"))),digits
 * `ksmooth` is a [**kernel smoother**](https://en.wikipedia.org/wiki/Kernel_smoother).  The default periodogram smoother in `spectrum` is also a kernel smoother.
 
 * `smooth.spline` is a [**spline smoother**](https://en.wikipedia.org/wiki/Smoothing_spline).
+
+* All these smoothers have some concept of a **bandwidth**, which is a measure of the size of the neighborhood of time points in which data affect the smoothed value at a particular time point. 
+
+* The concept of bandwidth is most obvious for kernel smoothers, but exists for other smoothers.
+
+* We usually only interpret bandwidth up to a constant. For a particular smoothing algorithm and software implementation, you learn by experience to interpret the comparative value (smaller bandwidth means less smoothing). 
+
+* Typically, when writing reports, it makes sense not to present or discuss smoothing bandwidth since it is not directly interpretable for most readers.
 
 <br>
 

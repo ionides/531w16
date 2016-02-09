@@ -15,9 +15,6 @@ dim(u1) <- NULL
 date <- seq(from=1948,length=length(u1),by=1/12)
 plot(date,u1,type="l",ylab="Percent unemployment (unadjusted)")
 
-## ----test----------------------------------------------------------------
-plot(u1)
-
 ## ----data_adj------------------------------------------------------------
 U2 <- read.table(file="adjusted_unemployment.csv",sep=",",header=TRUE)
 u2 <- t(as.matrix(U2[2:13]))
@@ -82,14 +79,21 @@ plot(spec_cycle$freq,freq_response_cycle,
 abline(h=1,lty="dashed",col="red")  
 
 
-## ----show range----------------------------------------------------------
+## ----show_range----------------------------------------------------------
 cut_fraction <- 0.5
 plot(spec_cycle$freq,freq_response_cycle,
   type="l",log="y",
   ylab="frequency ratio", xlab="frequency", xlim=c(0,0.9), ylim=c(1e-4,1.1),
   main=paste("frequency response, showing region for ratio >", cut_fraction))
-abline(h=1,lty="dashed",col="red")  
+abline(h=1,lty="dashed",col="blue")  
 freq_cycles <- range(spec_cycle$freq[freq_response_cycle>cut_fraction]) 
 abline(v=freq_cycles,lty="dashed",col="blue") 
 abline(h=cut_fraction,lty="dashed",col="blue")
+
+## ----print_range---------------------------------------------------------
+kable(matrix(freq_cycles,nrow=1,dimnames=list("frequency",c("low","hi"))),digits=3)
+
+## ----zoomed_spectrum-----------------------------------------------------
+s1 <- spectrum(u1_ts,spans=c(3),plot=FALSE)
+plot(s1,xlim=c(0,0.7),ylim=c(1e-2,max(s1$spec)))
 
