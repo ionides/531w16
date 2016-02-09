@@ -512,7 +512,7 @@ Hint: notice the standard error on the coefficient, together with consideration 
 
 * For a frequency component corresponding to  $\sin(2\pi\omega n)$ or $\cos(2\pi\omega n)$, we say that the frequency is $\omega$ **cycles per unit time**.
 
-* If the time series consists of equally spaced observations with $\t_{n}-t_{n-1}=\Delta $years, we say that the frequency is $\omega/\Delta$ **cycles per year**. 
+* Suppose the time series consists of equally spaced observations, with $t_{n}-t_{n-1}=\Delta$ years. Then we say that the frequency is $\omega/\Delta$ **cycles per year**. 
 
 * For a frequency component corresponding to  $\sin(\nu t)$ or $\cos(\nu t)$, we say that the frequency is $\nu$ **radians per unit time**.
 
