@@ -1,0 +1,359 @@
+---
+title: "9. Introduction to partially observed Markov process models"
+author: "Edward Ionides"
+date: "2/11/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=8"
+    ]
+csl: ecology.csl
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+* Develop a framework for thinking of models consisting of a stochastic dynamic system observed with noise.
+
+* In the linear Gaussian case, develop matrix operations to find an exact and computationally fast algorithm for the likelihood function. This algorithm is called the **Kalman filter**.
+
+* Understand how the Kalman filter is used to compute the likelihood for ARMA models.
+
+* See how the Kalman filter also facilitates forecasting and estimation of the state of the unobserved process.
+
+* Start to investigate the general nonlinear filtering equations.
+
+<br>
+
+----------------------
+
+---------------
+
+## Partially observed Markov processes (POMP) models
+
+* Uncertainty and variability are ubiquitous features of processes in the biological and social sciences. A physical system obeying Newton's laws is fully predictable, but complex systems are in practice not perfectly predictable---we can only forecast weather reliably in the near future.
+
+* Basic time series model of deterministic trend plus colored noise imply perfect reproducibility and (so far as the deterministic trend model can be extrapolated) forecasts that remain acurate far into the future.
+
+* To model variability and unpredictability in low frequency components, we may wish to specify a random process model for how the system evolves. We could call this a "stochastic trend" approach, though that is an oxymoron since we've defined trend to be expected value.
+
+* As in the deterministic signal plus noise model, we will model the observations as random variables conditional on the trajectory of the latent process.
+
+* The random proces model for how the system evolves is therefore called a **latent process model** or a **hidden process model** to acknowledge that we are modeling a process that we suppose cannot directly be observed.
+
+* A standard class of latent process models is characterized by the requirement that the future evolution of the system depends only on the current state, plus randomness introduced in future. A model of this type is called a **Markov chain**, or, if the process is defined in continuous time rather than just at discrete time points, a **Markov process**. We will use the term Markov process for both discrete and continous time.
+
+* **Partial observations** here mean either or both of (i) measurement noise; (ii) entirely unmeasured latent variables. Both these features are present in many systems.
+
+* To specify a **partially observed Markov process** (POMP) model, we will need to specify a latent Markov process model. We must also then specify how the **observation process model** is supposed to generate the data given the latent process.
+
+* In a POMP model, the latent Markov process model can also be called the **state process model** or the **hidden process model**. 
+
+* Often, much of the scientific interest is in understanding what models for the behavior of this latent process are consistent with the data. 
+
+* A good model for the underlying, but imperfectly observed, dynamics of a system can also lead to a skillful forecast.
+
+* We are going to introduce a general framework for specifying POMP models. This generality will give us the flexibility to develop models and methods appropriate to a range of applications.
+
+<br>
+
+-------
+
+-------
+
+### Discrete time Markov processes
+
+* A time series model $X_{0:N}$ is a **Markov process** model if the conditional densities satisfy the **Markov property**,
+<br><br>
+[MP1] $\eqspace f_{X_n|X_{1:n-1}}(x_n\given x_{1:n-1}) = f_{X_n|X_{n-1}}(x_n\given x_{n-1})
+$
+<br><br>
+for all $n\in 1:N$. 
+
+* We suppose that the random process $X_n$ occurs at time $t_n$ for $n\in 0:N$, so the discrete time process corresponds to time points in continuous time. 
+
+* We have **initialized** the Markov process model at a time $t_0$, although we will suppose that data are collected only at times $t_{1:N}$.
+
+    + The initialization model could be deterministic (a fixed value) or a random variable. 
+
+    + Formally, a fixed initial value is a special case of a discrete distribution having a point mass with probability one at the fixed value. Therefore, fixed initial values are covered in our framework since we use probability density functions to describe both discrete and continuous probability distributions.
+
+    + Mathematically, a probability mass function (for discrete distributions) is a probability density with respect to a [counting measure](https://en.wikipedia.org/wiki/Counting_measure). We don't have to get sidetracked on to that topic, but it is worth noting that there is a proper mathematical justification for treating a probability mass function as a type of probability density function.
+
+    + It is not important whether to adopt the convention that the Markov process model is intialized at time $t_1$ or at some previous time $t_0$. Here, we follow the choice to use $t_0$.
+
+* The probability density function $f_{X_n|X_{n-1}}(x_n\given x_{n-1})$ is called the **one-step transition density** of the Markov process.
+
+* In words, the Markov property says that the next step taken by a Markov process follows the one-step transition density based on the current state, whatever the previous history of the process.
+
+* For a POMP model, the full joint distribution of the latent process is entirely specified by the one-step transition densities, as we will show below. Therefore, we also call $f_{X_n|X_{n-1}}(x_n\given x_{n-1})$ the **process model**.
+
+
+
+<br>
+
+-----
+
+-----
+
+### Question: Write the joint distribution in terms of the one-step transition densities
+
+* Use [MP1] to derive an expression for the joint distribution of a Markov process as a produce of the one-step transition densities,
+<br><br>
+[MP2] $\eqspace f_{X_{0:N}}(x_{0:N}) = f_{X_0}(x_0)\prod_{n=1}^N f_{X_n|X_{n-1}}(x_n\given x_{n-1})
+$.
+<br><br>
+
+------
+
+------
+
+### Question: Show that a causal Gaussian AR(1) process is a Markov process.
+
+<br>
+
+-----
+
+-----
+
+### Time homogeneous transitions and stationarity
+
+* In general, the one step transition probability density in a POMP model can depend on $n$. 
+
+* A latent process model $X_{0:N}$ is **time-homogeneous** if the  one step transition probability density does not depend on $n$, i.e., if there is a conditional density $f(y\given x)$ such that, for all $n\in 1:N$,
+$$  f_{X_n|X_{n-1}}(x_n\given x_{n-1})= f(y_n|x_n).$$
+
+* If $X_{0:N}$ is stationary then it is time homogeneous. 
+
+    + Why? Go back to the definitions and show this from first principles. 
+
+* Time homogeneity does not necessarily imply stationarity. 
+
+    + Find a counter-example.
+
+    + What has to be added to time homogeneity to get stationarity?
+
+<br>
+
+--------
+
+--------
+
+
+### The measurement model
+
+* We model the observation process random variables $Y_{1:N}$.
+
+* For state space models, we will generally write the data as $\data{y_{1:N}}$.
+
+* We model the measurement at time $t_n$ to depend only on the value of the latent process at time $t_n$, conditionally independent of all other latent process and observation process variables. Formally, this assumption is,
+<br><br>
+[MP3] $\eqspace f_{Y_n|X_{0:N},Y_{1:n-1},Y_{n+1:N}}(y_n\given x_{0:N,y_{1:n-1},y_{n+1:N}) = f_{Y_n|X_n}(y_n\given x_{n})$.
+<br><br>
+
+* We call $f_{Y_n|X_n}(y_n\given x_{n})$ the **measurement model**.
+
+* In general, the measurement model can depend on $n$. 
+
+* The measurement model is **time-homogeneous** if there is a conditional probability density function $g(y\given x)$ such that, for all $n\in 1:N$,
+$$ f_{Y_n|X_n}(y_n\given x_{n})= g(y_n\given x_n).$$
+
+<br>
+
+--------
+
+--------
+
+## Four basic calculations for working with POMP models
+
+* Many time series models in science, engineering and industry can be written as POMP models.
+
+* A reason that POMP models form a useful tool for statistical work is that there are convenient recursive formulas to carry out following four basic calculations.
+
+<br>
+
+------
+
+-------
+
+### Prediction
+
+* One-step prediction for the latent process at time $t_{n+1}$ given data up to time $t_n$ involves finding
+$$ f_{X_{n+1}|Y_{1:n}}(x_{n+1}\given \data{y_{1:n}}).$$
+
+* We may want to carry out prediction (also called forecasting) more than one time step ahead. However, unless specified otherwise, the prediction calculation will be one-step prediction. 
+
+* One-step prediction turns out to be closely related to computing the likelihood function, and therefore central to statistical inference.
+
+* We have required our prediction to be a conditional probability density, not a point estimate. In the context of forecasting, this is called a **probabilistic forecast**, and has advantages over a point estimate forecast. What are they? Are there any disadvantages to probabilistic forecasting?
+
+<br>
+
+------
+
+-------
+
+### Filtering
+
+* The filtering calculation at time $t_n$ is to find the conditional distribution of the latent process $X_n$ given currently available data, $\data{y_{1:n}}$.
+
+* Filtering therefore involves calculating
+$$f_{X_{n}|Y_{1:n}}(x_n\given \data{y_{1:n}}).$$
+
+
+
+<br>
+
+------
+
+-------
+
+### Smoothing
+
+* In the context of a POMP model, smoothing involves finding the conditional distribution of $X_n$ given all the data, $\data{y_{1:N}}$.
+
+* So, the smoothing calculation is
+$$f_{X_{n}|Y_{1:N}}(x_n\given \data{y_{1:N}}).$$
+
+<br>
+
+------
+
+-------
+
+### The likelihood
+
+* The model may depend on a parameter vector $\theta$.
+
+* Since we haven't explicitly written this dependence above, the likelihood calculation is to evaluate the joint density of $Y_{1:N}$ at the data,
+$$f_{Y_{1:N}}(\data{y_{1:N}}).$$
+
+* If we can compute this for any value of $\theta$, we can perform numerical optimization to get a maximum likelihood estimate, compute profile likelihood confidence intervals, carry out likelihood ratio tests, and make AIC comparisons.
+
+<br
+
+
+
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
+<br>
+
+------
+
+-------
