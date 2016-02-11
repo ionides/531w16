@@ -70,8 +70,8 @@ img {
 
 <div id="TOC">
 <ul>
-<li><a href="#partially-observed-markov-processes-pomp-models"><span class="toc-section-number">8.1</span> Partially observed Markov processes (POMP) models</a></li>
-<li><a href="#four-basic-calculations-for-working-with-pomp-models"><span class="toc-section-number">8.2</span> Four basic calculations for working with POMP models</a></li>
+<li><a href="#partially-observed-markov-processes-pomp-models"><span class="toc-section-number">9.1</span> Partially observed Markov processes (POMP) models</a></li>
+<li><a href="#four-basic-calculations-for-working-with-pomp-models"><span class="toc-section-number">9.2</span> Four basic calculations for working with POMP models</a></li>
 </ul>
 </div>
 
@@ -90,7 +90,7 @@ img {
 <hr />
 <hr />
 <div id="partially-observed-markov-processes-pomp-models" class="section level2">
-<h2><span class="header-section-number">8.1</span> Partially observed Markov processes (POMP) models</h2>
+<h2><span class="header-section-number">9.1</span> Partially observed Markov processes (POMP) models</h2>
 <ul>
 <li><p>Uncertainty and variability are ubiquitous features of processes in the biological and social sciences. A physical system obeying Newton’s laws is fully predictable, but complex systems are in practice not perfectly predictable—we can only forecast weather reliably in the near future.</p></li>
 <li><p>Basic time series model of deterministic trend plus colored noise imply perfect reproducibility and (so far as the deterministic trend model can be extrapolated) forecasts that remain acurate far into the future.</p></li>
@@ -109,7 +109,7 @@ img {
 <hr />
 <hr />
 <div id="discrete-time-markov-processes" class="section level3">
-<h3><span class="header-section-number">8.1.1</span> Discrete time Markov processes</h3>
+<h3><span class="header-section-number">9.1.1</span> Discrete time Markov processes</h3>
 <ul>
 <li>A time series model <span class="math">\(X_{0:N}\)</span> is a <strong>Markov process</strong> model if the conditional densities satisfy the <strong>Markov property</strong> that, for all <span class="math">\(n\in 1:N\)</span>.</li>
 </ul>
@@ -134,7 +134,7 @@ img {
 <hr />
 </div>
 <div id="question-write-the-joint-distribution-in-terms-of-the-one-step-transition-densities" class="section level3">
-<h3><span class="header-section-number">8.1.2</span> Question: Write the joint distribution in terms of the one-step transition densities</h3>
+<h3><span class="header-section-number">9.1.2</span> Question: Write the joint distribution in terms of the one-step transition densities</h3>
 <ul>
 <li>Use [MP1] to derive an expression for the joint distribution of a Markov process as a produce of the one-step transition densities,</li>
 </ul>
@@ -145,13 +145,13 @@ img {
 <hr />
 </div>
 <div id="question-show-that-a-causal-gaussian-ar1-process-is-a-markov-process." class="section level3">
-<h3><span class="header-section-number">8.1.3</span> Question: Show that a causal Gaussian AR(1) process is a Markov process.</h3>
+<h3><span class="header-section-number">9.1.3</span> Question: Show that a causal Gaussian AR(1) process is a Markov process.</h3>
 <p><br></p>
 <hr />
 <hr />
 </div>
 <div id="time-homogeneous-transitions-and-stationarity" class="section level3">
-<h3><span class="header-section-number">8.1.4</span> Time homogeneous transitions and stationarity</h3>
+<h3><span class="header-section-number">9.1.4</span> Time homogeneous transitions and stationarity</h3>
 <ul>
 <li><p>In general, the one step transition probability density in a POMP model can depend on <span class="math">\(n\)</span>.</p></li>
 <li><p>A latent process model <span class="math">\(X_{0:N}\)</span> is <strong>time-homogeneous</strong> if the one step transition probability density does not depend on <span class="math">\(n\)</span>, i.e., if there is a conditional density <span class="math">\(f(y{{\, | \,}}x)\)</span> such that, for all <span class="math">\(n\in 1:N\)</span>, <span class="math">\[  f_{X_n|X_{n-1}}(x_n{{\, | \,}}x_{n-1})= f(x_n{{\, | \,}}x_{n-1}).\]</span></p></li>
@@ -170,7 +170,7 @@ img {
 <hr />
 </div>
 <div id="the-measurement-model" class="section level3">
-<h3><span class="header-section-number">8.1.5</span> The measurement model</h3>
+<h3><span class="header-section-number">9.1.5</span> The measurement model</h3>
 <ul>
 <li><p>We model the observation process random variables <span class="math">\(Y_{1:N}\)</span>.</p></li>
 <li><p>For state space models, we will generally write the data as <span class="math">\({y_{1:N}^*}\)</span>.</p></li>
@@ -190,7 +190,7 @@ img {
 </div>
 </div>
 <div id="four-basic-calculations-for-working-with-pomp-models" class="section level2">
-<h2><span class="header-section-number">8.2</span> Four basic calculations for working with POMP models</h2>
+<h2><span class="header-section-number">9.2</span> Four basic calculations for working with POMP models</h2>
 <ul>
 <li><p>Many time series models in science, engineering and industry can be written as POMP models.</p></li>
 <li><p>A reason that POMP models form a useful tool for statistical work is that there are convenient recursive formulas to carry out following four basic calculations.</p></li>
@@ -199,7 +199,7 @@ img {
 <hr />
 <hr />
 <div id="prediction" class="section level3">
-<h3><span class="header-section-number">8.2.1</span> Prediction</h3>
+<h3><span class="header-section-number">9.2.1</span> Prediction</h3>
 <ul>
 <li><p>One-step prediction of the latent process at time <span class="math">\(t_{n+1}\)</span> given data up to time <span class="math">\(t_n\)</span> involves finding <span class="math">\[ f_{X_{n+1}|Y_{1:n}}(x_{n+1}{{\, | \,}}{y_{1:n}^*}).\]</span></p></li>
 <li><p>We may want to carry out prediction (also called forecasting) more than one time step ahead. However, unless specified otherwise, the prediction calculation will be one-step prediction.</p></li>
@@ -211,7 +211,7 @@ img {
 <hr />
 </div>
 <div id="filtering" class="section level3">
-<h3><span class="header-section-number">8.2.2</span> Filtering</h3>
+<h3><span class="header-section-number">9.2.2</span> Filtering</h3>
 <ul>
 <li><p>The filtering calculation at time <span class="math">\(t_n\)</span> is to find the conditional distribution of the latent process <span class="math">\(X_n\)</span> given currently available data, <span class="math">\({y_{1:n}^*}\)</span>.</p></li>
 <li><p>Filtering therefore involves calculating <span class="math">\[f_{X_{n}|Y_{1:n}}(x_n{{\, | \,}}{y_{1:n}^*}).\]</span></p></li>
@@ -221,7 +221,7 @@ img {
 <hr />
 </div>
 <div id="smoothing" class="section level3">
-<h3><span class="header-section-number">8.2.3</span> Smoothing</h3>
+<h3><span class="header-section-number">9.2.3</span> Smoothing</h3>
 <ul>
 <li><p>In the context of a POMP model, smoothing involves finding the conditional distribution of <span class="math">\(X_n\)</span> given all the data, <span class="math">\({y_{1:N}^*}\)</span>.</p></li>
 <li><p>So, the smoothing calculation is <span class="math">\[f_{X_{n}|Y_{1:N}}(x_n{{\, | \,}}{y_{1:N}^*}).\]</span></p></li>
@@ -231,7 +231,7 @@ img {
 <hr />
 </div>
 <div id="the-likelihood" class="section level3">
-<h3><span class="header-section-number">8.2.4</span> The likelihood</h3>
+<h3><span class="header-section-number">9.2.4</span> The likelihood</h3>
 <ul>
 <li><p>The model may depend on a parameter vector <span class="math">\(\theta\)</span>.</p></li>
 <li><p>Since we haven’t explicitly written this dependence above, the likelihood calculation is to evaluate the joint density of <span class="math">\(Y_{1:N}\)</span> at the data, <span class="math">\[f_{Y_{1:N}}({y_{1:N}^*}).\]</span></p></li>
@@ -242,7 +242,7 @@ img {
 <hr />
 </div>
 <div id="the-prediction-and-filtering-formulas" class="section level3">
-<h3><span class="header-section-number">8.2.5</span> The prediction and filtering formulas</h3>
+<h3><span class="header-section-number">9.2.5</span> The prediction and filtering formulas</h3>
 <ul>
 <li>One-step prediction of the latent process at time <span class="math">\(t_{n}\)</span> given data up to time <span class="math">\(t_{n-1}\)</span> can be computed in terms of the filtering problem at time <span class="math">\(t_{n-1}\)</span>, via the <strong>prediction formula</strong> for <span class="math">\(n\in 1:N\)</span>,</li>
 </ul>
@@ -284,12 +284,12 @@ img {
 <hr />
 </div>
 <div id="question-give-a-detailed-derivation-of-mp4-mp5-and-mp6-being-careful-to-note-when-you-use-the-markov-property-mp1." class="section level3">
-<h3><span class="header-section-number">8.2.6</span> Question: Give a detailed derivation of [MP4], [MP5] and [MP6], being careful to note when you use the Markov property [MP1].</h3>
+<h3><span class="header-section-number">9.2.6</span> Question: Give a detailed derivation of [MP4], [MP5] and [MP6], being careful to note when you use the Markov property [MP1].</h3>
 <hr />
 <hr />
 </div>
 <div id="computation-of-the-likelihood" class="section level3">
-<h3><span class="header-section-number">8.2.7</span> Computation of the likelihood</h3>
+<h3><span class="header-section-number">9.2.7</span> Computation of the likelihood</h3>
 <ul>
 <li>The likelihood of the entire dataset, <span class="math">\({y_{1:N}^*}\)</span> can be found from [MP6], using the identity</li>
 </ul>
@@ -306,7 +306,7 @@ f_{Y_{1}}({y_1^*}).\]</span></p></li>
 <hr />
 </div>
 <div id="the-smoothing-formulas" class="section level3">
-<h3><span class="header-section-number">8.2.8</span> The smoothing formulas</h3>
+<h3><span class="header-section-number">9.2.8</span> The smoothing formulas</h3>
 <ul>
 <li><p>Smoothing is less fundamental for likelihood-based inference than filtering and one-step prediction.</p></li>
 <li><p>Nevertheless, sometimes we want to compute the smoothing density, so let’s obtain some necessary formulas.</p></li>
@@ -326,7 +326,7 @@ f_{Y_{1}}({y_1^*}).\]</span></p></li>
 <p><br></p>
 </div>
 <div id="question-show-how-mp8-mp9-and-mp10-follow-from-the-basic-properties-of-conditional-densities-combined-with-the-markov-property.-find-an-expression-for-the-constant-of-proportionality-in-mp10." class="section level3">
-<h3><span class="header-section-number">8.2.9</span> Question: Show how [MP8], [MP9] and [MP10] follow from the basic properties of conditional densities combined with the Markov property. Find an expression for the constant of proportionality in [MP10].</h3>
+<h3><span class="header-section-number">9.2.9</span> Question: Show how [MP8], [MP9] and [MP10] follow from the basic properties of conditional densities combined with the Markov property. Find an expression for the constant of proportionality in [MP10].</h3>
 <p><br></p>
 <hr />
 <hr />
