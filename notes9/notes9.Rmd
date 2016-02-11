@@ -109,7 +109,7 @@ options(
 
 * As in the deterministic signal plus noise model, we will model the observations as random variables conditional on the trajectory of the latent process.
 
-* The random proces model for how the system evolves is therefore called a **latent process model** or a **hidden process model** to acknowledge that we are modeling a process that we suppose cannot directly be observed.
+* The model for how the latent Markov process evolves is therefore called a **latent process model** or a **hidden process model** to acknowledge that we are modeling a process that we suppose cannot directly be observed. It is also sometimes called a **state process** since we may think of the latent process as representing the indirectly measured state of some system.
 
 * A standard class of latent process models is characterized by the requirement that the future evolution of the system depends only on the current state, plus randomness introduced in future. A model of this type is called a **Markov chain**, or, if the process is defined in continuous time rather than just at discrete time points, a **Markov process**. We will use the term Markov process for both discrete and continous time.
 
@@ -133,12 +133,13 @@ options(
 
 ### Discrete time Markov processes
 
-* A time series model $X_{0:N}$ is a **Markov process** model if the conditional densities satisfy the **Markov property**,
-<br><br>
-[MP1] $\eqspace f_{X_n|X_{1:n-1}}(x_n\given x_{1:n-1}) = f_{X_n|X_{n-1}}(x_n\given x_{n-1})
-$
-<br><br>
-for all $n\in 1:N$. 
+* A time series model $X_{0:N}$ is a **Markov process** model if the conditional densities satisfy the **Markov property** that, for all $n\in 1:N$. 
+
+<br>
+
+[MP1] $\eqspace f_{X_n|X_{1:n-1}}(x_n\given x_{1:n-1}) = f_{X_n|X_{n-1}}(x_n\given x_{n-1})$,
+
+<br>
 
 * We suppose that the random process $X_n$ occurs at time $t_n$ for $n\in 0:N$, so the discrete time process corresponds to time points in continuous time. 
 
@@ -169,10 +170,12 @@ for all $n\in 1:N$.
 ### Question: Write the joint distribution in terms of the one-step transition densities
 
 * Use [MP1] to derive an expression for the joint distribution of a Markov process as a produce of the one-step transition densities,
-<br><br>
-[MP2] $\eqspace f_{X_{0:N}}(x_{0:N}) = f_{X_0}(x_0)\prod_{n=1}^N f_{X_n|X_{n-1}}(x_n\given x_{n-1})
-$.
-<br><br>
+
+<br>
+
+[MP2] $\eqspace f_{X_{0:N}}(x_{0:N}) = f_{X_0}(x_0)\prod_{n=1}^N f_{X_n|X_{n-1}}(x_n\given x_{n-1})$.
+
+<br>
 
 ------
 
@@ -191,7 +194,7 @@ $.
 * In general, the one step transition probability density in a POMP model can depend on $n$. 
 
 * A latent process model $X_{0:N}$ is **time-homogeneous** if the  one step transition probability density does not depend on $n$, i.e., if there is a conditional density $f(y\given x)$ such that, for all $n\in 1:N$,
-$$  f_{X_n|X_{n-1}}(x_n\given x_{n-1})= f(y_n\given x_n).$$
+$$  f_{X_n|X_{n-1}}(x_n\given x_{n-1})= f(x_n\given x_{n-1}).$$
 
 * If $X_{0:N}$ is stationary then it is time homogeneous. 
 
@@ -217,9 +220,12 @@ $$  f_{X_n|X_{n-1}}(x_n\given x_{n-1})= f(y_n\given x_n).$$
 * For state space models, we will generally write the data as $\data{y_{1:N}}$.
 
 * We model the measurement at time $t_n$ to depend only on the value of the latent process at time $t_n$, conditionally independent of all other latent process and observation process variables. Formally, this assumption is,
-<br><br>
+
+<br>
+
 [MP3] $\eqspace f_{Y_n|X_{0:N},Y_{1:n-1},Y_{n+1:N}}(y_n\given x_{0:N},y_{1:n-1},y_{n+1:N}) = f_{Y_n|X_n}(y_n\given x_{n})$.
-<br><br>
+
+<br>
 
 * We call $f_{Y_n|X_n}(y_n\given x_{n})$ the **measurement model**.
 
@@ -310,11 +316,17 @@ $$f_{Y_{1:N}}(\data{y_{1:N}}).$$
 ### The prediction and filtering formulas
 
 * One-step prediction of the latent process at time $t_{n}$ given data up to time $t_{n-1}$ can be computed in terms of the filtering problem at time $t_{n-1}$, via the **prediction formula** for $n\in 1:N$,
-<br><br>
-[MP4] $\eqspace \displaystyle f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}})
-= \int f_{X_{n-1}|Y_{1:n-1}}(x_{n-1}\given \data{y_{1:n-1}}) 
+
+<br>
+
+[MP4] $\eqspace \displaystyle f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}})$
+
+<br>
+
+$\eqspace \eqspace \displaystyle = \int f_{X_{n-1}|Y_{1:n-1}}(x_{n-1}\given \data{y_{1:n-1}}) 
 f_{X_{n}|X_{n-1}}(x_{n}\given x_{n-1})\, dx_{n-1}$.
-<br><br>
+
+<br>
 
 * To make this formula work for $n=1$, we need the convention that $1:k$ is the empty set when $k=0$. Conditioning on an empty collection of random variables is the same as not conditioning at all! In this case, we have by definition that
 $$ f_{X_{0}|Y_{1:0}}(x_{0}\given \data{y_{1:0}}) = f_{X_0}(x_0).$$
@@ -330,7 +342,9 @@ which is a condition form of the basic identity that integrating out a joint dis
 -------
 
 * Filtering at time $t_n$ can be computed by combining the new information in the datapoint $\data{y_{n}}$ with the calculation of the one-step prediction of the latent process at time $t_{n}$ given data up to time $t_{n-1}$. This is carried out via the **filtering formula** for $n\in 1:N$,
-<br><br>
+
+<br>
+
 [MP5] $\eqspace \displaystyle f_{X_{n}|Y_{1:n}}(x_{n}\given \data{y_{1:n}})
 = \frac{
 f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}})\, 
@@ -338,23 +352,27 @@ f_{Y_n|X_n}(\data{y_n}\given x_n)
 }{
 f_{Y_{n}|Y_{1:n-1}}(\data{y_n}\given \data{y_{1:n-1}})
 }$.
-<br><br>
+
+<br>
 
 
 * The denominator in the filtering formula [MP5] is the **conditional likelihood** of $\data{y_{n}}$ given  $\data{y_{1:n-1}}$. It can be computed in terms of the one-step prediction density, via the **conditional likelihood formula**,
-<br><br>
+
+<br>
+
 [MP6] $\eqspace \displaystyle f_{Y_{n}|Y_{1:n-1}}(\data{y_n}\given \data{y_{1:n-1}})
 = 
 \int 
 f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}})\, f_{Y_n|X_n}(\data{y_n}\given x_n)\, dx_n$.
-<br><br>
+
+<br>
 
 * To make this formula work for $n=1$, we again take advantage of the convention that $1:k$ is the empty set when $k=0$. 
 
 * To see why the filtering formula is true, we can apply the identity  for joint continuous random variables $X$, $Y$, $Z$,
-$$f_{X|Y,Z}(x\given y,z)= \frac{ f_{Y|X,Z}(y\given x,z)\, f_{X|Z}(x\given z)}{f_{Y|Z}(y\given z)}.$$
+$$f_{X|YZ}(x\given y,z)= \frac{ f_{Y|XZ}(y\given x,z)\, f_{X|Z}(x\given z)}{f_{Y|Z}(y\given z)}.$$
 This is a conditional form of the Bayes formula, which in turn is closely related to a conditional form of the basic definition of the conditional probability density function,
-$$f_{X|Y,Z}(x\given y,z)= \frac{f_{XY|Z}(x,y\given z)}{f_{Y|Z}(y\given z)}.$$
+$$f_{X|YZ}(x\given y,z)= \frac{f_{XY|Z}(x,y\given z)}{f_{Y|Z}(y\given z)}.$$
 
 <br>
 
@@ -379,11 +397,13 @@ $$f_{X|Y,Z}(x\given y,z)= \frac{f_{XY|Z}(x,y\given z)}{f_{Y|Z}(y\given z)}.$$
 ### Computation of the likelihood
 
 * The likelihood of the entire dataset, $\data{y_{1:N}}$ can be found from [MP6], using the identity
-<br><br>
+
+<br>
+
 [MP7] $\eqspace\displaystyle f_{Y_{1:N}}(\data{y_{1:N}})
-= \prod_{n=1}^N f_{Y_{n}}(\data{y_{1:N}})
-f_{Y_{n}|Y_{1:n-1}}(\data{y_n}\given \data{y_{1:n-1}})$.
-<br><br>
+= \prod_{n=1}^N  f_{Y_{n}|Y_{1:n-1}}(\data{y_n}\given \data{y_{1:n-1}})$.
+
+<br>
 
 * Yet again, this formula [MP7] requires the convention that $1:k$ is the empty set when $k=0$, so the first term in the product is
 $$f_{Y_{1}|Y_{1:0}}(\data{y_1}\given \data{y_{1:0}}) = 
@@ -408,23 +428,32 @@ $$\loglik(\theta)=\log f_{Y_{1:N}}(\data{y_{1:N}}\params\theta).$$
 * The filtering and prediction formulas are recursions forwards in time (we use the solution at time $t_{n-1}$ to carry out the computation at time $t_{n}$).
 
 * There are similar **backwards recursion formulas**,
-<br><br>
+
+<br>
+
 [MP8] $\eqspace f_{Y_{n:N}|X_{n}}(\data{y_{n:N}}\given x_n)= f_{Y_n|X_n}(\data{y_n}\given x_n)
 f_{Y_{n+1:N}|X_{n}}(\data{y_{n+1:N}}\given x_n)$.
-<br><br>
+
+<br>
+
 [MP9] $\eqspace \displaystyle
-f_{Y_{n+1:N}|X_{n}}(\data{y_{n+1:N}}\given x_n)
-= \int f_{Y_{n+1:N}|X_{n+1}}(\data{y_{n+1:N}}\given x_{n+1}) \, 
+f_{Y_{n+1:N}|X_{n}}(\data{y_{n+1:N}}\given x_n)$
+<br>
+$\eqspace\eqspace\displaystyle = \int f_{Y_{n+1:N}|X_{n+1}}(\data{y_{n+1:N}}\given x_{n+1}) \, 
 f_{X_{n+1}|X_n}(x_{n+1}\given x_n)\, dx_n$.
-<br><br>
+
+<br>
 
 * The forwards and backwards recursion formulas together allow us to compute the **smoothing formula**,
-<br><br>
+
+<br>
+
 [MP10] $\eqspace f_{X_{n}|Y_{1:N}}(x_n\given \data{y_{1:N}})
 \propto
 f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}}) \, 
 f_{Y_{n:N}|X_{n}}(\data{y_{n:N}}\given x_n)$.
-<br><br>
+
+<br>
 
 ### Question: Show how [MP8], [MP9] and [MP10] follow from the basic properties of conditional densities combined with the Markov property. Find an expression for the constant of proportionality in [MP10].
 
