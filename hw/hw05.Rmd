@@ -1,5 +1,5 @@
 ---
-title: "Homework 4, due in class on Tues 2/9"
+title: "Homework 5, due in class on Tues 2/16"
 author: "Stats 531, Winter 2016"
 output:
   html_document:
@@ -14,30 +14,32 @@ output:
 
 -----------
 
-This homework gives you some experience at manipulating models and data in the frequency domain. Please turn in your homework on paper, in class.
+This homework gives you some experience at algebraic manipulation of POMP models by deriving the prediction, filtering and smoothing formulas in Chapter 9 of the notes.  Please read the revised version of Chapter 9, with many typos corrected, posted online.
 
+
+The calculations are all applications of basic identities for joint, conditional and marginal probability density functions. You may follow the hints in Section 9.2.5 of the notes.
+
+
+Please say explicitly when you use the Markov property. Also, write explicitly when and how you use basic identities such as those provided in Section 9.2.5.
+
+
+Please turn in your homework on paper, in class.
 
 --------
 
-**<big>Question 4.1</big>**. 
-
-<b>A</b>. Compute and plot the spectral density function of a stationary AR2 model,
-$$ X_n =  1.5 X_{n-1} - 0.8X_{n-2} + \epsilon_n,$$
-where $\{\epsilon_n\}$ is white noise with $\var(\epsilon_n)=\sigma^2$.
-You can use software to do this, or carry out some computations analytically. 
-It is up to you how much (or little) algebra you choose to work through, but please explain fully how you carried out your calculation.
-Also, plot the autocovariance function.
-
-<b>B</b>. Compute and plot the spectral density function of an MA(2) moving mean,
-$$ X_n = \epsilon_{n-2} + \epsilon_{n-1}+\epsilon_n,$$
-where $\{\epsilon_n\}$ is white noise with $\var(\epsilon_n)=\sigma^2$.
-As in part (A), you can use software to do this or carry out some computations analytically. 
-Also, plot the autocovariance function.
+**<big>Question 5.1</big>**. Derive the identity [MP2].
 
 
-<b>C</b>. Comment briefly on what you find in parts A and B.
+**<big>Question 5.2</big>**. Derive the prediction formula, [MP4].
 
-**<big>Question 4.2</big>**. Present an estimated spectral density of the sunspot time series in [sunspots.txt](sunspots.txt). Comment on your choice of estimator. Comment on the resulting estimate. These data, as well as some background on the historical and current interest in sunspot activity, are described at [http://solarscience.msfc.nasa.gov/SunspotCycle.shtml](http://solarscience.msfc.nasa.gov/SunspotCycle.shtml).
+
+**<big>Question 5.3</big>**. Derive the filtering formulas [MP5] and [MP6].
+
+
+**<big>Question 5.4</big>**. Derive the backward recursion formulas [MP8] and [MP9].
+
+
+**<big>Question 5.5</big>**. Derive the smoothing formula [MP10].
 
 
 --------

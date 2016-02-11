@@ -169,7 +169,7 @@ options(
 
 ### Question: Write the joint distribution in terms of the one-step transition densities
 
-* Use [MP1] to derive an expression for the joint distribution of a Markov process as a produce of the one-step transition densities,
+* Use [MP1] to derive an expression for the joint distribution of a Markov process as a product of the one-step transition densities,
 
 <br>
 
