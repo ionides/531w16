@@ -78,6 +78,8 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 8. [Smoothing in the time and frequency domains](notes8/notes8.html). [(R script)](notes8/notes8.R)
 
+9. [Introduction to partially observed Markov process models](notes9/notes9.html). [(R script)](notes9/notes9.R)
+
 --------
 
 ## Homework assignments
