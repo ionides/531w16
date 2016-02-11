@@ -94,6 +94,8 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 4](hw/hw04.html), due in class on 2/9. 
 
+* [Homework 5](hw/hw05.html), due in class on 2/16. 
+
 ------------
 
 ## Midterm exam information
