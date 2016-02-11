@@ -120,9 +120,9 @@ img {
 <li><p>Mathematically, a probability mass function (for discrete distributions) is a probability density with respect to a <a href="https://en.wikipedia.org/wiki/Counting_measure">counting measure</a>. We don’t have to get sidetracked on to that topic, but it is worth noting that there is a proper mathematical justification for treating a probability mass function as a type of probability density function.</p></li>
 <li><p>It is not important whether to adopt the convention that the Markov process model is intialized at time <span class="math">\(t_1\)</span> or at some previous time <span class="math">\(t_0\)</span>. Here, we follow the choice to use <span class="math">\(t_0\)</span>.</p></li>
 </ul></li>
-<li><p>The probability density function <span class="math">\(f_{X_n|X_{n-1}}(x_n\given x_{n-1})\)</span> is called the <strong>one-step transition density</strong> of the Markov process.</p></li>
+<li><p>The probability density function <span class="math">\(f_{X_n|X_{n-1}}(x_n{{\, | \,}}x_{n-1})\)</span> is called the <strong>one-step transition density</strong> of the Markov process.</p></li>
 <li><p>In words, the Markov property says that the next step taken by a Markov process follows the one-step transition density based on the current state, whatever the previous history of the process.</p></li>
-<li><p>For a POMP model, the full joint distribution of the latent process is entirely specified by the one-step transition densities, as we will show below. Therefore, we also call <span class="math">\(f_{X_n|X_{n-1}}(x_n\given x_{n-1})\)</span> the <strong>process model</strong>.</p></li>
+<li><p>For a POMP model, the full joint distribution of the latent process is entirely specified by the one-step transition densities, as we will show below. Therefore, we also call <span class="math">\(f_{X_n|X_{n-1}}(x_n{{\, | \,}}x_{n-1})\)</span> the <strong>process model</strong>.</p></li>
 </ul>
 <p><br></p>
 <hr />
@@ -146,7 +146,7 @@ img {
 <h3><span class="header-section-number">8.1.4</span> Time homogeneous transitions and stationarity</h3>
 <ul>
 <li><p>In general, the one step transition probability density in a POMP model can depend on <span class="math">\(n\)</span>.</p></li>
-<li><p>A latent process model <span class="math">\(X_{0:N}\)</span> is <strong>time-homogeneous</strong> if the one step transition probability density does not depend on <span class="math">\(n\)</span>, i.e., if there is a conditional density <span class="math">\(f(y\given x)\)</span> such that, for all <span class="math">\(n\in 1:N\)</span>, <span class="math">\[  f_{X_n|X_{n-1}}(x_n\given x_{n-1})= f(y_n|x_n).\]</span></p></li>
+<li><p>A latent process model <span class="math">\(X_{0:N}\)</span> is <strong>time-homogeneous</strong> if the one step transition probability density does not depend on <span class="math">\(n\)</span>, i.e., if there is a conditional density <span class="math">\(f(y{{\, | \,}}x)\)</span> such that, for all <span class="math">\(n\in 1:N\)</span>, <span class="math">\[  f_{X_n|X_{n-1}}(x_n{{\, | \,}}x_{n-1})= f(y_n{{\, | \,}}x_n).\]</span></p></li>
 <li><p>If <span class="math">\(X_{0:N}\)</span> is stationary then it is time homogeneous.</p>
 <ul>
 <li>Why? Go back to the definitions and show this from first principles.</li>
@@ -166,10 +166,10 @@ img {
 <ul>
 <li><p>We model the observation process random variables <span class="math">\(Y_{1:N}\)</span>.</p></li>
 <li><p>For state space models, we will generally write the data as <span class="math">\({y_{1:N}^*}\)</span>.</p></li>
-<li><p>We model the measurement at time <span class="math">\(t_n\)</span> to depend only on the value of the latent process at time <span class="math">\(t_n\)</span>, conditionally independent of all other latent process and observation process variables. Formally, this assumption is, <br><br> [MP3] <span class="math">\({\quad\quad\quad}f_{Y_n|X_{0:N},Y_{1:n-1},Y_{n+1:N}}(y_n\given x_{0:N,y_{1:n-1},y_{n+1:N}) = f_{Y_n|X_n}(y_n\given x_{n})\)</span>. <br><br></p></li>
-<li><p>We call <span class="math">\(f_{Y_n|X_n}(y_n\given x_{n})\)</span> the <strong>measurement model</strong>.</p></li>
+<li><p>We model the measurement at time <span class="math">\(t_n\)</span> to depend only on the value of the latent process at time <span class="math">\(t_n\)</span>, conditionally independent of all other latent process and observation process variables. Formally, this assumption is, <br><br> [MP3] <span class="math">\({\quad\quad\quad}f_{Y_n|X_{0:N},Y_{1:n-1},Y_{n+1:N}}(y_n{{\, | \,}}x_{0:N},y_{1:n-1},y_{n+1:N}) = f_{Y_n|X_n}(y_n{{\, | \,}}x_{n})\)</span>. <br><br></p></li>
+<li><p>We call <span class="math">\(f_{Y_n|X_n}(y_n{{\, | \,}}x_{n})\)</span> the <strong>measurement model</strong>.</p></li>
 <li><p>In general, the measurement model can depend on <span class="math">\(n\)</span>.</p></li>
-<li><p>The measurement model is <strong>time-homogeneous</strong> if there is a conditional probability density function <span class="math">\(g(y\given x)\)</span> such that, for all <span class="math">\(n\in 1:N\)</span>, <span class="math">\[ f_{Y_n|X_n}(y_n\given x_{n})= g(y_n\given x_n).\]</span></p></li>
+<li><p>The measurement model is <strong>time-homogeneous</strong> if there is a conditional probability density function <span class="math">\(g(y{{\, | \,}}x)\)</span> such that, for all <span class="math">\(n\in 1:N\)</span>, <span class="math">\[ f_{Y_n|X_n}(y_n{{\, | \,}}x_{n})= g(y_n{{\, | \,}}x_n).\]</span></p></li>
 </ul>
 <p><br></p>
 <hr />
@@ -188,7 +188,7 @@ img {
 <div id="prediction" class="section level3">
 <h3><span class="header-section-number">8.2.1</span> Prediction</h3>
 <ul>
-<li><p>One-step prediction for the latent process at time <span class="math">\(t_{n+1}\)</span> given data up to time <span class="math">\(t_n\)</span> involves finding <span class="math">\[ f_{X_{n+1}|Y_{1:n}}(x_{n+1}\given {y_{1:n}^*}).\]</span></p></li>
+<li><p>One-step prediction of the latent process at time <span class="math">\(t_{n+1}\)</span> given data up to time <span class="math">\(t_n\)</span> involves finding <span class="math">\[ f_{X_{n+1}|Y_{1:n}}(x_{n+1}{{\, | \,}}{y_{1:n}^*}).\]</span></p></li>
 <li><p>We may want to carry out prediction (also called forecasting) more than one time step ahead. However, unless specified otherwise, the prediction calculation will be one-step prediction.</p></li>
 <li><p>One-step prediction turns out to be closely related to computing the likelihood function, and therefore central to statistical inference.</p></li>
 <li><p>We have required our prediction to be a conditional probability density, not a point estimate. In the context of forecasting, this is called a <strong>probabilistic forecast</strong>, and has advantages over a point estimate forecast. What are they? Are there any disadvantages to probabilistic forecasting?</p></li>
@@ -201,7 +201,7 @@ img {
 <h3><span class="header-section-number">8.2.2</span> Filtering</h3>
 <ul>
 <li><p>The filtering calculation at time <span class="math">\(t_n\)</span> is to find the conditional distribution of the latent process <span class="math">\(X_n\)</span> given currently available data, <span class="math">\({y_{1:n}^*}\)</span>.</p></li>
-<li><p>Filtering therefore involves calculating <span class="math">\[f_{X_{n}|Y_{1:n}}(x_n\given {y_{1:n}^*}).\]</span></p></li>
+<li><p>Filtering therefore involves calculating <span class="math">\[f_{X_{n}|Y_{1:n}}(x_n{{\, | \,}}{y_{1:n}^*}).\]</span></p></li>
 </ul>
 <p><br></p>
 <hr />
@@ -211,7 +211,7 @@ img {
 <h3><span class="header-section-number">8.2.3</span> Smoothing</h3>
 <ul>
 <li><p>In the context of a POMP model, smoothing involves finding the conditional distribution of <span class="math">\(X_n\)</span> given all the data, <span class="math">\({y_{1:N}^*}\)</span>.</p></li>
-<li><p>So, the smoothing calculation is <span class="math">\[f_{X_{n}|Y_{1:N}}(x_n\given {y_{1:N}^*}).\]</span></p></li>
+<li><p>So, the smoothing calculation is <span class="math">\[f_{X_{n}|Y_{1:N}}(x_n{{\, | \,}}{y_{1:N}^*}).\]</span></p></li>
 </ul>
 <p><br></p>
 <hr />
@@ -224,108 +224,66 @@ img {
 <li><p>Since we haven’t explicitly written this dependence above, the likelihood calculation is to evaluate the joint density of <span class="math">\(Y_{1:N}\)</span> at the data, <span class="math">\[f_{Y_{1:N}}({y_{1:N}^*}).\]</span></p></li>
 <li><p>If we can compute this for any value of <span class="math">\(\theta\)</span>, we can perform numerical optimization to get a maximum likelihood estimate, compute profile likelihood confidence intervals, carry out likelihood ratio tests, and make AIC comparisons.</p></li>
 </ul>
-<p><br <br></p>
+<p><br></p>
 <hr />
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col width="9%"></col>
-</colgroup>
-<tbody>
-<tr class="odd">
-<td align="left"><br></td>
-</tr>
-</tbody>
-</table>
+<hr />
+</div>
+<div id="the-prediction-and-filtering-formulas" class="section level3">
+<h3><span class="header-section-number">8.2.5</span> The prediction and filtering formulas</h3>
+<ul>
+<li><p>One-step prediction of the latent process at time <span class="math">\(t_{n}\)</span> given data up to time <span class="math">\(t_{n-1}\)</span> can be computed in terms of the filtering problem at time <span class="math">\(t_{n-1}\)</span>, via the <strong>prediction formula</strong> for <span class="math">\(n\in 1:N\)</span>, <br><br> [MP4] <span class="math">\({\quad\quad\quad}\displaystyle f_{X_{n}|Y_{1:n-1}}(x_{n}{{\, | \,}}{y_{1:n-1}^*}) = \int f_{X_{n-1}|Y_{1:n-1}}(x_{n-1}{{\, | \,}}{y_{1:n-1}^*}) f_{X_{n}|X_{n-1}}(x_{n}{{\, | \,}}x_{n-1})\, dx_{n-1}\)</span>. <br><br></p></li>
+<li><p>To make this formula work for <span class="math">\(n=1\)</span>, we need the convention that <span class="math">\(1:k\)</span> is the empty set when <span class="math">\(k=0\)</span>. Conditioning on an empty collection of random variables is the same as not conditioning at all! In this case, we have by definition that <span class="math">\[ f_{X_{0}|Y_{1:0}}(x_{0}{{\, | \,}}{y_{1:0}^*}) = f_{X_0}(x_0).\]</span> In other words, the filtering calcuation at time <span class="math">\(t_0\)</span> is the initial density for the latent process. This makes sense, since at time <span class="math">\(t_0\)</span> we have no data to condition on.</p></li>
+<li><p>To see why the prediction formula is true, we can view it is an application of a general identity for joint continuous random variables <span class="math">\(X\)</span>, <span class="math">\(Y\)</span>, <span class="math">\(Z\)</span>, <span class="math">\[ f_{X|Y}(x{{\, | \,}}y)= \int f_{XZ|Y}(x,z{{\, | \,}}y)\, dz,\]</span> which is a condition form of the basic identity that integrating out a joint distribution gives a marginal distribution.</p></li>
+</ul>
+<hr />
+<hr />
+<ul>
+<li><p>Filtering at time <span class="math">\(t_n\)</span> can be computed by combining the new information in the datapoint <span class="math">\({y_{n}^*}\)</span> with the calculation of the one-step prediction of the latent process at time <span class="math">\(t_{n}\)</span> given data up to time <span class="math">\(t_{n-1}\)</span>. This is carried out via the <strong>filtering formula</strong> for <span class="math">\(n\in 1:N\)</span>, <br><br> [MP5] <span class="math">\({\quad\quad\quad}\displaystyle f_{X_{n}|Y_{1:n}}(x_{n}{{\, | \,}}{y_{1:n}^*}) = \frac{ f_{X_{n}|Y_{1:n-1}}(x_{n}{{\, | \,}}{y_{1:n-1}^*})\, f_{Y_n|X_n}({y_n^*}{{\, | \,}}x_n) }{ f_{Y_{n}|Y_{1:n-1}}({y_n^*}{{\, | \,}}{y_{1:n-1}^*}) }\)</span>. <br><br></p></li>
+<li><p>The denominator in the filtering formula [MP5] is the <strong>conditional likelihood</strong> of <span class="math">\({y_{n}^*}\)</span> given <span class="math">\({y_{1:n-1}^*}\)</span>. It can be computed in terms of the one-step prediction density, via the <strong>conditional likelihood formula</strong>, <br><br> [MP6] <span class="math">\({\quad\quad\quad}\displaystyle f_{Y_{n}|Y_{1:n-1}}({y_n^*}{{\, | \,}}{y_{1:n-1}^*}) = \int f_{X_{n}|Y_{1:n-1}}(x_{n}{{\, | \,}}{y_{1:n-1}^*})\, f_{Y_n|X_n}({y_n^*}{{\, | \,}}x_n)\, dx_n\)</span>. <br><br></p></li>
+<li><p>To make this formula work for <span class="math">\(n=1\)</span>, we again take advantage of the convention that <span class="math">\(1:k\)</span> is the empty set when <span class="math">\(k=0\)</span>.</p></li>
+<li><p>To see why the filtering formula is true, we can apply the identity for joint continuous random variables <span class="math">\(X\)</span>, <span class="math">\(Y\)</span>, <span class="math">\(Z\)</span>, <span class="math">\[f_{X|Y,Z}(x{{\, | \,}}y,z)= \frac{ f_{Y|X,Z}(y{{\, | \,}}x,z)\, f_{X|Z}(x{{\, | \,}}z)}{f_{Y|Z}(y{{\, | \,}}z)}.\]</span> This is a conditional form of the Bayes formula, which in turn is closely related to a conditional form of the basic definition of the conditional probability density function, <span class="math">\[f_{X|Y,Z}(x{{\, | \,}}y,z)= \frac{f_{XY|Z}(x,y{{\, | \,}}z)}{f_{Y|Z}(y{{\, | \,}}z)}.\]</span></p></li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+<ul>
+<li>The prediction and filtering formulas are <strong>recursive</strong>. If they can be computed for time <span class="math">\(t_n\)</span> then they provide the foundation for the following computation at time <span class="math">\(t_{n+1}\)</span>.</li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="question-give-a-detailed-derivation-of-mp4-mp5-and-mp6-being-careful-to-note-when-you-use-the-markov-property-mp1." class="section level3">
+<h3><span class="header-section-number">8.2.6</span> Question: Give a detailed derivation of [MP4], [MP5] and [MP6], being careful to note when you use the Markov property [MP1].</h3>
+<hr />
+<hr />
+</div>
+<div id="computation-of-the-likelihood" class="section level3">
+<h3><span class="header-section-number">8.2.7</span> Computation of the likelihood</h3>
+<ul>
+<li><p>The likelihood of the entire dataset, <span class="math">\({y_{1:N}^*}\)</span> can be found from [MP6], using the identity <br><br> [MP7] <span class="math">\({\quad\quad\quad}\displaystyle f_{Y_{1:N}}({y_{1:N}^*}) = \prod_{n=1}^N f_{Y_{n}}({y_{1:N}^*}) f_{Y_{n}|Y_{1:n-1}}({y_n^*}{{\, | \,}}{y_{1:n-1}^*})\)</span>. <br><br></p></li>
+<li><p>Yet again, this formula [MP7] requires the convention that <span class="math">\(1:k\)</span> is the empty set when <span class="math">\(k=0\)</span>, so the first term in the product is <span class="math">\[f_{Y_{1}|Y_{1:0}}({y_1^*}{{\, | \,}}{y_{1:0}^*}) = 
+f_{Y_{1}}({y_1^*}).\]</span></p></li>
+<li><p>If our model has an unknown parameter <span class="math">\(\theta\)</span>, the likelihood identity [MP7] lets us evaluate the log likelihood function, <span class="math">\[{\ell}(\theta)=\log f_{Y_{1:N}}({y_{1:N}^*}{\, ; \,}\theta).\]</span></p></li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="the-smoothing-formulas" class="section level3">
+<h3><span class="header-section-number">8.2.8</span> The smoothing formulas</h3>
+<ul>
+<li><p>Smoothing is less fundamental for likelihood-based inference than filtering and one-step prediction.</p></li>
+<li><p>Nevertheless, sometimes we want to compute the smoothing density, so let’s obtain some necessary formulas.</p></li>
+<li><p>The filtering and prediction formulas are recursions forwards in time (we use the solution at time <span class="math">\(t_{n-1}\)</span> to carry out the computation at time <span class="math">\(t_{n}\)</span>).</p></li>
+<li><p>There are similar <strong>backwards recursion formulas</strong>, <br><br> [MP8] <span class="math">\({\quad\quad\quad}f_{Y_{n:N}|X_{n}}({y_{n:N}^*}{{\, | \,}}x_n)= f_{Y_n|X_n}({y_n^*}{{\, | \,}}x_n) f_{Y_{n+1:N}|X_{n}}({y_{n+1:N}^*}{{\, | \,}}x_n)\)</span>. <br><br> [MP9] <span class="math">\({\quad\quad\quad}\displaystyle f_{Y_{n+1:N}|X_{n}}({y_{n+1:N}^*}{{\, | \,}}x_n) = \int f_{Y_{n+1:N}|X_{n+1}}({y_{n+1:N}^*}{{\, | \,}}x_{n+1}) \, f_{X_{n+1}|X_n}(x_{n+1}{{\, | \,}}x_n)\, dx_n\)</span>. <br><br></p></li>
+<li><p>The forwards and backwards recursion formulas together allow us to compute the <strong>smoothing formula</strong>, <br><br> [MP10] <span class="math">\({\quad\quad\quad}f_{X_{n}|Y_{1:N}}(x_n{{\, | \,}}{y_{1:N}^*}) \propto f_{X_{n}|Y_{1:n-1}}(x_{n}{{\, | \,}}{y_{1:n-1}^*}) \, f_{Y_{n:N}|X_{n}}({y_{n:N}^*}{{\, | \,}}x_n)\)</span>. <br><br></p></li>
+</ul>
+</div>
+<div id="question-show-how-mp8-mp9-and-mp10-follow-from-the-basic-properties-of-conditional-densities-combined-with-the-markov-property.-find-an-expression-for-the-constant-of-proportionality-in-mp10." class="section level3">
+<h3><span class="header-section-number">8.2.9</span> Question: Show how [MP8], [MP9] and [MP10] follow from the basic properties of conditional densities combined with the Markov property. Find an expression for the constant of proportionality in [MP10].</h3>
+<p><br></p>
+<hr />
 <hr />
 </div>
 </div>
