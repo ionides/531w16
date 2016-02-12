@@ -72,6 +72,7 @@ img {
 <ul>
 <li><a href="#partially-observed-markov-processes-pomp-models"><span class="toc-section-number">9.1</span> Partially observed Markov processes (POMP) models</a></li>
 <li><a href="#four-basic-calculations-for-working-with-pomp-models"><span class="toc-section-number">9.2</span> Four basic calculations for working with POMP models</a></li>
+<li><a href="#linear-gaussian-pomp-lg-pomp-models"><span class="toc-section-number">9.3</span> Linear Gaussian POMP (LG-POMP) models</a></li>
 </ul>
 </div>
 
@@ -330,6 +331,119 @@ f_{Y_{1}}({y_1^*}).\]</span></p></li>
 <p><br></p>
 <hr />
 <hr />
+</div>
+</div>
+<div id="linear-gaussian-pomp-lg-pomp-models" class="section level2">
+<h2><span class="header-section-number">9.3</span> Linear Gaussian POMP (LG-POMP) models</h2>
+<ul>
+<li><p>Linear Gaussian partially observed Markov process (LG-POMP) models have many applications</p>
+<ul>
+<li><p>Gassian ARMA models are LG-POMP models. The POMP recursion formulas give a computationally efficient way to obtain the likelihood of a Gaussian ARMA model.</p></li>
+<li><p>The computations for smoothing splines can be written as an LG-POMP model. This gives a route to computationally efficient spline smooothing.</p></li>
+<li><p>The so-called <strong>Basic Structural Model</strong> is an LG-POMP used for econometric forecasting. It models a stochastic trend, seasonality, and measurement error, in a framework with econometrically interpretable parameters. By contrast, all but the simplest ARMA models are usually <strong>black box</strong> methods, which may fit the data but are not readily interpretable.</p></li>
+<li><p>LG-POMP models are widely used in engineering, especially for control applications.</p></li>
+<li><p>In all scientific and engineering applications, if your situation is not too far from linear and Gaussian, you save a lot of effort if an LG-POMP model is appropriate. General nonlinear POMP models usually involve intensive Monte Carlo computation.</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+<div id="the-general-lg-pomp-model" class="section level3">
+<h3><span class="header-section-number">9.3.1</span> The general LG-POMP model</h3>
+<ul>
+<li><p>Suppose the latent process, <span class="math">\(X_{0:N}\)</span>, takes vector values with dimension <span class="math">\(d_X\)</span>.</p></li>
+<li><p>Suppose the observation process, <span class="math">\(\{Y_n\}\)</span>, takes vector values with dimension <span class="math">\(d_Y\)</span>.</p></li>
+<li><p>A general mean zero LG-POMP model is specified by</p>
+<ul>
+<li><p>A sequence of <span class="math">\(d_X\times d_X\)</span> matrices, <span class="math">\({\mathbb{A}}_{1:N}\)</span>,</p></li>
+<li><p>A sequence of <span class="math">\(d_X\times d_X\)</span> covariance matrices, <span class="math">\({\mathbb{U}}_{0:N}\)</span>,</p></li>
+<li><p>A sequence of <span class="math">\(d_Y\times d_X\)</span> matrices, <span class="math">\({\mathbb{B}}_{1:N}\)</span></p></li>
+<li><p>A sequence of <span class="math">\(d_Y\times d_Y\)</span> covariance matrices, <span class="math">\({\mathbb{V}}_{1:N}\)</span>.</p></li>
+</ul></li>
+<li><p>We initialize with <span class="math">\(X_0\sim N[0,{\mathbb{U}}_0]\)</span> and then define the entire LG-POMP model by a recursion for <span class="math">\(n\in 1:N\)</span>,</p></li>
+</ul>
+<p><br></p>
+<p>[LG1] <span class="math">\({\quad\quad\quad}X_{n+1} = {\mathbb{A}}_n X_n + \epsilon_n\)</span>, <span class="math">\({\quad\quad\quad}\epsilon_n\sim N[0,{\mathbb{U}}_n]\)</span>,</p>
+<p><br></p>
+<p>[LG2] <span class="math">\({\quad\quad\quad}Y_{n} = {\mathbb{B}}_n X_n + \eta_n\)</span>, <span class="math">\({\quad\quad\quad}\eta_n\sim N[0,{\mathbb{V}}_n]\)</span>.</p>
+<ul>
+<li>Often, but not always, we will have a <strong>time-homogeneous</strong> LG-POMP model, with <span class="math">\({\mathbb{A}}_n={\mathbb{A}}\)</span>, <span class="math">\(\;{\mathbb{B}}_n={\mathbb{B}}\)</span>, <span class="math">\(\;{\mathbb{U}}_n={\mathbb{U}}\)</span> and <span class="math">\({\mathbb{V}}_n={\mathbb{V}}\)</span> for <span class="math">\(n\in 1:N\)</span>.</li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="example-the-lg-pomp-representation-of-a-gaussian-arma" class="section level3">
+<h3><span class="header-section-number">9.3.2</span> Example: the LG-POMP representation of a Gaussian ARMA</h3>
+<ul>
+<li>Suppose <span class="math">\(\{Y_n\}\)</span> is a Gaussian ARMA(p,q) model with noise process <span class="math">\(\omega_n\sim N[0,\sigma^2]\)</span> and specification</li>
+</ul>
+<p><br></p>
+<p>[LG3] <span class="math">\({\quad\quad\quad}\displaystyle Y_n = \sum_{j=1}^p {\phi}_j Y_{n-j} + \omega_n + \sum_{k=1}^q {\psi}_q \omega_{n-k}.\)</span>$</p>
+<p><br></p>
+<ul>
+<li><p>Set <span class="math">\(r=\max(p,q+1)\)</span> so that <span class="math">\(\{Y_n\}\)</span> is also ARMA(r,r-1).</p></li>
+<li><p>Our LG-POMP representation has <span class="math">\(d_X=r\)</span>, with <span class="math">\[{\mathbb{B}}_n = {\mathbb{B}}= (1,0,0,\dots,0)\]</span> and <span class="math">\[{\mathbb{V}}_n = {\mathbb{V}}= 0.\]</span></p></li>
+<li><p>Therefore, <span class="math">\(Y_n\)</span> is the first component of <span class="math">\(X_n\)</span>, observed without measurement error.</p></li>
+<li><p>Now, define <span class="math">\[ X_n = \left(\begin{array}{l}
+Y_n \\
+{\phi}_2 Y_{n-1} + \dots + {\phi}_r Y_{n-r+1} + {\psi}_1 \omega_n + \dots +{\psi}_{r-1} \omega_{n-r+2}
+\\
+{\phi}_3 Y_{n-1} + \dots + {\phi}_r Y_{n-r+1} + {\psi}_2 \omega_n + \dots +{\psi}_{r-1} \omega_{n-r+3}
+\\
+\vdots
+\\
+{\phi}_r Y_{n-1} + {\psi}_{r-1} \omega_t
+\end{array}\right)\]</span></p></li>
+<li><p>We can check that the ARMA equation [LG3] corresponds to the matrix equation <span class="math">\[ X_{n+1} = {\mathbb{A}}X_n + \left(\begin{array}{l}
+1 \\
+{\psi}_1\\
+{\psi}_2\\
+\vdots\\
+{\psi}_{r-1}
+\end{array}\right) \omega_n.
+\]</span> where <span class="math">\[
+{\mathbb{A}}= 
+\left(\begin{array}{ccccc}
+{\phi}_1 &amp; 1 &amp; 0 &amp; \ldots &amp; 0 \\
+{\phi}_2 &amp; 0 &amp; 1 &amp;       &amp; 0 \\
+\vdots &amp; \vdots&amp; \ddots &amp; \\
+{\phi}_{r-1} &amp; 0 &amp; &amp; 1 \\
+{\phi}_{r} &amp; 0 \ldots &amp; 0
+\end{array}\right).\]</span> This is in the form of a time-homogenous LG-POMP, with <span class="math">\({\mathbb{A}}\)</span>, <span class="math">\({\mathbb{B}}\)</span> and <span class="math">\({\mathbb{V}}\)</span> defined above, and <span class="math">\[{\mathbb{U}}_n = {\mathbb{U}}= \sigma^2 (1, {\psi}_1,{\psi}_2,\dots,{\psi}_{r-1})^{\scriptsize{T}}(1, {\psi}_1,{\psi}_2,\dots,{\psi}_{r-1}).\]</span></p></li>
+<li><p>There are other LG-POMP representations giving rise to the same ARMA model.</p></li>
+<li><p>When only one component of a latent process is observed, any model giving rise to the same observed component is indistinguishable from the data.</p></li>
+<li><p>Here, the LG-POMP model has order <span class="math">\(r^2\)</span> parameters and the ARMA model has order <span class="math">\(r\)</span> parameters, so we might expect there are many ways to parameterize the ARMA model as a special case of the much larger LG-POMP model.</p></li>
+</ul>
+<p><br></p>
+<hr />
+<hr />
+</div>
+<div id="example-the-basic-structural-model-for-econometrics" class="section level3">
+<h3><span class="header-section-number">9.3.3</span> Example: The Basic Structural Model for econometrics</h3>
+<ul>
+<li>The basic stuctural model supposes that the observation process <span class="math">\(Y_{1:N}\)</span> is the sum of a <strong>level</strong> (<span class="math">\(L_n\)</span>), a <strong>trend</strong> (<span class="math">\(T_n\)</span>) describing the rate of change of the level, and a monthly <strong>seasonal component</strong> (<span class="math">\(S_n\)</span>). The model supposes that all these quantities are perturbed with Gaussian white noise at each time point. So, we have the following model equations</li>
+</ul>
+<p><br></p>
+<p><span class="math">\(\begin{array}{lrcl} \mbox{[BSM1]} {\quad\quad\quad}&amp; Y_n &amp;=&amp; L_n + S_n + \epsilon_n \\ \mbox{[BSM2]} {\quad\quad\quad}&amp; L_{n+1} &amp;=&amp; L_n + T_n + \xi_n \\ \mbox{[BSM3]} {\quad\quad\quad}&amp; T_{n+1} &amp;=&amp; T_n + \zeta_n \\ \mbox{[BSM4]} {\quad\quad\quad}&amp; S_{n+1} &amp;=&amp; -\sum_{k=0}^{10} S_{n-k} + \eta_n \end{array}\)</span></p>
+<p><br></p>
+<ul>
+<li><p>We suppose <span class="math">\(\epsilon_n\sim N[0,\sigma^2_\epsilon]\)</span>, <span class="math">\(\xi_n\sim N[0,\sigma^2_\xi]\)</span>, <span class="math">\(\zeta_n\sim N[0,\sigma^2_\zeta]\)</span>, and <span class="math">\(\eta_n\sim N[0,\sigma^2_\eta]\)</span>.</p></li>
+<li><p>To complete the model, we need to specify initial values. There is no mention of this in the documentation of the R implementation of the basic structural model, <code>StructTS</code>. We could go through the source code to find out what it does.</p></li>
+<li><p>Incidentally, <code>?StructTS</code> does give some advice which resonates with our experience earlier in the course that optimization for ARMA models is often imperfect.</p>
+<p>“Optimization of structural models is a lot harder than many of the references admit. For example, the ‘AirPassengers’ data are considered in Brockwell &amp; Davis (1996): their solution appears to be a local maximum, but nowhere near as good a fit as that produced by ‘StructTS’. It is quite common to find fits with one or more variances zero, and this can include sigma^2_eps.”</p></li>
+<li><p>To put [BSM1-4] in the form of an LG-POMP model, we set</p></li>
+</ul>
+<p><br></p>
+<p>[BSM5] <span class="math">\({\quad\quad\quad}X_n = (L_n,T_n,S_n, S_{n-1}, \dots,S_{n-10})^{\scriptsize{T}}\)</span>.</p>
+<p><br></p>
+<p>Then, we have</p>
+<p><br></p>
+<p>[BSM6] <span class="math">\({\quad\quad\quad}Y_n = (1,0,1,0,0,\dots, 0) X_n + \epsilon_n\)</span>,</p>
+<p><br></p>
+<p>and</p>
+<p>[BSM7] <span class="math">\({\quad\quad\quad}\displaystyle  \left(\begin{array}{l} L_{n+1} \\ T_{n+1} \\ S_{n+1} \\ S_{n}\\  \vdots \\ S_{n-9} \end{array}\right) ={\mathbb{A}}\left(\begin{array}{l} L_n \\ T_n \\ S_n \\ S_{n-1}\\  \vdots \\ S_{n-10} \end{array}\right) + \left(\begin{array}{l} \xi_n \\ \zeta_n \\ \eta_n \\ 0 \\  \vdots \\ 0 \end{array}\right)\)</span></p>
+<p><br></p>
 </div>
 </div>
 

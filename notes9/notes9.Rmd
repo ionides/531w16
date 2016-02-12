@@ -34,6 +34,11 @@ csl: ecology.csl
 \newcommand\MA{\Psi}
 \newcommand\ev{u}
 \newcommand\given{{\, | \,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+
 
 
 Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
@@ -462,3 +467,206 @@ f_{Y_{n:N}|X_{n}}(\data{y_{n:N}}\given x_n)$.
 ------
 
 -------
+
+## Linear Gaussian POMP (LG-POMP) models
+
+* Linear Gaussian partially observed Markov process (LG-POMP) models have many applications
+
+    + Gassian ARMA models are LG-POMP models. The POMP recursion formulas give a computationally efficient way to obtain the likelihood of a Gaussian ARMA model. 
+
+    + The computations for smoothing splines can be written as an LG-POMP model. This gives a route to computationally efficient spline smooothing.
+
+    + The so-called **Basic Structural Model** is an LG-POMP used for econometric forecasting. It models a stochastic trend, seasonality, and measurement error, in a framework with econometrically interpretable parameters. By contrast, all but the simplest ARMA models are usually **black box** methods, which may fit the data but are not readily interpretable.
+
+    + LG-POMP models are widely used in engineering, especially for control applications. 
+
+    + In all scientific and engineering applications, if your situation is not too far from linear and Gaussian, you save a lot of effort if an LG-POMP model is appropriate. General nonlinear POMP models usually involve intensive Monte Carlo computation.
+
+<br>
+
+-------
+
+------
+
+### The general LG-POMP model
+
+* Suppose the latent process, $X_{0:N}$, takes vector values with dimension $d_X$.
+
+* Suppose the observation process, $\{Y_n\}$, takes vector values with dimension $d_Y$.
+
+* A general mean zero LG-POMP model is specified by 
+
+    + A sequence of $d_X\times d_X$ matrices, $\matA_{1:N}$,
+
+    + A sequence of  $d_X\times d_X$ covariance matrices, $\covmatX_{0:N}$,
+
+    + A sequence of $d_Y\times d_X$ matrices, $\matB_{1:N}$
+
+    + A sequence of  $d_Y\times d_Y$ covariance matrices, $\covmatY_{1:N}$.
+
+* We initialize with $X_0\sim N[0,\covmatX_0]$ and then define the entire LG-POMP model by a recursion for $n\in 1:N$,
+
+<br>
+
+[LG1] $\eqspace X_{n+1} = \matA_n X_n + \epsilon_n$, $\eqspace \epsilon_n\sim N[0,\covmatX_n]$,
+
+<br>
+
+[LG2] $\eqspace Y_{n} = \matB_n X_n + \eta_n$, $\eqspace \eta_n\sim N[0,\covmatY_n]$.
+
+* Often, but not always, we will have a **time-homogeneous** LG-POMP model, with $\matA_n=\matA$, $\;\matB_n=\matB$, $\;\covmatX_n=\covmatX$ and $\covmatY_n=\covmatY$ for $n\in 1:N$.
+
+<br>
+
+--------
+
+-------
+
+### Example: the LG-POMP representation of a Gaussian ARMA
+
+* Suppose $\{Y_n\}$ is a Gaussian ARMA(p,q) model with noise process $\omega_n\sim N[0,\sigma^2]$ and specification
+
+<br>
+
+[LG3] $\eqspace\displaystyle Y_n = \sum_{j=1}^p \ar_j Y_{n-j} +  \omega_n + \sum_{k=1}^q \ma_q \omega_{n-k}.$$
+
+<br>
+
+* Set $r=\max(p,q+1)$ so that $\{Y_n\}$ is also ARMA(r,r-1).
+
+* Our LG-POMP representation has $d_X=r$, with
+$$\matB_n = \matB = (1,0,0,\dots,0)$$
+and 
+$$\covmatY_n = \covmatY = 0.$$
+
+* Therefore, $Y_n$ is the first component of $X_n$, observed without measurement error.
+
+* Now, define
+$$ X_n = \left(\begin{array}{l}
+Y_n \\
+\ar_2 Y_{n-1} + \dots + \ar_r Y_{n-r+1} + \ma_1 \omega_n + \dots +\ma_{r-1} \omega_{n-r+2}
+\\
+\ar_3 Y_{n-1} + \dots + \ar_r Y_{n-r+1} + \ma_2 \omega_n + \dots +\ma_{r-1} \omega_{n-r+3}
+\\
+\vdots
+\\
+\ar_r Y_{n-1} + \ma_{r-1} \omega_t
+\end{array}\right)$$
+
+* We can check that the ARMA equation [LG3] corresponds to the matrix equation
+$$ X_{n+1} = \matA X_n + \left(\begin{array}{l}
+1 \\
+\ma_1\\
+\ma_2\\
+\vdots\\
+\ma_{r-1}
+\end{array}\right) \omega_n.
+$$
+where
+$$
+\matA = 
+\left(\begin{array}{ccccc}
+\ar_1 & 1 & 0 & \ldots & 0 \\
+\ar_2 & 0 & 1 &       & 0 \\
+\vdots & \vdots& \ddots & \\
+\ar_{r-1} & 0 & & 1 \\
+\ar_{r} & 0 \ldots & 0
+\end{array}\right).$$
+This is in the form of a time-homogenous LG-POMP, with $\matA$, $\matB$ and $\covmatY$ defined above, and
+$$\covmatX_n = \covmatX = \sigma^2 (1, \ma_1,\ma_2,\dots,\ma_{r-1})^\transpose(1, \ma_1,\ma_2,\dots,\ma_{r-1}).$$
+
+* There are other LG-POMP representations giving rise to the same ARMA model.
+
+* When only one component of a latent process is observed, any model giving rise to the same observed component is indistinguishable from the data.
+
+* Here, the LG-POMP model has order $r^2$ parameters and the ARMA model has order $r$ parameters, so we might expect there are many ways to parameterize the ARMA model as a special case of the much larger LG-POMP model.
+
+<br>
+
+--------
+
+--------
+
+### Example: The Basic Structural Model for econometrics
+
+* The basic stuctural model supposes that the observation process $Y_{1:N}$ is the sum of a **level** ($L_n$),  a **trend** ($T_n$) describing the rate of change of the level, and a monthly **seasonal component** ($S_n$). The model supposes that all these quantities are perturbed with Gaussian white noise at each time point. So, we have the following model equations
+
+<br>
+
+$\begin{array}{lrcl}
+\mbox{[BSM1]} \eqspace & Y_n &=& L_n + S_n + \epsilon_n \\
+\mbox{[BSM2]} \eqspace & L_{n+1} &=& L_n + T_n + \xi_n \\
+\mbox{[BSM3]} \eqspace & T_{n+1} &=& T_n + \zeta_n \\
+\mbox{[BSM4]} \eqspace & S_{n+1} &=& -\sum_{k=0}^{10} S_{n-k} + \eta_n
+\end{array}$
+
+<br>
+
+* We suppose $\epsilon_n\sim N[0,\sigma^2_\epsilon]$,  $\xi_n\sim N[0,\sigma^2_\xi]$,  $\zeta_n\sim N[0,\sigma^2_\zeta]$, and $\eta_n\sim N[0,\sigma^2_\eta]$.
+
+* To complete the model, we need to specify initial values. There is no mention of this in the documentation of the  R implementation of the basic structural model, `StructTS`. We could go through the source code to find out what it does.
+
+* Incidentally, `?StructTS` does give some advice which resonates with our experience earlier in the course that optimization for ARMA models is often imperfect.
+
+     "Optimization of structural models is a lot harder than many of the
+     references admit.  For example, the ‘AirPassengers’ data are
+     considered in Brockwell & Davis (1996): their solution appears to
+     be a local maximum, but nowhere near as good a fit as that
+     produced by ‘StructTS’.  It is quite common to find fits with one
+     or more variances zero, and this can include sigma^2_eps."
+
+* To put [BSM1-4] in the form of an LG-POMP model, we set
+
+<br>
+
+[BSM5] $\eqspace X_n = (L_n,T_n,S_n, S_{n-1}, \dots,S_{n-10})^\transpose$.
+
+<br>
+
+Then, we have
+
+<br>
+
+[BSM6] $\eqspace Y_n = (1,0,1,0,0,\dots, 0) X_n + \epsilon_n$,
+
+<br>
+
+and 
+
+[BSM7] $\eqspace \displaystyle
+ \left(\begin{array}{l}
+L_{n+1} \\
+T_{n+1} \\
+S_{n+1} \\
+S_{n}\\
+ \vdots \\
+S_{n-9}
+\end{array}\right)
+=\matA
+\left(\begin{array}{l}
+L_n \\
+T_n \\
+S_n \\
+S_{n-1}\\
+ \vdots \\
+S_{n-10}
+\end{array}\right)
++
+\left(\begin{array}{l}
+\xi_n \\
+\zeta_n \\
+\eta_n \\
+0 \\
+ \vdots \\
+0
+\end{array}\right)$
+
+<br>
+
+
+
+
+
+
+
+
