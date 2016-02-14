@@ -317,20 +317,38 @@ f_{Y_{1}}({y_1^*}).\]</span></p></li>
 <p><br></p>
 <p>[MP8] <span class="math">\({\quad\quad\quad}f_{Y_{n:N}|X_{n}}({y_{n:N}^*}{{\, | \,}}x_n)= f_{Y_n|X_n}({y_n^*}{{\, | \,}}x_n) f_{Y_{n+1:N}|X_{n}}({y_{n+1:N}^*}{{\, | \,}}x_n)\)</span>.</p>
 <p><br></p>
-<p>[MP9] <span class="math">\({\quad\quad\quad}\displaystyle f_{Y_{n+1:N}|X_{n}}({y_{n+1:N}^*}{{\, | \,}}x_n)\)</span> <br> <span class="math">\({\quad\quad\quad}{\quad\quad\quad}\displaystyle = \int f_{Y_{n+1:N}|X_{n+1}}({y_{n+1:N}^*}{{\, | \,}}x_{n+1}) \, f_{X_{n+1}|X_n}(x_{n+1}{{\, | \,}}x_n)\, dx_n\)</span>.</p>
+<p>[MP9] <span class="math">\({\quad\quad\quad}\displaystyle f_{Y_{n+1:N}|X_{n}}({y_{n+1:N}^*}{{\, | \,}}x_n)\)</span> <br> <span class="math">\({\quad\quad\quad}{\quad\quad\quad}\displaystyle = \int f_{Y_{n+1:N}|X_{n+1}}({y_{n+1:N}^*}{{\, | \,}}x_{n+1}) \, f_{X_{n+1}|X_n}(x_{n+1}{{\, | \,}}x_n)\, dx_{n+1}\)</span>.</p>
 <p><br></p>
 <ul>
 <li>The forwards and backwards recursion formulas together allow us to compute the <strong>smoothing formula</strong>,</li>
 </ul>
 <p><br></p>
-<p>[MP10] <span class="math">\({\quad\quad\quad}f_{X_{n}|Y_{1:N}}(x_n{{\, | \,}}{y_{1:N}^*}) \propto f_{X_{n}|Y_{1:n-1}}(x_{n}{{\, | \,}}{y_{1:n-1}^*}) \, f_{Y_{n:N}|X_{n}}({y_{n:N}^*}{{\, | \,}}x_n)\)</span>.</p>
+<p>[MP10] <span class="math">\({{\quad\quad\quad}\displaystyle  f_{X_{n}|Y_{1:N}}(x_n{{\, | \,}}{y_{1:N}^*}) = \frac{ f_{X_{n}|Y_{1:n-1}}(x_{n}{{\, | \,}}{y_{1:n-1}^*}) \, f_{Y_{n:N}|X_{n}}({y_{n:N}^*}{{\, | \,}}x_n) }{ f_{Y_{n:N}|Y_{1:n-1}}({y_{n:N}^*}{{\, | \,}}{y_{1:n-1}^*}) } }\)</span>.</p>
 <p><br></p>
 </div>
-<div id="question-show-how-mp8-mp9-and-mp10-follow-from-the-basic-properties-of-conditional-densities-combined-with-the-markov-property.-find-an-expression-for-the-constant-of-proportionality-in-mp10." class="section level3">
-<h3><span class="header-section-number">9.2.9</span> Question: Show how [MP8], [MP9] and [MP10] follow from the basic properties of conditional densities combined with the Markov property. Find an expression for the constant of proportionality in [MP10].</h3>
+<div id="question-show-how-mp8-mp9-and-mp10-follow-from-the-basic-properties-of-conditional-densities-combined-with-the-markov-property." class="section level3">
+<h3><span class="header-section-number">9.2.9</span> Question: Show how [MP8], [MP9] and [MP10] follow from the basic properties of conditional densities combined with the Markov property.</h3>
 <p><br></p>
 <hr />
 <hr />
+</div>
+<div id="un-normalized-filtering-and-smoothing" class="section level3">
+<h3><span class="header-section-number">9.2.10</span> Un-normalized filtering and smoothing</h3>
+<ul>
+<li><p>Some common Monte Carlo algorithms (Markov chain Monte Carlo and self-normalized importance sampling) need probability density functions only up to an unknown constant factor. These algorithms depend on ratios of densities, for which a constant factor cancels out and so does not have to be computed.</p></li>
+<li><p>In some analytic and numeric computations, it is helpful to avoid calculating a normalizing constant for a density, since it can be worked out later using the property that the probability density function must integrate to 1.</p></li>
+<li><p>The denominators <span class="math">\(f_{Y_{n}|Y_{1:n-1}}({y_n^*}{{\, | \,}}{y_{1:n-1}^*})\)</span> and <span class="math">\(f_{Y_{n:N}|Y_{1:n-1}}({y_{n:N}^*}{{\, | \,}}{y_{1:n-1}^*})\)</span>, in equations [MP5] and [MP10] respectively, may sometimes be hard to compute.</p></li>
+<li><p>When we are only interested in computing the filtering and smoothing densities up to an unknown constant, we can simplify [MP5] and [MP10] using the proportionality relationship <span class="math">\(\propto\)</span>. This gives,</p></li>
+</ul>
+<p><br></p>
+<p>[MP5<span class="math">\(^\prime\)</span>] <span class="math">\({{\quad\quad\quad}\displaystyle  f_{X_{n}|Y_{1:n}}(x_{n}{{\, | \,}}{y_{1:n}^*}) \propto f_{X_{n}|Y_{1:n-1}}(x_{n}{{\, | \,}}{y_{1:n-1}^*})\, f_{Y_n|X_n}({y_n^*}{{\, | \,}}x_n) }\)</span>,</p>
+<p><br></p>
+<p>[MP10<span class="math">\(^\prime\)</span>] <span class="math">\({{\quad\quad\quad}\displaystyle  f_{X_{n}|Y_{1:N}}(x_n{{\, | \,}}{y_{1:N}^*}) \propto f_{X_{n}|Y_{1:n-1}}(x_{n}{{\, | \,}}{y_{1:n-1}^*}) \, f_{Y_{n:N}|X_{n}}({y_{n:N}^*}{{\, | \,}}x_n) }\)</span>.</p>
+<p><br></p>
+<ul>
+<li>Note that the normalizing “constant” in equations [MP5] and [MP10] does depend on <span class="math">\({y_{1:N}^*}\)</span>. However, the data are fixed constant values. The variable in both these equations is <span class="math">\(x_n\)</span>.</li>
+</ul>
+<p><br></p>
 </div>
 </div>
 <div id="linear-gaussian-pomp-lg-pomp-models" class="section level2">

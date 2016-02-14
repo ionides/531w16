@@ -25,6 +25,7 @@ csl: ecology.csl
 \newcommand\params{\, ; \,}
 \newcommand\transpose{\scriptsize{T}}
 \newcommand\eqspace{\quad\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
 \newcommand\lik{\mathscr{L}}
 \newcommand\loglik{\ell}
 \newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
@@ -445,7 +446,7 @@ f_{Y_{n+1:N}|X_{n}}(\data{y_{n+1:N}}\given x_n)$.
 f_{Y_{n+1:N}|X_{n}}(\data{y_{n+1:N}}\given x_n)$
 <br>
 $\eqspace\eqspace\displaystyle = \int f_{Y_{n+1:N}|X_{n+1}}(\data{y_{n+1:N}}\given x_{n+1}) \, 
-f_{X_{n+1}|X_n}(x_{n+1}\given x_n)\, dx_n$.
+f_{X_{n+1}|X_n}(x_{n+1}\given x_n)\, dx_{n+1}$.
 
 <br>
 
@@ -453,20 +454,57 @@ f_{X_{n+1}|X_n}(x_{n+1}\given x_n)\, dx_n$.
 
 <br>
 
-[MP10] $\eqspace f_{X_{n}|Y_{1:N}}(x_n\given \data{y_{1:N}})
-\propto
-f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}}) \, 
-f_{Y_{n:N}|X_{n}}(\data{y_{n:N}}\given x_n)$.
+[MP10] $\myeq{
+f_{X_{n}|Y_{1:N}}(x_n\given \data{y_{1:N}})
+= \frac{
+f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}}) \, f_{Y_{n:N}|X_{n}}(\data{y_{n:N}}\given x_n)
+}{
+f_{Y_{n:N}|Y_{1:n-1}}(\data{y_{n:N}}\given \data{y_{1:n-1}})
+}
+}$.
 
 <br>
 
-### Question: Show how [MP8], [MP9] and [MP10] follow from the basic properties of conditional densities combined with the Markov property. Find an expression for the constant of proportionality in [MP10].
+### Question: Show how [MP8], [MP9] and [MP10] follow from the basic properties of conditional densities combined with the Markov property.
 
 <br>
 
 ------
 
 -------
+
+### Un-normalized filtering and smoothing
+
+* Some common Monte Carlo algorithms (Markov chain Monte Carlo and self-normalized importance sampling) need probability density functions only up to an unknown constant factor. These algorithms depend on ratios of densities, for which a constant factor cancels out and so does not have to be computed.
+
+* In some analytic and numeric computations, it is helpful to avoid calculating a normalizing constant for a density, since it can be worked out later using the property that the probability density function must integrate to 1.
+
+* The denominators $f_{Y_{n}|Y_{1:n-1}}(\data{y_n}\given \data{y_{1:n-1}})$ and $f_{Y_{n:N}|Y_{1:n-1}}(\data{y_{n:N}}\given \data{y_{1:n-1}})$, in equations [MP5] and [MP10]  respectively, may sometimes be hard to compute. 
+
+* When we are only interested in computing the filtering and smoothing densities up to an unknown constant, we can simplify [MP5] and [MP10] using the proportionality relationship $\propto$. This gives,
+
+<br>
+
+[MP5$^\prime$] $\myeq{
+f_{X_{n}|Y_{1:n}}(x_{n}\given \data{y_{1:n}})
+\propto 
+f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}})\, f_{Y_n|X_n}(\data{y_n}\given x_n)
+}$,
+
+<br>
+
+[MP10$^\prime$] $\myeq{
+f_{X_{n}|Y_{1:N}}(x_n\given \data{y_{1:N}})
+\propto
+f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}}) \, f_{Y_{n:N}|X_{n}}(\data{y_{n:N}}\given x_n)
+}$.
+
+<br>
+
+* Note that the normalizing "constant" in equations [MP5] and [MP10] does depend on $\data{y_{1:N}}$. However, the data are fixed constant values. The variable in both these equations is $x_n$.
+
+<br>
+
 
 ## Linear Gaussian POMP (LG-POMP) models
 
