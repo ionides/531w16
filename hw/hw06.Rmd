@@ -1,0 +1,54 @@
+---
+title: "Homework 6, due in class on Tues 2/23"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+-----------
+
+* This homework asks for some feedback from you on the level of openness that the class is prepared to accept for midterm and final projects. There are no right or wrong opinions. Your homework will be graded on completeness and engagement with the issues. 
+
+* This homework is intended to be relatively quick. Your priority for Stats 531 this week is to prepare for the [midterm exam](http://ionides.github.io/531w16/#midterm-exam-information), in class on Thursday February 25.
+
+
+* A goal for this course is to participate in the development of open-access online academic materials. A question that arises is to what extent products of student work can and should be part of this open-access project. 
+
+
+**<big>Question 6.1</big>**. What level of anonymity is appropriate, if the class favors posting either or both of the midterm and final projects? There are many options. Please give each one a letter grade; **A** for entirely acceptable to you; **B** for satisfactory, suggesting you have no serious objections but it would not be among your most favored choices; **C** for minimally satisfactory, suggesting that you have some reservations but don't see anything fundamentally wrong with the option; **D** for failing, suggesting that you would be unhappy if anyone required you to comply with this option; **E** for objectionable, suggesting that you feel this option is unreasonable and should not be given further consideration. You can add $\pm$ values to your grades if you like. You may like to come back to answer Question 6.1 after responding to Question 6.2.
+
+Options for you to give an A--E letter grade:
+
+Q6.1.1. Open-access without anonymity. Your project, with your name, is posted on the Github repository. If your project has confidential data, or research results that you hope to publish and wish to keep private until that time, you can ask for an exception and your project will be turned in directly to me and not posted on the course Github site.
+
+Q6.1.2. Open-access with partial anonymity. Your project is un-named. You upload and edit your project on the class Github site, so someone could in principle search through the revision logs and unblind you. However, no internet search engine could associate your project with your name.  If your project has confidential data, or research results that you hope to publish and wish to keep private until that time, you can ask for an exception and your project will be turned in directly to me and not posted on course Github site.
+
+Q6.1.3. Open-access with full anonymity. You submit your project via Canvas, un-named, and Dao or I post it on the class Github site.  If your project has confidential data, or research results that you hope to publish and wish to keep private until that time, you can ask for an exception and your project will not be posted on course Github site.
+
+Q6.1.4. No open access. Your project and source code are submitted via Canvas, but will not appear on the course Github site.
+
+**<big>Question 6.2</big>**.  There are arguments for and against open-access online sharing of class projects, and for and against each level of anonymity. Please write responses to the following statements. In addition to saying whether you agree or disagree, it would be nice to have some comments on any thoughts or reservations you might have about your answer. 
+
+Q6.2.1. As long as you follow basic rules of academic integrity, you have more to gain than lose by having your project, with your name, posted online. Potential employers (if they look for your internet presence at all, which is not unlikely before they decide to hire you) may see that you have taken a relevant course. If you are at a point where this class project is one of the highlights of your academic progress to date, you can link to your project on the course Github site and draw the attention of those potential employers. It would be a disaster if you were caught publicly carrying out [plagiarism](https://en.wikipedia.org/wiki/Plagiarism) or other [academic dishonesty](https://en.wikipedia.org/wiki/Academic_dishonesty). However, assuming you are not going down that route, you will gain from the security that open-access work associated with a name disincentivizes others from trying to cheat the academic system. 
+
+Q6.2.2. People should properly feel reluctant to post anything online associated with their name without having thought through the issues involved. In fact, unless you think the benefits outweigh the disadvantages to you, it is wise to err on the side of caution.
+
+Q6.2.3. There is an academic advantage to you in having access to the midterm projects and source code of other students. We will have a session with 3 minute talks for each project, presenting a single slide where you describe your data and something you learned from the time series analysis. If you see some analysis you like, you will be readily able to look through the full project and source code for useful tricks.
+
+Q6.2.4. Open access means that courses in future years will be able to build on the successes of previous years, facilitating a cycle of continuing improvement. Most previous projects will likely not be widely read (as is the case with most published papers) but a few projects may become popular. Associating your name with your project means that, if your project is read in the future, you get the credit.
+
+Q6.2.5. How about sharing projects and source code privately within the course, via the Canvas site? Again, the author could be anonymous or identified. This doesn't have many of the advantages of open access identified above, either to you or to future students and faculty building on this class. Nevertheless, it is a valid point of view. 
+
+
+**<big>Question 6.3 (Optional)</big>**. Do you have any other thoughts or opinions or anecdotes related to the topic of open-access online academic materials and specifically student term projects?
+
+
+-----------
+
