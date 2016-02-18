@@ -638,11 +638,11 @@ Y
 <li><p>From the results for linear combinations of Normal random variables, we get the Kalman filter and prediction recursions:</p></li>
 </ul>
 <p><br></p>
-<p>[KF3] <span class="math">\({{\quad\quad}\displaystyle   \mu_{n+1}^P(y_{1:n}) = {\mathbb{A}}_n \mu_{n}^F(y_{1:n}) }\)</span>,</p>
+<p>[KF3] <span class="math">\({{\quad\quad}\displaystyle   \mu_{n+1}^P(y_{1:n}) = {\mathbb{A}}_{n+1} \mu_{n}^F(y_{1:n}) }\)</span>,</p>
 <p><br></p>
-<p>[KF4] <span class="math">\({{\quad\quad}\displaystyle   \Sigma_{n+1}^P = {\mathbb{A}}_n \Sigma_{n}^F {\mathbb{A}}_n^{\scriptsize{T}}+ {\mathbb{U}}}\)</span>.</p>
+<p>[KF4] <span class="math">\({{\quad\quad}\displaystyle   \Sigma_{n+1}^P = {\mathbb{A}}_{n+1} \Sigma_{n}^F {\mathbb{A}}_{n+1}^{\scriptsize{T}}+ {\mathbb{U}}_{n+1} }\)</span>.</p>
 <p><br></p>
-<p>[KF5] <span class="math">\({{\quad\quad}\displaystyle   \Sigma_{n}^F = \big([\Sigma_n^P]^{-1} + {\mathbb{B}}_n^{\scriptsize{T}}{\mathbb{V}}_n^{-1}{\mathbb{V}}\big)^{-1} }\)</span>.</p>
+<p>[KF5] <span class="math">\({{\quad\quad}\displaystyle   \Sigma_{n}^F = \big([\Sigma_n^P]^{-1} + {\mathbb{B}}_n^{\scriptsize{T}}{\mathbb{V}}_n^{-1}{\mathbb{B}}_n\big)^{-1} }\)</span>.</p>
 <p><br></p>
 <p>[KF6] <span class="math">\({{\quad\quad}\displaystyle   \mu_{n}^F(y_{1:n}) = \mu_{n}^P(y_{1:n-1}) + \Sigma_n^F {\mathbb{B}}^{\scriptsize{T}}_n{\mathbb{V}}_n^{-1}\big\{y_n - {\mathbb{B}}\mu_n^P(y_{1:n-1})\big\} }\)</span>.</p>
 <p><br></p>

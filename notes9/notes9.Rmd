@@ -981,20 +981,20 @@ $\Sigma_n^S(\data{y_{1:N}})=\var\big(X_n\given Y_{1:N}\equals \data{y_{1:N}}\big
 <br>
 
 [KF3] $\myeq{
-  \mu_{n+1}^P(y_{1:n}) = \matA_n \mu_{n}^F(y_{1:n})
+  \mu_{n+1}^P(y_{1:n}) = \matA_{n+1} \mu_{n}^F(y_{1:n})
 }$,
 
 <br>
 
 [KF4] $\myeq{
-  \Sigma_{n+1}^P = \matA_n \Sigma_{n}^F \matA_n^\transpose + \covmatX
+  \Sigma_{n+1}^P = \matA_{n+1} \Sigma_{n}^F \matA_{n+1}^\transpose + \covmatX_{n+1}
 }$.
 
 
 <br>
 
 [KF5] $\myeq{
-  \Sigma_{n}^F = \big([\Sigma_n^P]^{-1} + \matB_n^\transpose\covmatY_n^{-1}\covmatY\big)^{-1}
+  \Sigma_{n}^F = \big([\Sigma_n^P]^{-1} + \matB_n^\transpose\covmatY_n^{-1}\matB_n\big)^{-1}
 }$.
 
 <br>
