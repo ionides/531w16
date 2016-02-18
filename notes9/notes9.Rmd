@@ -24,7 +24,7 @@ csl: ecology.csl
 \newcommand\data[1]{#1^*}
 \newcommand\params{\, ; \,}
 \newcommand\transpose{\scriptsize{T}}
-\newcommand\eqspace{\quad\quad\quad}
+\newcommand\eqspace{\quad\quad}
 \newcommand\myeq[1]{\eqspace \displaystyle #1}
 \newcommand\lik{\mathscr{L}}
 \newcommand\loglik{\ell}
@@ -35,6 +35,7 @@ csl: ecology.csl
 \newcommand\MA{\Psi}
 \newcommand\ev{u}
 \newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
 \newcommand\matA{\mathbb{A}}
 \newcommand\matB{\mathbb{B}}
 \newcommand\matH{\mathbb{H}}
@@ -547,7 +548,7 @@ f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}}) \, f_{Y_{n:N}|X_{n}}(\data{y_{
 
 <br>
 
-[LG1] $\eqspace X_{n+1} = \matA_n X_n + \epsilon_n$, $\eqspace \epsilon_n\sim N[0,\covmatX_n]$,
+[LG1] $\eqspace X_{n} = \matA_n X_{n-1} + \epsilon_n$, $\eqspace \epsilon_n\sim N[0,\covmatX_n]$,
 
 <br>
 
@@ -567,7 +568,7 @@ f_{X_{n}|Y_{1:n-1}}(x_{n}\given \data{y_{1:n-1}}) \, f_{Y_{n:N}|X_{n}}(\data{y_{
 
 <br>
 
-[LG3] $\eqspace\displaystyle Y_n = \sum_{j=1}^p \ar_j Y_{n-j} +  \omega_n + \sum_{k=1}^q \ma_q \omega_{n-k}.$$
+[LG3] $\eqspace\displaystyle Y_n = \sum_{j=1}^p \ar_j Y_{n-j} +  \omega_n + \sum_{k=1}^q \ma_q \omega_{n-k}.$
 
 <br>
 
@@ -593,7 +594,7 @@ Y_n \\
 \end{array}\right)$$
 
 * We can check that the ARMA equation [LG3] corresponds to the matrix equation
-$$ X_{n+1} = \matA X_n + \left(\begin{array}{l}
+$$ X_{n} = \matA X_{n-1} + \left(\begin{array}{l}
 1 \\
 \ma_1\\
 \ma_2\\
@@ -636,9 +637,9 @@ $$\covmatX_n = \covmatX = \sigma^2 (1, \ma_1,\ma_2,\dots,\ma_{r-1})^\transpose(1
 
 $\begin{array}{lrcl}
 \mbox{[BSM1]} \eqspace & Y_n &=& L_n + S_n + \epsilon_n \\
-\mbox{[BSM2]} \eqspace & L_{n+1} &=& L_n + T_n + \xi_n \\
-\mbox{[BSM3]} \eqspace & T_{n+1} &=& T_n + \zeta_n \\
-\mbox{[BSM4]} \eqspace & S_{n+1} &=& -\sum_{k=0}^{10} S_{n-k} + \eta_n
+\mbox{[BSM2]} \eqspace & L_{n} &=& L_{n-1} + T_{n-1} + \xi_n \\
+\mbox{[BSM3]} \eqspace & T_{n} &=& T_{n-1} + \zeta_n \\
+\mbox{[BSM4]} \eqspace & S_{n} &=& -\sum_{k=1}^{11} S_{n-k} + \eta_n
 \end{array}$
 
 <br>
@@ -678,32 +679,32 @@ $\begin{array}{lrcl}
 
 $\displaystyle
  \left(\begin{array}{l}
-L_{n+1} \\
-T_{n+1} \\
-S_{n+1} \\
-S_{n}\\
-S_{n-1} \\
- \vdots \\
-S_{n-9}
-\end{array}\right)
-=
-\left(\begin{array}{ccccc}
-1 & 1 & 0 & 0 & 0 & \ldots & 0 \\
-0 & 1 & 0 & 0 & 0 & \ldots     & 0 \\
-0 & 0 & -1 & -1 &  -1 & \ldots & -1\\
-0 & 0 & 1 & 0 &  0 & \ldots & 0 \\
-0 & 0 & 0 & 1 &  0 & \ldots & 0 \\
-\vdots &  & &\ddots & \ddots & \ddots & \vdots \\
-0 & 0 & 0 & \ldots & 0 & 1 & 0   
-\end{array}\right)
-\left(\begin{array}{l}
-L_n \\
-T_n \\
-S_n \\
+L_{n} \\
+T_{n} \\
+S_{n} \\
 S_{n-1}\\
 S_{n-2} \\
  \vdots \\
 S_{n-10}
+\end{array}\right)
+=
+\left(\begin{array}{ccccccc}
+1      & 1 & 0  & 0     & 0      & \ldots & 0 \\
+0      & 1 & 0  & 0     & 0      & \ldots & 0 \\
+0      & 0 & -1 & -1    &  -1    & \ldots & -1\\
+0      & 0 & 1  & 0     &  0     & \ldots & 0 \\
+0      & 0 & 0  & 1     &  0     & \ldots & 0 \\
+\vdots &   &    &\ddots & \ddots & \ddots & \vdots \\
+0      & 0 & 0  &\ldots & 0      & 1      & 0   
+\end{array}\right)
+\left(\begin{array}{l}
+L_{n-1} \\
+T_{n-1} \\
+S_{n-1} \\
+S_{n-2}\\
+S_{n-3} \\
+ \vdots \\
+S_{n-11}
 \end{array}\right)
 +
 \left(\begin{array}{l}
@@ -732,12 +733,12 @@ S_{n-10}
 
 * For example, `smooth.spline` in R.
 
-* A **smoothing spline** for an equally spaced time series $\data{y_{1:N}}$ collected at times $t_{1:N}$ is the sequence $x_{1:N}$ minimizing the **penalized sum of squares (PSS)** defined as
+* A **smoothing spline** for an equally spaced time series $\data{y_{1:N}}$ collected at times $t_{1:N}$ is the sequence $x_{1:N}$ minimizing the **penalized sum of squares (PSS)**, which is defined as
 
 <br>
 
 [SS1] $\myeq{
-  \mathrm{PSS}(x_{1:N}\params\lambda)}
+  \mathrm{PSS}(x_{1:N}\params\lambda)
   = \sum_{n-1}^N(\data{y_n}-x_n)^2 + \lambda\sum_{n=3}^T(\Delta^2 x_n)^2
 }$,
 
@@ -760,7 +761,7 @@ since $\Delta^2(\alpha + \beta n) = 0$.
 <br>
 
 [SS2] $\eqspace 
-\begin{array}{rclcl
+\begin{array}{rclcl}
 X_n &=& 2X_{n-1}-X_{n-2} + \epsilon_n, & & \epsilon_n\sim \mathrm{iid}\; N[0,\sigma^2/\lambda]\\
 Y_n &=& X_n + \eta_n & & \eta_n\sim \mathrm{iid}\; N[0,\sigma^2].
 \end{array}$
@@ -791,12 +792,12 @@ $$ f_{X_{1:N}Y_{1:N}}(x_{1:N},y_{1:N})= f_{X_{1:N}}(x_{1:N}) \, f_{Y_{1:N}|X_{1:
 * Taking logs, 
 $$ \log f_{X_{1:N}Y_{1:N}}(x_{1:N},y_{1:N})= \log f_{X_{1:N}}(x_{1:N}) + \log f_{Y_{1:N}|X_{1:N}}(y_{1:N}\given x_{1:N}).$$
 
-* Suppose that initial conditions are irrelevant (they could be either unknown parameters or an improper Gaussian distribution with infinite variance).  Then, noting that $\{\Delta^2 X_{1:N}\}$ and $\{Y_n-X_n\}$ are independent Normal random variables with mean zero and variances $\sigma^2/\lambda$ and $\sigma^2$, we have
+* Suppose that initial conditions are irrelevant (they could be either unknown parameters or an improper Gaussian distribution with infinite variance).  Then, noting that $\{\Delta^2 X_{n}, n\in 1:N\}$ and $\{Y_n-X_n, n\in 1:N\}$ are collections of independent Normal random variables with mean zero and variances $\sigma^2/\lambda$ and $\sigma^2$ respectively, we have
 
 <br>
 
 [SS3] $\myeq{
-\log f_{X_{1:N}Y_{1:N}}(x_{1:N},y_{1:N} \params \sigma,\lambda) = \frac{-1}{2\sigma^2} \sum_{n-1}^N(y_n-x_n)^2 +\frac{-\lambda}{2\sigma^2}  \lambda\sum_{n=3}^T(\Delta^2 x_n)^2 + C
+\log f_{X_{1:N}Y_{1:N}}(x_{1:N},y_{1:N} \params \sigma,\lambda) = \frac{-1}{2\sigma^2} \sum_{n-1}^N(y_n-x_n)^2 +\frac{-\lambda}{2\sigma^2}  \sum_{n=3}^T(\Delta^2 x_n)^2 + C
 }$.
 
 <br>
@@ -822,7 +823,7 @@ $$\begin{eqnarray}
 &=& 
 \arg\max_{x_{1:N}} f_{X_{1:N}|Y_{1:N}}(x_{1:N}\given \data{y_{1:N}}\params \sigma,\lambda),
 \\
-&=& \E[X_{1:N}\given Y_{1:N}=\data{y_{1:N}} \params  \sigma,\lambda).
+&=& \E\big[X_{1:N}\given Y_{1:N}=\data{y_{1:N}} \params  \sigma,\lambda\big].
 \end{eqnarray}$$
 
 * The smoothing calculation for an LG-POMP model involves finding the mean and variance of $X_{n}$ given $Y_{1:N}=\data{y_{1:N}}$.
@@ -880,9 +881,13 @@ $$\matH\matH^\transpose = \Sigma_X.$$
 
 * We write $X\sim N\big[\mu_X,\Sigma_X\big]$.
 
-* If $X\sim N\big[\mu_X,\Sigma_X\big]$ has a probability density function then it is given by 
-$$f_X(x) = \frac{1}{(2\pi)^{d_X/2}|\Sigma_X|}\exp\left\{-\frac{x\, \big[\Sigma_X\big]^{-1} \, x^\transpose \big}{2}\right\}.$$
-This happens if and only if $\Sigma_X$ is invertible.
+* $X\sim N\big[\mu_X,\Sigma_X\big]$ has a probability density function if and only if $\Sigma_X$ is invertible. This density is given by 
+$$f_X(x) = \frac{1}{(2\pi)^{d_X/2}|\Sigma_X|}
+\exp
+  \left\{-
+     \frac{x\, \big[\Sigma_X\big]^{-1} \, x^\transpose}{2}
+  \right\}.
+$$
 
 * $X$ and $Y$ are **jointly multivariate normal** if the combined vector 
 $$W=\left(\begin{array}{l}
@@ -933,13 +938,13 @@ $$ X\given Y=y \sim N\big[\mu_{X|Y}(y),\Sigma_{X|Y}\big]. $$
 
 <br>
 
-[KF2] $\eqspace \begin{eqnarray}
-X_{n}\given Y_{1:n-1}=y_{1:n-1} &\sim& N\big[ \mu_{n}^P(y_{1:n-1}),\Sigma_n^P\big],
+[KF2] $\eqspace \begin{array}{lcl}
+X_{n}\given Y_{1:n-1}\equals y_{1:n-1} &\sim& N\big[ \mu_{n}^P(y_{1:n-1}),\Sigma_n^P\big],
 \\
-X_n\given Y_{1:n}=y_{1:n} &\sim& N\big[ \mu_n^F(y_{1:n-1}),\Sigma_n^F\big],
+X_n\given Y_{1:n}\equals y_{1:n} &\sim& N\big[ \mu_n^F(y_{1:n-1}),\Sigma_n^F\big],
 \\
-X_n\given Y_{1:N}=y_{1:N} &\sim& N\big[ \mu_n^S(y_{1:N}),\Sigma_n^F\big].
-\end{eqnarray}$
+X_n\given Y_{1:N}\equals y_{1:N} &\sim& N\big[ \mu_n^S(y_{1:N}),\Sigma_n^F\big].
+\end{array}$
 
 <br>
 
@@ -947,27 +952,27 @@ X_n\given Y_{1:N}=y_{1:N} &\sim& N\big[ \mu_n^S(y_{1:N}),\Sigma_n^F\big].
 
 <br>
 
-$\mu_n^P(\data{y_{1:n-1}})=\E\big[X_n\given Y_{1:n-1}=\data{y_{1:n-1}}\big]$ is the **one-step prediction mean** for time $t_n$. It is an arbitrary decision we have made to call this the prediction for time $t_n$ (the time for which the prediction is being made) rather than for time $t_{n-1}$ (the time at which the prediction for time $t_n$ becomes available).
+$\mu_n^P(\data{y_{1:n-1}})=\E\big[X_n\given Y_{1:n-1}\equals \data{y_{1:n-1}}\big]$ is the **one-step prediction mean** for time $t_n$. It is an arbitrary decision we have made to call this the prediction for time $t_n$ (the time for which the prediction is being made) rather than for time $t_{n-1}$ (the time at which the prediction for time $t_n$ becomes available).
 
 <br>
 
-$\Sigma_n^P(\data{y_{1:n-1}})=\var\big(X_n\given Y_{1:n-1}=\data{y_{1:n-1}}\big)$ is the **one-step prediction variance** for time $t_n$. To make this terminology work for general POMP models as well as for LG-POMP models, we have included the dependence on $\data{y_{1:n-1}}$.
+$\Sigma_n^P(\data{y_{1:n-1}})=\var\big(X_n\given Y_{1:n-1}\equals \data{y_{1:n-1}}\big)$ is the **one-step prediction variance** for time $t_n$. To make this terminology work for general POMP models as well as for LG-POMP models, we have included the dependence on $\data{y_{1:n-1}}$.
 
 <br>
 
-$\mu_n^F(\data{y_{1:n}})=\E\big[X_n\given Y_{1:n}=\data{y_{1:n}}\big]$ is the **filter mean** for time $t_n$.
+$\mu_n^F(\data{y_{1:n}})=\E\big[X_n\given Y_{1:n}\equals \data{y_{1:n}}\big]$ is the **filter mean** for time $t_n$.
 
 <br>
 
-$\Sigma_n^F(\data{y_{1:n}})=\var\big(X_n\given Y_{1:n}=\data{y_{1:n}}\big)$ is the **filter variance** for time $t_n$.
+$\Sigma_n^F(\data{y_{1:n}})=\var\big(X_n\given Y_{1:n}\equals \data{y_{1:n}}\big)$ is the **filter variance** for time $t_n$.
 
 <br>
 
-$\mu_n^S(\data{y_{1:N}})=\E\big[X_n\given Y_{1:N}=\data{y_{1:N}}\big]$ is the **smoothing mean** for time $t_n$. 
+$\mu_n^S(\data{y_{1:N}})=\E\big[X_n\given Y_{1:N}\equals \data{y_{1:N}}\big]$ is the **smoothing mean** for time $t_n$. 
 
 <br>
 
-$\Sigma_n^S(\data{y_{1:N}})=\var\big(X_n\given Y_{1:N}=\data{y_{1:N}}\big)$ is the **smoothing variance** for time $t_n$.
+$\Sigma_n^S(\data{y_{1:N}})=\var\big(X_n\given Y_{1:N}\equals \data{y_{1:N}}\big)$ is the **smoothing variance** for time $t_n$.
 
 * We have defined the above quantities as estimates rather than estimators. For example, we could define the filter mean estimator to be the function which is evaluated at the data to give the filter mean.
 
