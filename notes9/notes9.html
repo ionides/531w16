@@ -481,12 +481,12 @@ Y_n \\
 <div id="spline-smoothing-and-its-lg-pomp-representation" class="section level2">
 <h2><span class="header-section-number">9.6</span> Spline smoothing and its LG-POMP representation</h2>
 <ul>
-<li><p>Spline smoothing is a stanrdard method to smooth scatter plots and time plots.</p></li>
+<li><p>Spline smoothing is a standard method to smooth scatter plots and time plots.</p></li>
 <li><p>For example, <code>smooth.spline</code> in R.</p></li>
 <li><p>A <strong>smoothing spline</strong> for an equally spaced time series <span class="math">\({y_{1:N}^*}\)</span> collected at times <span class="math">\(t_{1:N}\)</span> is the sequence <span class="math">\(x_{1:N}\)</span> minimizing the <strong>penalized sum of squares (PSS)</strong>, which is defined as</p></li>
 </ul>
 <p><br></p>
-<p>[SS1] <span class="math">\({{\quad\quad}\displaystyle   \mathrm{PSS}(x_{1:N}{\, ; \,}\lambda)  = \sum_{n-1}^N({y_n^*}-x_n)^2 + \lambda\sum_{n=3}^T(\Delta^2 x_n)^2 }\)</span>,</p>
+<p>[SS1] <span class="math">\({{\quad\quad}\displaystyle   \mathrm{PSS}(x_{1:N}{\, ; \,}\lambda)  = \sum_{n=1}^N({y_n^*}-x_n)^2 + \lambda\sum_{n=3}^N(\Delta^2 x_n)^2 }\)</span>.</p>
 <p><br></p>
 <ul>
 <li><p>The spline is defined for all times, but here we are only concerned with its value at the times <span class="math">\(t_{1:N}\)</span>.</p></li>
@@ -508,7 +508,7 @@ Y_n \\
 <div id="question-constructing-a-linear-gaussian-pomp-lg-pomp-model-from-ss2." class="section level3">
 <h3><span class="header-section-number">9.6.1</span> Question: Constructing a linear Gaussian POMP (LG-POMP) model from [SS2].</h3>
 <ul>
-<li>Note that <span class="math">\(\{X_n,Y_n\}\)</span> defined in [SS2] is not quite an LG-POMP model. However, we can use <span class="math">\(\{X_\}\)</span> and <span class="math">\(\{Y_n\}\)</span> to build an LG-POMP model. How?</li>
+<li>Note that <span class="math">\(\{X_n,Y_n\}\)</span> defined in [SS2] is not quite an LG-POMP model. However, we can use <span class="math">\(\{X_n\}\)</span> and <span class="math">\(\{Y_n\}\)</span> to build an LG-POMP model. How?</li>
 </ul>
 <p><br></p>
 <hr />
@@ -519,7 +519,7 @@ Y_n \\
 <li><p>Suppose that initial conditions are irrelevant (they could be either unknown parameters or an improper Gaussian distribution with infinite variance). Then, noting that <span class="math">\(\{\Delta^2 X_{n}, n\in 1:N\}\)</span> and <span class="math">\(\{Y_n-X_n, n\in 1:N\}\)</span> are collections of independent Normal random variables with mean zero and variances <span class="math">\(\sigma^2/\lambda\)</span> and <span class="math">\(\sigma^2\)</span> respectively, we have</p></li>
 </ul>
 <p><br></p>
-<p>[SS3] <span class="math">\({{\quad\quad}\displaystyle  \log f_{X_{1:N}Y_{1:N}}(x_{1:N},y_{1:N} {\, ; \,}\sigma,\lambda) = \frac{-1}{2\sigma^2} \sum_{n-1}^N(y_n-x_n)^2 +\frac{-\lambda}{2\sigma^2} \sum_{n=3}^T(\Delta^2 x_n)^2 + C }\)</span>.</p>
+<p>[SS3] <span class="math">\({{\quad\quad}\displaystyle  \log f_{X_{1:N}Y_{1:N}}(x_{1:N},y_{1:N} {\, ; \,}\sigma,\lambda) = \frac{-1}{2\sigma^2} \sum_{n=1}^N(y_n-x_n)^2 +\frac{-\lambda}{2\sigma^2} \sum_{n=3}^N(\Delta^2 x_n)^2 + C }\)</span>.</p>
 <p><br></p>
 <ul>
 <li><p>In [SS3], <span class="math">\(C\)</span> is a constant that depends on <span class="math">\(\sigma\)</span> and <span class="math">\(\lambda\)</span> but not on <span class="math">\(x_{1:N}\)</span> or <span class="math">\(y_{1:N}\)</span>.</p></li>
@@ -527,7 +527,7 @@ Y_n \\
 <li><p>For a Gaussian density, the mode (i.e., the maximum of the density) is equal to the expected value. Therefore, we have</p></li>
 </ul>
 <p><span class="math">\[\begin{eqnarray}
-\arg\max_{x_{1:N}} \mathrm{PSS}(x_{1:N}{\, ; \,}\lambda),
+\arg\min_{x_{1:N}} \mathrm{PSS}(x_{1:N}{\, ; \,}\lambda),
 &amp;=&amp; 
 \arg\max_{x_{1:N}} f_{X_{1:N}Y_{1:N}}(x_{1:N},{y_{1:N}^*}{\, ; \,}\sigma,\lambda),
 \\
@@ -584,7 +584,7 @@ Y_n \\
 <li><p><span class="math">\(X\sim N\big[\mu_X,\Sigma_X\big]\)</span> has a probability density function if and only if <span class="math">\(\Sigma_X\)</span> is invertible. This density is given by <span class="math">\[f_X(x) = \frac{1}{(2\pi)^{d_X/2}|\Sigma_X|}
 \exp
   \left\{-
- \frac{x\, \big[\Sigma_X\big]^{-1} \, x^{\scriptsize{T}}}{2}
+ \frac{ (x - \mu_X)\, \big[\Sigma_X\big]^{-1} \, (x - \mu_X)^{\scriptsize{T}}}{2}
   \right\}.
 \]</span></p></li>
 <li><p><span class="math">\(X\)</span> and <span class="math">\(Y\)</span> are <strong>jointly multivariate normal</strong> if the combined vector <span class="math">\[W=\left(\begin{array}{l}
@@ -616,7 +616,7 @@ Y
 <li>To write the Kalman filter, we define the following notation,</li>
 </ul>
 <p><br></p>
-<p>[KF2] <span class="math">\({\quad\quad}\begin{array}{lcl} X_{n}{{\, | \,}}Y_{1:n-1}{{=\,}}y_{1:n-1} &amp;\sim&amp; N\big[ \mu_{n}^P(y_{1:n-1}),\Sigma_n^P\big], \\ X_n{{\, | \,}}Y_{1:n}{{=\,}}y_{1:n} &amp;\sim&amp; N\big[ \mu_n^F(y_{1:n-1}),\Sigma_n^F\big], \\ X_n{{\, | \,}}Y_{1:N}{{=\,}}y_{1:N} &amp;\sim&amp; N\big[ \mu_n^S(y_{1:N}),\Sigma_n^F\big]. \end{array}\)</span></p>
+<p>[KF2] <span class="math">\({\quad\quad}\begin{array}{lcl} X_{n}{{\, | \,}}Y_{1:n-1}{{=\,}}y_{1:n-1} &amp;\sim&amp; N\big[ \mu_{n}^P(y_{1:n-1}),\Sigma_n^P\big], \\ X_n{{\, | \,}}Y_{1:n}{{=\,}}y_{1:n} &amp;\sim&amp; N\big[ \mu_n^F(y_{1:n-1}),\Sigma_n^F\big], \\ X_n{{\, | \,}}Y_{1:N}{{=\,}}y_{1:N} &amp;\sim&amp; N\big[ \mu_n^S(y_{1:N}),\Sigma_n^S\big]. \end{array}\)</span></p>
 <p><br></p>
 <ul>
 <li>To relate this notation to the general POMP recursion formulas, given data <span class="math">\({y_{1:N}^*}\)</span>, we define the following terminology:</li>
@@ -644,7 +644,7 @@ Y
 <p><br></p>
 <p>[KF5] <span class="math">\({{\quad\quad}\displaystyle   \Sigma_{n}^F = \big([\Sigma_n^P]^{-1} + {\mathbb{B}}_n^{\scriptsize{T}}{\mathbb{V}}_n^{-1}{\mathbb{B}}_n\big)^{-1} }\)</span>.</p>
 <p><br></p>
-<p>[KF6] <span class="math">\({{\quad\quad}\displaystyle   \mu_{n}^F(y_{1:n}) = \mu_{n}^P(y_{1:n-1}) + \Sigma_n^F {\mathbb{B}}^{\scriptsize{T}}_n{\mathbb{V}}_n^{-1}\big\{y_n - {\mathbb{B}}\mu_n^P(y_{1:n-1})\big\} }\)</span>.</p>
+<p>[KF6] <span class="math">\({{\quad\quad}\displaystyle   \mu_{n}^F(y_{1:n}) = \mu_{n}^P(y_{1:n-1}) + \Sigma_n^F {\mathbb{B}}^{\scriptsize{T}}_n{\mathbb{V}}_n^{-1}\big\{y_n - {\mathbb{B}}_n\mu_n^P(y_{1:n-1})\big\} }\)</span>.</p>
 <p><br></p>
 <ul>
 <li><p>These equations are easy to code, and quick to compute unless the dimension of the latent space is very large. In numerical weather forecasting, with careful programming, they are solved with latent variables having dimension <span class="math">\(d_X\approx 10^7\)</span>.</p></li>
