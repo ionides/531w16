@@ -1,0 +1,43 @@
+---
+title: "Midterm project instructions"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+-----------
+
+
+**<big>Midterm project outline</big>**. Find a time series dataset of your choice. Carry out a time series analysis, taking advantage of what we have learned so far in this course. Write a report, as an R markdown (Rmd) file. Data can be read by the Rmd file directly from an internet source, or copied into the Rmd file. Submit the report by midnight on Thursday March 10. 
+
+---------
+
+**<big>Choice of data</big>**. The time series should hopefully have at least 100 time points. You can have less, if your interests demand it. Shorter data needs additional care, since model diagnostics and asymptotic approximations become more delicate on small datasets. If your data are longer than, say, 1000 time points, you can subsample if you start having problems working with too much data. Come ask me if you have questions or concerns about your choice of data.
+
+----------
+
+**<big>Expectations for the report</big>**. The report will be graded on the following points.
+
+* Raising a question. You should explain some background to the data you chose, and give motivation for the reader to appreciate the purpose of your data analysis. 
+
+* Use of appropriate statistical methods.
+
+* Scholarship. Your report should make references where appropriate. The models and methods you use should be fully explained, either by references or within your report. When using a reference to point the reader to descriptions elsewhere, you should provide a brief summary in your own report. Although you will be submitting your source code, you should not expect the reader to study it.
+
+* Reaching a conclusion. You should say what you have concluded, as well as describing things you might have liked to do that were beyond the scope of this midterm project.
+
+* Presentation of data analysis. Focus on a few, carefully explained and justified, figures, tables, statistics and hypothesis tests. You may want to try many things, but only write up evidence supporting how the data help you to get from your question to your conclusions. Including material that is of borderline relevance, or that is not fully explained, makes it harder for the reader to appreciate your analysis.
+
+----------
+
+**<big>Midterm project mini-presentations</big>**. In class, on March 22 and 24, some of the class time will be used for brief 3-minute presentations of all the midterm projects. You should have a single slide. There will be just enough time to say what data you analyzed and to share something that you learned. 
+
+------------
+
