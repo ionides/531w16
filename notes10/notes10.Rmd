@@ -1,0 +1,271 @@
+---
+title: "10. Case study: An association between unemployment and mortality?"
+author: "Edward Ionides"
+date: "2/23/2016"
+output:
+  html_document:
+    fig_caption: true
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=10"
+    ]
+csl: ecology.csl
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+\newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\matH{\mathbb{H}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+
+
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+-------------------
+
+------------------
+
+<big><big><big>Objectives</big></big></big>
+
+* Discuss a data analysis comparable to your midterm projects and the midterm exam.
+
+* Review ARMA methods.
+
+* Consider how one can build causal arguments based on time series associations.
+
+<br>
+
+----------------------
+
+---------------
+
+## Historical investigations linking business cycles to mortality
+
+* \citet{ogburn22} were among the first to report **pro-cyclical** mortality, i.e., mortality tends to be above trend when economic activity is above trend. This suggests that one key measure of population health is worse in economic booms than in economic recessions.
+
+* Noone disputes that both the economy and life expectancy have grown over the last century. However, these phenomena have not always come together. For example, 1950--1980 saw rapid growth in life expectancy in India and China, which has tapered off during the recent economic surges in these countries.
+
+* The link between economic growth and health improvement is controversial, since it has political implications. 
+
+    + If our goal is population health and happiness, how much should our policies focus on gross domestic product (GDP) growth? 
+
+    + If you have evidence supporting the view that economic growth is the critical engine for other improvements in living conditions, the answer is: a lot. 
+
+    + If you have evidence that there are other major factors involved, GDP growth becomes only one consideration, and not necessary always a top political priority.
+
+* Economists and epidemiologists have argued both sides of this debate, using time series methods.
+
+## Some data
+
+* We're going to look at national historical data for the USA. 
+
+```{r read_data_e}
+E_data <- read.table(file="life_expectancy_usa.txt",header=TRUE)
+head(E_data)
+```
+
+* The variable `e0` here is civilian life expectancy at birth. This is an actuarial calculation based on a fictitious individual having mortality rates at each age matching the census age-specific mortality rates for the current year. It is a standard way to combine all the age-specific mortality rates into a single number.
+
+* One can also break down life expectancy by gender, race, geography, etc. It is interesting and relevant to investigate the consistency of any established pattern across sub-populations, but here we'll focus on a single, national analysis.
+
+```{r read_data_u}
+U_data <- read.table(file="unadjusted_unemployment.csv",sep=",",header=TRUE)
+head(U_data)
+```
+
+* These are the unemployment data that we looked at in Chapter 8. 
+
+* Write $E_n$ for life expectancy in year $t_n=1947+n$. 
+
+
+* Write $U_n$ for mean unemployment in year $t_n$.
+
+* These variables are coded as follows.
+
+```{r clean_data}
+t <- intersect(E_data$Yr,U_data$Year)
+E <- E_data$e0[E_data$Yr %in% t]
+U <- apply(U_data[U_data$Year %in% t, 2:13],1,mean)
+```
+
+* We can get some feeling for the data by plotting them. It is always appropriate to present some graphical investigation of your data before diving into statistical analysis.
+
+```{r data_plots,fig.height=5}
+plot(ts(cbind(E,U),start=1948),main="Percent unemployment (U) and life expectancy (E) for USA",xlab="Year")
+```
+
+* We are interested in changes over business cycle timescales, once trends have been removed. 
+
+* To extract the cyclical component, we use an econometric method called the Hodrick-Prescott (HP) filter \citep{hodrick97}.
+
+* The HP filter is exactly a smoothing spline (discussed in Chapter 8) with a particular choice of smoothing parameter. 
+
+* Specifically, for a time series $\data{y_{1:N}}$, the HP filter is the time series $\data{s_{1:N}}$ constructed as
+
+<br>
+
+[HP1] $\myeq{
+  \data{s_{1:N}} =  \arg\min_{s_{1:N}} 
+  \left\{ 
+    \sum^{N}_{n=1}\big(\data{y_n}-s_{n}\big)^2 + \lambda\sum^{N-1}_{n=2}\big(s_{n+1}-2s_{n}+s_{n-1}\big)^2 
+  \right\}
+}$
+
+<br>
+
+* A standard econometric choice of $\lambda$ for removing nonlinear trend, and therefore extracting the business cycle component, in annual data is $\lambda=100$.
+
+* An R implementation of the Hodrick-Prescott filter is `hpfilter` in the R package `mFilter`.
+
+```{r hp}
+require(mFilter)
+E_hp <- hpfilter(E, freq=100,type="lambda",drift=F)$cycle
+U_hp <- hpfilter(U, freq=100,type="lambda",drift=F)$cycle
+```
+
+```{r hpplots, fig.cap="uhp (black; left axis) and ehp (red; right axis)"}
+plot(t,U_hp,type="l")
+E_hp_unit_scale <- (E_hp-min(E_hp))/(max(E_hp)-min(E_hp)) 
+E_hp_uhp_scale <- min(U_hp) + (max(U_hp)-min(U_hp))* E_hp_unit_scale
+lines(t,E_hp_uhp_scale,col="red")
+E_hp_ticks <- c(-0.3,0,0.3,0.6)
+E_hp_ticks_unit_scale <- (E_hp_ticks-min(E_hp))/(max(E_hp)-min(E_hp)) 
+E_hp_ticks_uhp_scale <- min(U_hp) + (max(U_hp)-min(U_hp))* E_hp_ticks_unit_scale
+lines(t,E_hp_uhp_scale,col="red")
+axis(side=4, at=E_hp_ticks_uhp_scale, labels=E_hp_ticks,col="red")
+```
+
+* Looking at this figure may suggest that detrended life expectancy and detrended unemployment cycle together. 
+
+* We want to make a test to check that.
+
+* Fitting to the whole time series suggests no evidence for a linear relationship of the form.  For example, we can model $e^{hp*}_{1:N}$ using regression with ARMA errors,
+$$ E^{hp}_n = \alpha + \beta u^{hp*}_n + \epsilon_n,$$
+where $\{\epsilon_n\}$ is a Gaussian ARMA process. 
+
+```{r hp_b}
+(arima(E_hp,xreg=U_hp,order=c(1,0,0)))
+```
+
+* However, we may also notice from the plot that the relationship seems clearer before the mid 1990s, say in the first 45 years of the time series.
+
+```{r hp_early_fit}
+tt <- 1:45
+arima(ehp[tt],xreg=uhp[tt],order=c(1,0,0))
+```
+
+* This analysis shows clear evidence for an association in the time period 1948--1992.
+
+* It is quite plausible that the relationship between health, mortality, and the economy is changing over time. Why? 
+
+## Conclusions
+
+* Up until the early 1990s, there is reasonably clear evidence of pro-cyclical mortality at a national level in the USA. 
+
+* In recent times, the association has become less clear.
+
+* The *Great Recession* led to high unemployment in 2009-2010, but these two years had respectable gains in life expectancy at birth.
+
+* More data, perhaps a state-level or international **panel analysis** combining many time series, might be able to improve the signal to noise ration and lead to clearer results.
+
+
+## Some alternative analysis
+
+* We are interested in whether periods of low economic activity (measured by high unemployq
+ment) have systematically higher or lower improvements in mortality. Therefore, we consider the variable 
+
+$$ \Delta E_n = E_n - E_{n-1}.$$
+```{r clean_data_again}
+t <- intersect(E_data$Yr,U_data$Year)
+E <- E_data$e0[E_data$Yr %in% t]
+DE <- E - E_data$e0[E_data$Yr %in% (t-1)]
+U <- apply(U_data[U_data$Year %in% t, 2:13],1,mean)
+```
+
+```{r plots, fig.cap="U (black; left axis) and DE (red; right axis)"}
+plot(t,U,type="l")
+DE_unit_scale <- (DE-min(DE))/(max(DE)-min(DE)) 
+DE_U_scale <- min(U) + (max(U)-min(U))* DE_unit_scale
+lines(t,DE_U_scale,col="red")
+DE_ticks <- c(-0.3,0,0.3,0.6)
+DE_ticks_unit_scale <- (DE_ticks-min(DE))/(max(DE)-min(DE)) 
+DE_ticks_U_scale <- min(U) + (max(U)-min(U))* DE_ticks_unit_scale
+lines(t,DE_U_scale,col="red")
+axis(side=4, at=DE_ticks_U_scale, labels=DE_ticks,col="red")
+```
+
+
+```{r arma}
+a1 <- arima(DE,xreg=U,order=c(1,0,0))
+a1
+```
+
+```{r arma-b}
+a2 <- arima(DE,xreg=U,order=c(0,0,0))
+a2
+```
