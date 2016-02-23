@@ -1,0 +1,176 @@
+---
+title: "Solution to Homework 2"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+
+--------
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "HW2"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+**<big>Question 2.1</big>**. 
+
+
+
+A. Since $\{\epsilon_{n}\}$ is white noise with variance $\sigma^{2}$,
+then
+$$\begin{eqnarray}
+\gamma_{h}&=& \cov (X_{n},\ X_{n+h})\\
+&=& \cov (X_{n},\phi X_{n+h-1}+\epsilon_{n+h})\\
+&=&\phi\mathrm{\cov}(X_{n},\ X_{n+h-1})+ \cov (X_{n},\ \epsilon_{n+h})\\
+&=&\phi\gamma_{h-1}.
+\end{eqnarray}$$
+
+We can get $\gamma_{0}$ by simple computing,
+
+$$\begin{eqnarray}
+\gamma_{0}&=& \cov (X_{n},\ X_{n})\\
+\gamma_{0}&=& \cov (\phi X_{n-1}+\epsilon_{n},\ \phi X_{n-1}+\epsilon_{n})\\
+\gamma_{0}&=&\phi^{2} \cov (X_{n-1},\ X_{n-1})+ \cov (\epsilon_{n},\ \epsilon_{n})\\
+\gamma_{0}&=&\phi^{2}\gamma_{0}+\sigma^{2}\\
+(1\ -\phi^{2})\gamma_{0}&=&\sigma^{2}\\
+\gamma_{0}&=&\frac{\sigma^{2}}{1-\phi^{2}}
+\end{eqnarray}$$
+
+Let $\gamma_{h}=A\lambda^{h}$, then
+$$\begin{eqnarray}
+A\lambda^{h}&=&\phi\mathrm{R}\lambda^{h-1}\\
+\lambda^{h}&=&\phi\lambda^{h-1}\\
+\lambda&=&\phi.
+\end{eqnarray}$$
+
+Applying $\gamma_{0}$ as an initial condition, then 
+$$\begin{eqnarray}
+A\ \lambda^{0}&=&\gamma_{0}\\
+&=&\frac{\sigma^{2}}{1-\phi^{2}}.
+\end{eqnarray}$$
+Therefore,
+\[
+\gamma_{h}=\frac{\sigma^{2}}{1-\phi^{2}}\phi^{h}.
+\]
+
+B. By Taylor series expansion, 
+$$
+g(x)=g(0)+g^\prime(0)x + \frac{1}{2}g^{(2)}(0)x^{2}+\frac{1}{3!}g^{(3)}(0)x^{3}+...
+$$
+Since 
+$$\begin{eqnarray}
+g^{(n)}(0)&=&\frac{d^{n}}{dt^{n}}\frac{1}{1-\phi x}\\
+&=&n!\phi^{n}x^{n},
+\end{eqnarray}$$
+we have 
+$$
+g(x)\ =\sum_{n=0}^{\infty}\phi^{n}x^{n}
+$$
+The AR(1) model is equivalent to the following MA $(\infty)$ process
+$$\begin{eqnarray}
+X_{n}&=&\phi X_{n-1}+\epsilon_{n}\\
+&=&\phi BX_{n}+\epsilon_{n}\\
+(1-\phi B)X_{n}&=&\epsilon_{n}\\
+X_{n}&=&(1-\phi B)^{-1}\epsilon_{n}\\
+&=&\epsilon_{n}+\phi B\epsilon_{n}+\phi^{2} B^2\epsilon_{n}+...\\
+&=&\epsilon_{n}+\phi\epsilon_{n-1}+\phi^{2}\epsilon_{n-2}+...\\
+&=&\sum_{j=0}^{\infty}\phi^{j}\epsilon_{n-j}.
+\end{eqnarray}$$
+
+Then, apply the general formular for the autocovariance function of
+the MA $(\infty)$ process with the constraint $-1<\phi<1$, 
+$$\begin{eqnarray}
+\gamma_{h}&=&\sum_{j=0}^{\infty}\psi_{j}\psi_{j+h}\sigma^{2}\\
+&=&\sum_{j=0}^{\infty}\phi^{2j+h}\sigma^{2}\\
+&=&\phi^{h}\sigma^{2}\sum_{j=0}^{\infty}\phi^{2j}\\
+&=&\frac{\phi^{h}\sigma^{2}}{1-\phi^{2}}.
+\end{eqnarray}$$
+
+which is the same as the answer in A.
+
+C. From the above derivation, we have
+$$\begin{eqnarray}
+\rho_{h}&=&\frac{\gamma_{h}}{\gamma_{0}}\\
+&=&\frac{\frac{\phi^{h}\sigma^{2}}{1-\phi^{2}}}{\frac{\sigma^{2}}{1-\phi^{2}}}\\
+&=&\phi^{h}
+\end{eqnarray}$$
+
+which is the same as R funtion ARMAacf by the following code.
+
+```{r checkequality}
+set.seed(12345)
+ar_coefs <- 0.6
+phi <-ar_coefs
+acf <- phi^(0:100)
+Racf <- ARMAacf(ar=ar_coefs,lag.max=100)             
+all(abs(acf-Racf)<1e-6)
+plot(acf,type="l", col='red', xlab ="lag")
+lines(Racf, lty =2, col='blue')
+legend("topright", legend = c("ACF", "RACF"), col = c("red","blue"), lty =c(1,2))
+```
+
+
+
+-------------------
+
+**<big>Question 2.2</big>**.  
+The solution of stochastic difference equation of the random walk
+model is: 
+$$
+X_{n}=\sum_{k=1}^{n}\epsilon_{k}
+$$
+Therefore,
+$$\begin{eqnarray}
+\gamma_{mn}&=&\mathrm{Cov}(X_{m},X_{n})\\
+&=&\cov\left(\sum_{i=1}^{n}\epsilon_{i},\sum_{j=1}^{n}\epsilon_{j}\right)\\
+&=&\sum_{i=1}^{\min(m,n)}\var(\epsilon_{i})\\
+&=&\min(m,n)\sigma^{2}
+\end{eqnarray}$$
+
+Putting together, we have, 
+$${\gamma_{mn}=\min(m,n)\sigma^{2}}$$
+
+
+
+----------------------

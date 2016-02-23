@@ -88,9 +88,9 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 1](hw/hw01.html), due in class on 1/19. [Solution](hw/sol01.html).
 
-* [Homework 2](hw/hw02.html), due in class on 1/26. 
+* [Homework 2](hw/hw02.html), due in class on 1/26. [Solution](hw/sol02.html).
 
-* [Homework 3](hw/hw03.html), due midnight on 2/2. 
+* [Homework 3](hw/hw03.html), due midnight on 2/2. [Solution](hw/sol03.html). See also [Chapter 7.3](http://ionides.github.io/531w16/notes7/notes7.html#some-data-analysis-using-the-frequency-domain).
 
 * [Homework 4](hw/hw04.html), due in class on 2/9. 
 
