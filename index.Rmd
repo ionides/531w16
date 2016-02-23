@@ -80,7 +80,7 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 9. [Introduction to partially observed Markov process models](notes9/notes9.html). [(R script)](notes9/notes9.R)
 
-10. [Case study: An association between unemployment and mortality?](notes10/notes10.html). [(R script)](notes10/notes10.R)
+10. [Case study: An association between unemployment and mortality?](notes10/notes10.html) [(R script)](notes10/notes10.R)
 
 --------
 
@@ -104,11 +104,15 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 ## Midterm exam information
 
-The midterm exam will involve reasoning about a data analysis using the theoretical and computational techniques we have studied in class. The best predictor of the style of the exam may be the following two past papers from a somewhat similar course:
+* The midterm exam will involve reasoning about a data analysis using the theoretical and computational techniques we have studied in class. 
 
-* [Midterm exam for Stats531 Winter 2009](exam/w09/mt531w09.pdf). [Solutions](exam/w09/mt531w09sol.pdf).
+* You should bring to the exam just pens and/or pencils. The exam will be taken without any electronic devices, books or notes.
 
-* [Midterm exam for Stats531 Winter 2007](exam/w07/mt531w07.pdf). [Solutions](exam/w07/mt531w07sol.pdf).
+* The best predictor of the style of the exam may be the following two past papers from a somewhat similar course:
+
+    +  [Midterm exam for Stats531 Winter 2009](exam/w09/mt531w09.pdf). [Solutions](exam/w09/mt531w09sol.pdf).
+
+    + [Midterm exam for Stats531 Winter 2007](exam/w07/mt531w07.pdf). [Solutions](exam/w07/mt531w07sol.pdf).
 
 
 
