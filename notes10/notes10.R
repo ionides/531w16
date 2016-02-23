@@ -28,13 +28,13 @@ u_hp <- hpfilter(u, freq=100,type="lambda",drift=F)$cycle
 ## ----hpplots, fig.cap="Figure 2. Detrended unemployment (black; left axis) and detrended life expectancy at birth (red; right axis)."----
 plot(t,u_hp,type="l",xlab="Year",ylab="")
 e_hp_unit_scale <- (e_hp-min(e_hp))/(max(e_hp)-min(e_hp)) 
-e_hp_uhp_scale <- min(u_hp) + (max(u_hp)-min(u_hp))* e_hp_unit_scale
-lines(t,e_hp_uhp_scale,col="red")
+e_hp_plot_scale <- min(u_hp) + (max(u_hp)-min(u_hp))* e_hp_unit_scale
+lines(t,e_hp_plot_scale,col="red")
 e_hp_ticks <- c(-0.3,0,0.3,0.6)
 e_hp_ticks_unit_scale <- (e_hp_ticks-min(e_hp))/(max(e_hp)-min(e_hp)) 
-e_hp_ticks_uhp_scale <- min(u_hp) + (max(u_hp)-min(u_hp))* e_hp_ticks_unit_scale
-lines(t,e_hp_uhp_scale,col="red")
-axis(side=4, at=e_hp_ticks_uhp_scale, labels=e_hp_ticks,col="red")
+e_hp_ticks_plot_scale <- min(u_hp) + (max(u_hp)-min(u_hp))* e_hp_ticks_unit_scale
+lines(t,e_hp_plot_scale,col="red")
+axis(side=4, at=e_hp_ticks_plot_scale, labels=e_hp_ticks,col="red")
 
 ## ----hp_b----------------------------------------------------------------
 arima(e_hp,xreg=u_hp,order=c(1,0,0))
@@ -76,19 +76,19 @@ plot(r)
 acf(r)
 
 ## ----clean_data_again----------------------------------------------------
-DE <- E - E_data$e0[E_data$Yr %in% (t-1)]
+delta_e <- e - e_data$e0[e_data$Yr %in% (t-1)]
 
-## ----plots, fig.cap="U (black; left axis) and DE (red; right axis)"------
-plot(t,U,type="l")
-DE_unit_scale <- (DE-min(DE))/(max(DE)-min(DE)) 
-DE_U_scale <- min(U) + (max(U)-min(U))* DE_unit_scale
-lines(t,DE_U_scale,col="red")
-DE_ticks <- c(-0.3,0,0.3,0.6)
-DE_ticks_unit_scale <- (DE_ticks-min(DE))/(max(DE)-min(DE)) 
-DE_ticks_U_scale <- min(U) + (max(U)-min(U))* DE_ticks_unit_scale
-lines(t,DE_U_scale,col="red")
-axis(side=4, at=DE_ticks_U_scale, labels=DE_ticks,col="red")
+## ----plots, fig.cap="unemployment (black; left axis) and differenced life expectancy (red; right axis)."----
+plot(t,u,type="l")
+delta_e_unit_scale <- (delta_e-min(delta_e))/(max(delta_e)-min(delta_e)) 
+delta_e_plot_scale <- min(u) + (max(u)-min(u))* delta_e_unit_scale
+lines(t,delta_e_plot_scale,col="red")
+delta_e_ticks <- c(-0.3,0,0.3,0.6)
+delta_e_ticks_unit_scale <- (delta_e_ticks-min(delta_e))/(max(delta_e)-min(delta_e)) 
+delta_e_ticks_plot_scale <- min(u) + (max(u)-min(u))* delta_e_ticks_unit_scale
+lines(t,delta_e_plot_scale,col="red")
+axis(side=4, at=delta_e_ticks_plot_scale, labels=delta_e_ticks,col="red")
 
 ## ----arma----------------------------------------------------------------
-arima(DE,xreg=U,order=c(1,0,1))
+arima(delta_e,xreg=u,order=c(1,0,1))
 
