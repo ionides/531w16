@@ -80,6 +80,8 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 9. [Introduction to partially observed Markov process models](notes9/notes9.html). [(R script)](notes9/notes9.R)
 
+10. [Case study: An association between unemployment and mortality?](notes10/notes10.html). [(R script)](notes10/notes10.R)
+
 --------
 
 ## Homework assignments
