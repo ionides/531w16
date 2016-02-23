@@ -1,0 +1,185 @@
+---
+title: "STATS 531 HW3 Solution"
+author: "Adapted from Xiaoyue Liu and Yura Kim"
+date: "February 22, 2016"
+output: html_document
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+
+-------------------
+
+------------------
+
+**<big>1.Explore the data</big>**
+
+* This is open-ended problem. An example of the analysis is as follows. First we read in the data. It is the Ann Arbor January Low temperature time series. The data set consists of 115 observations and 12 variables. It records the weather change from 1900 to 2014. There is one missing value within the Low variable, so we delete it before analyzing the data.
+```{r read_data}
+x <- read.table(file="http://ionides.github.io/531w16/intro/ann_arbor_weather.csv",header=TRUE)
+x1 <- na.omit(x)
+```
+* The five number summary of the lowest temperature in Fahrenheit for each year are as follows.
+
+```{r summary, echo = F}
+summary(x1$Low)
+```
+* Then we plot the data over time to study its pattern. The blue line represents the mean for this time series. 
+
+```{r plot, echo = F}
+plot(Low~Year,data=x1,type="l")
+lines(x = x1$Year, y = rep(mean(x1$Low, na.rm = T), length(x1$Year)), col = "blue", lwd = 1.5)
+```
+
+
+* The variation of the data seems to increase a bit during the last 35 years but there is no visible trend. Now we analyze this time series.
+
+------------------
+
+**<big>2.Fitting an ARMA model</big>**
+
+* Let's start by fitting a stationary ARMA$(p,q)$ model under the null hypothesis that there is no trend. This hypothesis, which asserts that nothing has substantially changed in this system over the last 150 years, is not entirely unreasonable from looking at the data.
+
+
+* We seek to fit a stationary Gaussian ARMA(p,q) model with parameter vector $\theta=(\ar_{1:p},\ma_{1:q},\mu,\sigma^2)$ given by
+$$ \ar(B)(X_n-\mu) = \ma(B) \epsilon_n,$$
+where 
+$$\begin{eqnarray}
+\mu &=& \E[X_n]
+\\
+\ar(x)&=&1-\ar_1 x-\dots -\ar_px^p,
+\\ 
+\ma(x)&=&1+\ma_1 x+\dots +\ma_qx^q, 
+\\
+\epsilon_n&\sim&\mathrm{ iid }\, N[0,\sigma^2].
+\end{eqnarray}$$
+
+
+* We need to decide where to start in terms of values of $p$ and $q$. Viewed as a way to select a model with reasonable predictive skill from a range of possibilities. 
+* Akaike's information criterion **AIC** is given by $$ AIC = -2 \times \loglik(\data{\theta}) + 2D$$ 
+* AIC is often useful. Let's tabulate some AIC values for a range of different choices of $p$ and $q$.
+
+```{r AIC, message = FALSE, warning = FALSE, echo = FALSE}
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+low_aic_table <- aic_table(x$Low,4,5)
+require(knitr)
+kable(low_aic_table,digits=2)
+```
+
+* From the AIC table, I select ARMA(0,0), ARMA(1,0), and ARMA(0,1) as candidates. However, from the results below, we can check that ar1, ma1 parameters have a small fitted value that is inside the unit circle. Moreover, their standard errors seem to be large compared to the coefficient estimates. Thus, I choose ARMA(0,0) model to analyze this dataset.
+
+```{r}
+ar1 <- arima(x1$Low, order=c(1,0,0))
+ar1
+```
+
+```{r}
+ma1 <- arima(x1$Low, order=c(0,0,1))
+ma1
+```
+
+* ARMA(0,0) model can be written as:
+$$X_n=\mu+\epsilon_n$$
+where $\{\epsilon_n\}$ is a white noise process.
+
+* Here, $\mu$ is a constant, since I assumed there is no trend. In addition, I will assume that $\{\epsilon_n\}$ is a Gaussian white noise process.
+
+* Now, the null hypothesis become $$H_0 : X_n\sim IID\ N[\mu,\sigma^2].$$
+
+**<big>3.Testing for Normality</big>**
+
+* I first plot qqplot. From the qqplot below, we can see that the quantiles lie roughly on a straight line. 
+
+```{r}
+qqnorm(x1$Low)
+qqline(x1$Low)
+```
+ 
+* Moreover, I also perform Shapiro-Wilk's normality test on the dataset.
+
+```{r}
+shapiro.test(x1$Low)
+```
+
+* I get p-value of 0.7062. Null hypothesis of normality cannot be rejected, thus it is reasonable to assume $\{X_n\}$ are normally distributed. 
+
+**<big>4.Inference on $\mu$</big>**
+
+* Now we fit ARMA(0,0) model to the dataset.
+
+```{r}
+arma00 <- arima(x1$Low, order=c(0,0,0))
+arma00
+```
+
+* We have esimate of $\mu$, $\mu^*=-2.83$, with standard error of 0.68. Moreover, estimate of $\sigma^2$ is given by 53.37. Now, I consider simulation method to check if this result is reasonable. 
+
+* Below figures show the histogram (left) and a density plot (right) of simulated $\mu^*$ under the hypothesis $X_n\sim IID\ N[-2.83,53.37]$.  
+
+```{r, echo=FALSE}
+set.seed(57892330)
+J <- 1000
+params <- coef(arma00)
+intercept <- params["intercept"]
+sigma <- sqrt(arma00$sigma2)
+theta <- matrix(NA,nrow=J,ncol=length(params),dimnames=list(NULL,names(params)))
+for(j in 1:J){
+   X_j <- rnorm(length(x1$Low),sd=sigma)+intercept
+   theta[j,] <- coef(arima(X_j,order=c(0,0,0)))
+}
+
+par(mfrow=c(1,2))
+hist(theta[,"intercept"],freq=FALSE,main="", xlab="mu") 
+plot(density(theta[,"intercept"],bw=0.05),main="")
+```
+
+* Confidence interval derived from Fisher information is $$[-2.83-1.96(0.6842),-2.83+1.96(0.6842)]=[-4.17,-1.49].$$
+ 
+* By comparing this confidence interval with above plots, it seems like standard error computed by Fisher information is reasonable.  
+
+
+**<big>5. Diagnostics</big>**
+
+* For the diagnostic analysis, I look at the residuals. 
+
+```{r}
+plot(arma00$resid, ylab="residuals")
+```
+
+```{r}
+acf(arma00$resid,na.action=na.pass,main="ACF of residuals")
+```
+
+* ACF plot shows not much sign of autocorrelation. However, residual plot shows that there are some up-down trend that occurs every 20-30 years, suggesting further analysis with more complex model than ARMA.
+
+------------------
+
+**<big>6.Summary</big>**
+
+* We find ARMA(0,0)(Gaussian white noise) model fits the Ann Arbor January Low temperature time series. We compute the autocovariance of the data and compare the data with a normal distribution. All of these results suggest that ARMA(0,0)(Gaussian white noise) model is a good fit for the data.
+
+* As white noise model fits the data well, it means that there's no pattern, just random variation in the low temperature in January for Ann Arbor, showing that we can not predict next year's low temperature based on data from previous years. Maybe one year is too long for predicting the temperature. Last year(2014) it was quite cold in January and there was lot of snow, however this year it is too warm for Michigan winter, resulting in little snow and difficulty for snow resorts to make snow.
+
+
