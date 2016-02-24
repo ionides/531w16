@@ -1,0 +1,143 @@
+---
+title: "Solution to Homework 5"
+author: "adapted from Xiang Gao"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+
+--------
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "HW4"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+**<big>Facts</big>**. 
+
+
+**<normal>[MP2]</normal>**. 
+
+Facts:
+$$\begin{eqnarray}
+(1)& f_{X|Y}\left(x|y\right)=\frac{f_{XY}\left(x,y\right)}{f_{Y}\left(y\right)}\\
+(2)& f_{X|YZ}\left(x|y,z\right)=\frac{f_{XY|Z}\left(x,y|z\right)}{f_{Y|Z}\left(y|z\right)}\\
+(3)& f_{X_{n}|X_{1:n-1}}\left(x_{n}|x_{1:n-1}\right)=f_{X_{n}|X_{n-1}}\left(x_{n}|x_{n-1}\right).\\
+(4)& f_{X|Y}\left(x|y\right)=\int f_{XZ|Y}\left(x,z|y\right)dz\\
+(5)& f_{XZ|Y}\left(x,z|y\right)=f_{Z|Y}\left(z|y\right)f_{X|ZY}\left(x|y,z\right)\\
+(6)& f_{Y_{n}|X_{0:N},Y_{1:n-1},Y_{n+1:N}}\left(y_{n}|x_{0:N},y_{1:n-1},y_{n+1:N}\right)=f_{Y_{n}|X_{n}}\left(y_{n}|x_{n}\right)\\
+(7)& f_{X|YZ}\left(x|y,z\right)=\frac{f_{Y|XZ}\left(y|x,z\right)f_{X|Z}\left(x|z\right)}{f_{Y|Z}\left(y|z\right)}
+\end{eqnarray}$$
+**<big>Question 5.1</big>**. 
+
+**<normal>[MP2]</normal>**. 
+
+5.1 
+
+$$\begin{eqnarray}
+f_{X_{0:N}}\left(x_{0:N}\right)&=&f_{X_{1:N}|X_{0}}\left(x_{1:N}|x_{0}\right)f_{X_{0}}\left(x_{0}\right)
+&by&(1)\\
+&=&f_{X_{2:N}|X_{0:1}}\left(x_{2:N}|x_{0:1}\right)f_{X_{1}|X_{0}}\left(x_{1}|x_{0}\right)f_{X_{0}}\left(x_{0}\right) &by& (2) \\
+&=&f_{X_{2:N}|X_{1}}\left(x_{2:N}|x_{1}\right)f_{X_{1}|X_{0}}\left(x_{1}|x_{0}\right)f_{X_{0}}\left(x_{0}\right) &by& (3)\\
+&=&...& & \\
+&=&f_{X_{0}}\left(x_{0}\right)\prod_{n=1}^{N}f_{X_{n}|X_{n-1}}\left(x_{n}|x_{n-1}\right)& by\ iteratively\ or\ formally\ by\ induction &
+\end{eqnarray}$$
+**<big>Question 5.2</big>**. 
+
+**<normal>[MP4]</normal>**. 
+
+$$\begin{eqnarray}
+&&\int f_{X_{\mathrm{n}-1}|Y_{1:\mathrm{n}-1}}(x_{n-1}|y_{1:n-1}^{*})f_{X_{\mathrm{n}}|X_{\mathrm{n}-1}}(x_{n}|x_{n-1})dx_{n-1}&\\
+&=&\int f_{X_{\mathrm{n}-1}|Y_{1:\mathrm{n}-1}}(x_{n-1}|y_{1:n-1}^{*})f_{X_{\mathrm{n}}|X_{\mathrm{n}-1}Y_{1:n-1}}(x_{n}|x_{n-1},y_{1:n-1}^{*})dx_{n-1}\quad &by\ (6) \\
+&=&\int f_{X_{n}X_{\mathrm{n}-1}|Y_{1:\mathrm{n}-1}}(x_{n},x_{n-1}|y_{1:n-1}^{*})dx_{n-1}\quad&by\ (5)\\
+&=&f_{X_{n}|Y_{1:\mathrm{n}-1}}(x_{n}|y_{1:n-1}^{*})\quad &by\ (4)
+\end{eqnarray}$$
+
+**<big>Question 5.3</big>**. 
+
+**<normal>[MP5]</normal>**. 
+
+$$\begin{eqnarray}
+f_{X_{\mathrm{n}}|Y_{1:\mathrm{n}}}(x_{n}|y_{1:n}^{*})&=&f_{X_{\mathrm{n}}|Y_{n}Y_{1:\mathrm{n-1}}}(x_{n}|y_{n}^{*}y_{1:n-1}^{*})&\\
+&=&\frac{f_{Y_{\mathrm{n}}|X_{n}Y_{1:\mathrm{n-1}}}(y_{n}^{*}|x_{n},y_{1:n-1}^{*})f_{X_{\mathrm{n}}|Y_{1:\mathrm{n-1}}}(x_{n}|y_{1:n-1}^{*})}{f_{Y_{n}|Y_{1:\mathrm{n-1}}}(y_{n}^{*}|y_{1:n-1}^{*})}\quad &by\ (6)\\
+&=&\frac{f_{Y_{\mathrm{n}}|X_{n}}(y_{n}^{*}|x_{n})f_{X_{\mathrm{n}}|Y_{1:\mathrm{n-1}}}(x_{n}|y_{1:n-1}^{*})}{f_{Y_{n}|Y_{1:\mathrm{n-1}}}(y_{n}^{*}|y_{1:n-1}^{*})}\quad &by\ (7)
+\end{eqnarray}$$
+
+
+**<normal>[MP6]</normal>**. 
+$$\begin{eqnarray}
+f_{Y_{\mathrm{n}}|Y_{1:\mathrm{n}-1}}(y_{n}^{*}|y_{1:n-1}^{*})&=&\int f_{Y_{\mathrm{n}}X_{n}|Y_{1:\mathrm{n}-1}}({\displaystyle y_{n}^{*},x_{n}|y_{1:n-1}^{*})}dx_{n}\quad &by\ (4)\\
+&=&\int f_{X_{n}|Y_{1:\mathrm{n}-1}}({\displaystyle x_{n}|y_{1:n-1}^{*})}f_{Y_{\mathrm{n}}|X_{n}Y_{1:\mathrm{n}-1}}({\displaystyle y_{n}^{*}|x_{n},y_{1:n-1}^{*})}dx_{n}\quad &by\ (5)\\
+&=&\int f_{X_{\mathrm{n}}|Y_{1:\mathrm{n}-1}}(x_{n}|y_{1:n-1}^{*})f_{Y_{\mathrm{n}}|X_{\mathrm{n}}}(y_{n}^{*}|x_{n})dx_{n}\quad &by\ (6)
+\end{eqnarray}$$
+
+
+**<big>Question 5.4</big>**. 
+
+**<normal>[MP8]</normal>**.
+$$\begin{eqnarray}
+f_{Y_{\mathrm{n}:N}|X_{\mathrm{n}}}(y_{n:N}^{*}|x_{n})&=&f_{Y_{\mathrm{n}}|X_{\mathrm{n}}}(y_{n}^{*}|x_{n})f_{Y_{\mathrm{n}+1:N}|Y_{n}X_{\mathrm{n}}}(y_{n+1:N}^{*}|y_{n}^{*},x_{n})\quad &by\ (5)\\
+&=&f_{Y_{\mathrm{n}}|X_{\mathrm{n}}}(y_{n}^{*}|x_{n})f_{Y_{\mathrm{n}+1:N}|X_{\mathrm{n}}}(y_{n+1:N}^{*}|x_{n})\quad &by\ (6)
+\end{eqnarray}$$
+
+
+**<normal>[MP9]</normal>**.
+$$\begin{eqnarray}
+f_{Y_{\mathrm{n}+1:N}|X_{\mathrm{n}}}(y_{n+1:N}^{*}|x_{n})&=&\int f_{Y_{\mathrm{n}+1:N}X_{\mathrm{n}+1}|X_{n}}(y_{n+1:N}^{*},x_{n+1}|x_{n})dx_{n+1}\quad &by\ (4)\\
+&=&\int f_{X_{\mathrm{n}+1}|X_{n}}(x_{n+1}|x_{n})f_{Y_{\mathrm{n}+1:N}|X_{\mathrm{n}+1}X_{n}}(y_{n+1:N}^{*}|x_{n+1},x_{n})dx_{n+1}\quad &by\ (5)\\
+&=&\int f_{X_{\mathrm{n}+1}|X_{\mathrm{n}}}(x_{n+1}|x_{n})f_{Y_{\mathrm{n}+1:N}|X_{\mathrm{n}+1}}(y_{n+1:N}^{*}|x_{n+1})dx_{n+1}\quad &by\ (6)
+\end{eqnarray}$$
+
+
+
+**<big>Question 5.5</big>**. 
+
+**<normal>[MP10]</normal>**.
+$$\begin{eqnarray}
+f_{X_{\mathrm{n}}|Y_{1:N}}(x_{n}|y_{1:N}^{*})&=&f_{X_{\mathrm{n}}|Y_{1:n-1}Y_{n:N}}(x_{n}|y_{1:n-1}^{*},y_{n:N}^{*})&\\
+&=&{\displaystyle \frac{f_{X_{\mathrm{n}}|Y_{1:\mathrm{n}-\mathrm{l}}}(x_{n}|y_{1:n-1}^{*})f_{Y_{\mathrm{n}:N}|X_{\mathrm{n}}Y_{1:n-1}}(y_{n:N}^{*}|x_{n},y_{1:n-1}^{*})}{f_{Y_{\mathrm{n}:N}|Y_{1:\mathrm{n}-1}}(y_{n:N}^{*}|y_{1:n-1}^{*})}}\quad &by\ (7)\\
+&=&{\displaystyle \frac{f_{X_{\mathrm{n}}|Y_{1:\mathrm{n}-\mathrm{l}}}(x_{n}|y_{1:n-1}^{*})f_{Y_{\mathrm{n}:N}|X_{\mathrm{n}}}(y_{n:N}^{*}|x_{n})}{f_{Y_{\mathrm{n}:N}|Y_{1:\mathrm{n}-1}}(y_{n:N}^{*}|y_{1:n-1}^{*})}}\quad &by\ (6)
+\end{eqnarray}$$
+
+
+----------------------
