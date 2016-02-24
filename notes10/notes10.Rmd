@@ -174,16 +174,10 @@ plot(ts(cbind(e,u),start=1948),main="Percent unemployment (u) and life expectanc
 
 * Specifically, for a time series $\data{y_{1:N}}$, the HP filter is the time series $\data{s_{1:N}}$ constructed as
 
-<br>
-
-[HP1] $\myeq{
-  \data{s_{1:N}} =  \arg\min_{s_{1:N}} 
+$$\data{s_{1:N}} =  \arg\min_{s_{1:N}} 
   \left\{ 
     \sum^{N}_{n=1}\big(\data{y_n}-s_{n}\big)^2 + \lambda\sum^{N-1}_{n=2}\big(s_{n+1}-2s_{n}+s_{n-1}\big)^2 
-  \right\}
-}$
-
-<br>
+  \right\}.$$
 
 * A standard econometric choice of $\lambda$ for removing nonlinear trend, and therefore extracting the business cycle component, in annual data is $\lambda=100$.
 
@@ -199,14 +193,9 @@ u_hp <- hpfilter(u, freq=100,type="lambda",drift=F)$cycle
 
 ```{r hpplots, fig.cap="Figure 2. Detrended unemployment (black; left axis) and detrended life expectancy at birth (red; right axis)."}
 plot(t,u_hp,type="l",xlab="Year",ylab="")
-e_hp_unit_scale <- (e_hp-min(e_hp))/(max(e_hp)-min(e_hp)) 
-e_hp_plot_scale <- min(u_hp) + (max(u_hp)-min(u_hp))* e_hp_unit_scale
-lines(t,e_hp_plot_scale,col="red")
-e_hp_ticks <- c(-0.3,0,0.3,0.6)
-e_hp_ticks_unit_scale <- (e_hp_ticks-min(e_hp))/(max(e_hp)-min(e_hp)) 
-e_hp_ticks_plot_scale <- min(u_hp) + (max(u_hp)-min(u_hp))* e_hp_ticks_unit_scale
-lines(t,e_hp_plot_scale,col="red")
-axis(side=4, at=e_hp_ticks_plot_scale, labels=e_hp_ticks,col="red")
+par(new=TRUE)
+plot(t,e_hp,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4, col="red")
 ```
 
 * Looking at this figure may suggest that detrended life expectancy and detrended unemployment cycle together. 
@@ -253,7 +242,7 @@ arima(e_hp[tt],xreg=u_hp[tt],order=c(1,0,0))
 
 * For example, the *Great Recession* led to high unemployment in 2009-2010, but these two years had above-trend values of life expectancy at birth.
 
-* More data, perhaps a state-level or international **panel analysis** combining many time series, might be able to improve the signal to noise ration and lead to clearer results.
+* More data, perhaps a state-level or international **panel analysis** combining many time series, might be able to improve the signal to noise ratio and lead to clearer results.
 This might give us the statistical precision to compare time periods and sub-populations more accurately than can be done with just one national-level dataset. 
 
 * We have been careful to talk about **association**, since observational data giving firm statistical evidence of an assocation between $X$ and $Y$ cannot readily distinguish between three possibilities:
@@ -358,15 +347,10 @@ delta_e <- e - e_data$e0[e_data$Yr %in% (t-1)]
 ```
 
 ```{r plots, fig.cap="unemployment (black; left axis) and differenced life expectancy (red; right axis)."}
-plot(t,u,type="l")
-delta_e_unit_scale <- (delta_e-min(delta_e))/(max(delta_e)-min(delta_e)) 
-delta_e_plot_scale <- min(u) + (max(u)-min(u))* delta_e_unit_scale
-lines(t,delta_e_plot_scale,col="red")
-delta_e_ticks <- c(-0.3,0,0.3,0.6)
-delta_e_ticks_unit_scale <- (delta_e_ticks-min(delta_e))/(max(delta_e)-min(delta_e)) 
-delta_e_ticks_plot_scale <- min(u) + (max(u)-min(u))* delta_e_ticks_unit_scale
-lines(t,delta_e_plot_scale,col="red")
-axis(side=4, at=delta_e_ticks_plot_scale, labels=delta_e_ticks,col="red")
+plot(t,u,type="l",xlab="Year",ylab="")
+par(new=TRUE)
+plot(t,delta_e,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4,col="red")
 ```
 
 * The relationship between unemployment and differenced life expectancy is harder to see than when HP-detrended.
@@ -380,6 +364,8 @@ arima(delta_e,xreg=u,order=c(1,0,1))
 * Here, we do not see evidence for the relationship.
 
 * A scientific principle for interpreting experimental results is as follows: An experiment which finds evidence of an effect is usually a better foundation for future investigations than one which fails to find evidence. The experiment which found no evidence of an effect might have been a bad choice of experiment, or might have been carried out poorly. 
+
+* The principle of giving preference to methods giving positive results must be balanced with consideration of **multiple testing**. There is a danger in trying many analyses and settling on the first that claims statistical significance. The generalizability of any result is tentative until confirmed in other studies. 
 
 * It appears that temporal differencing has destroyed too much of the evidence we were hoping it would clarify.
 
