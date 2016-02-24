@@ -94,9 +94,9 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 3](hw/hw03.html), due midnight on 2/2. [Solution](hw/sol03.html). See also [Chapter 7.3](http://ionides.github.io/531w16/notes7/notes7.html#some-data-analysis-using-the-frequency-domain).
 
-* [Homework 4](hw/hw04.html), due in class on 2/9. 
+* [Homework 4](hw/hw04.html), due in class on 2/9. [Solution](hw/sol04.html).
 
-* [Homework 5](hw/hw05.html), due in class on 2/16. 
+* [Homework 5](hw/hw05.html), due in class on 2/16. [Solution](hw/sol05.html).
 
 * [Homework 6](hw/hw06.html), due in class on 2/23. 
 
@@ -105,6 +105,8 @@ Any material taken from any source, such as the internet, must be properly ackno
 ## Midterm exam information
 
 * The midterm exam will involve reasoning about a data analysis using the theoretical and computational techniques we have studied in class. 
+
+* The exam may include techniques covered in homeworks 1-5 and will assume familiarity with Chapters 1-10 of the notes. For Chapter 9, you do not need to review algebraic manipulation of state space models beyond what was in homework 5. 
 
 * You should bring to the exam just pens and/or pencils. The exam will be taken without any electronic devices, books or notes.
 
