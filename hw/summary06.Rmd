@@ -1,0 +1,315 @@
+---
+title: "Summary of responses for Homework 6"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+
+--------
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "HW4"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+## Summary of letter-graded responses
+
+Response frequencies are tabulated for the 26 respondents (there was 1 non-respondent).
+
+The full questions are copied in an [appendix](summary06.html#appendix-letter-graded-questions) below.
+
+
+Question                               | A | B | C | D | E |
+---------------------------------------|---|---|---|---|---|
+1. Full open access without anonymity  |   |   |   |   |   | 
+2. Open access with partial anonymity  |   |   |   |   |   | 
+3. Open access with full anonymity     |   |   |   |   |   | 
+4. No open access                      |   |   |   |   |   | 
+
+
+## Summary of text feedback
+
+A representative sample of your written comments are copied in a [following section](summary06.html#text-comments). Many people support open access. Many support the option of anonymity, and a few feel strongly that anonymity should be a possibility. Some issues raised are addressed below.
+
+**Copyright**. If you post material online, it gives you some protection of your intellectual property to copyright it. For example, the Stats 531 notes are licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+This simply requires writing in your document that you intend it to be covered by this license. Read more at http://creativecommons.org/.
+You can [copyright anonymous work](https://commons.wikimedia.org/wiki/Commons:Anonymous_works).
+
+**Equity**. Two people commented that the class policy for making the projects available should treat everyone the same.
+
+**Non-judgemental posting**. No project grades, or other comments on the projects, should be shared. The aim of sharing the projects is not for comparison of the projects.
+
+**Posting on Canvas**. Several people preferred sharing within the class. However, if open access is combined with the possiblity of posting anonymously, only one individual found that unsatisfactory.
+
+**Final projects vs midterms**. A sentiment expressed several times was that midterm projects might be insufficiently developed to be shared with pride. However, from the point of view of learning, sharing midterm projects is as important as sharing final projects. It would be expected that fewer people would choose to attach their name to an online version of their midterm project than their final.
+
+## Conclusion
+
+My conclusion is that projects should be submitted on Canvas, and posted on the class Github site with an option of whether or not to attach your name. Exceptions can be made for those who either (i) have confidential data; (ii) expect to publish the results and do not want to circulate any preliminary results before publication---noting that presenting preliminary results before publication has risks but also benefits that may outweigh the risks, for example, most successful scientists will present results in professional conferences that are not yet published on the assumption that the chance of useful feedback and the opportunity to communicate ideas outweighs the small danger of theft of intellectual property.
+
+
+
+
+## Text comments
+
+"I would be happy with any of the first three options, with a preference for more openness."
+
+
+"[Open access] is a good way  to  improve  our analysis and programming skills by learning from	other students.	 One  probable  disadvantage  may  be  that  this  will  increase  competition among the  class  and  cause  large  work  load  of  course."
+
+"As long as the	 one's project will not be presented  as a case of  poor  work."
+
+
+"Open--access make students treat the projects more seriously and try the best to improve their work."
+
+
+
+"Associating one’s name publicly to one’s work provides an incentive for one to work
+harder to perfect one’s analysis. It also provides one an incentive to be more original and creative in one’s analysis
+instead of resorting to plagiarism. However, this assumes that I will be happy with future employers seeing both the
+excellent parts and non-excellent parts of my analysis, in posterity. Ten years down the road, it is possible that I may not
+agree with my current analysis anymore and in that case, I would not want it to accessible publicly online anymore."
+
+
+"It would be acceptable for me to have my work posted on the class GitHub site, but it must be fully anonymized."
+
+"Having the content of each person’s work, and source code posted on the class GitHub site
+will provide a win-win scenario for everyone in the class in that each person may learn exactly how other people
+performed their analysis and how they implemented their analysis. This can be invaluable in that techniques these
+people will use may not have been covered in class. Moreover, their data set may have a special structure that might be
+interesting and learning the techniques they used will help you analyze a whole similar class of data."
+
+
+"I am fine with sharing my project on the Canvas site and having my name associated with it. However, the disadvantage
+of it is that a broad community of data enthusiasts will not be able to build on your analysis, which is only possible if
+your work is posted online. If other data enthusiasts, possibly located many time zones away, catch on your work, and
+they share their analysis online as well, then you would have started a virtuous cycle of information sharing."
+
+
+"Coursera, Wikipedia, and MIT Opencourseware have helped me learn new
+skills from people I would have otherwise not have the opportunity to meet. In particular, after MIT started to make
+public high quality material from many of their courses through MIT Opencourseware, other top academic institutions
+then started making public their course material. These course material have helped students like myself, in lifelong
+learning."
+
+"As long as it is your own original work, there is nothing to be afraid of to put it online.... I wouldn’t put anything personal with my name on online. Some people with some
+purpose will tort the intention of your work and may do harm."
+
+"I was not sure that I can do something I really proud of during a relatively short time. Do something worth
+to publish is a really time-consuming based on my previous experience, which is not my expectation for a course project."
+
+
+"For the statement of potential employers, I can send them directly about the brief
+introduction of this course and project if I want, to let them know the relevant things about it. However, if I didn’t do well in my project, I still have to let them know if I posted online with my name, which is not I am looking for."
+
+"Personally, as my personality, I don’t like to expose too much on Internet, which I can’t get control with it."
+
+"I think I would prefer not to post my course work on Internet at all. But I think sharing my work with my mates is a good idea."
+
+"I would like to post the whole project on Canvas, but I don’t think post my code on
+GitHub is a good way for it. Posted online means many things, including maintains your code, debugging, updating, etc.,
+which it is a huge responsibility and need everyone thinking it through. I don’t like to do something irresponsible, such as
+just leave it alone on GitHub after I finished the “homework”. However, I do think that I can learn many useful things from my
+classmates’ project. Considering all of these stuff, I would love to share my entire project with my classmates, but not the
+whole world."
+
+
+"I think what we learn and do in this class is just
+a really small part of the Time Series world, I don’t really want my potential
+employer think I that’s all I have."
+
+"We should post anything online with anonymity,
+people on the internet could still give the advice about what we did. We still can
+improve by doing this way."
+
+
+"Posting our project online is a very good way to
+building a data base for students will take this class in the future or students just
+who are interested in this topic. From this point of view, if people really like my
+project, I am thankful. I will be happy if someone else will be benefit from my
+research project."
+
+"Generally, I agree we post the project and code online, however I also think it is
+good to be anonymity. It could give us a privacy when we discuss the project
+results."
+
+From	my	point	of	view,	if	we	want	to	have	an	open-access	of	our	project,	it	is	better	to	open	to	anyone	online	instead	of	opening	partially.	Thus	I	prefer	to	have	an	open-access	of	our	project	
+on	github.	
+
+
+"Open-access	 to	 the	 project	 can	 draw	 the	 attention	 of	
+potential	 employers	 and	 keep	 academic	 honesty.	 However,	 it	 can	 also	 make	 someone	 feel	
+reluctant	and	uncomfortable."
+
+"If it's a work someone worked on at least several
+months, it would be safe to post it online with his name on it. However, if it's just a few weeks of work and if its quality is not so high, I think there might be a room for disadvantages."
+
+"Since we are going to do the presentation, posting works anonymously on Canvas
+does not seem to have a point. However, posting works with names on Canvas seems to be
+good idea."
+
+"since students learn similar topics at similar level each year, I don’t think future students
+can make great improvement based on previous works."
+
+"I'd	like	to	have	my	projected	open-accessed.	I	don’t	want	to	
+enjoy	myself	with	the	project.	I	want	others	see	what	I	did	and	discuss	it	with	me."
+	
+"As	long	as	I	really	pay	a	lot	attention	on	the	project,	I’d	like	it	to	be	open-accessed.	
+There	is	not	disadvantage	for	me	to	post	the	course	project	online,	which	I	spent	a	lot	of	
+time	and	efforts	on."
+	
+"As	long	as	the	other	students	have	no	problem	with	sharing	their	projects,	I	can	
+benefit	a	lot	from	studying	their	ideas	and	results.
+If	all	of	the	students	accept	to	share	the	projects	with	the	classmates,	it	will	be	better	
+to	share	it	online."	
+	
+"I	hope	my	project	can	be	popular	in	the	future.	But	if	it	it	not,	I	still	won’t	lose	
+anything	with	it	open-accessed	online."
+	
+"we should always be very careful to post something online. But considering
+publishing project online, I did not come up with many serious disadvantages."
+
+"When I took other courses before, I
+always suffered from no way to review others' projects after their presentation which I felt
+interested in. If we all post the projects online, we could see others' work and would gain more relevant knowledge about this course."
+
+"People should be careful of what they post online. But this project
+will  not  connect  anything  private  to the  author  so  personally  I  am not so worried about this."
+
+"We  should definitely learn new techniques for	 data  analysis	 if we see our  fellows  use a	new method.  I  can also see which project I am	interested in and pay more attention to	that during the presentation."
+
+"It is  desirable that I  can link  my project on the course  Github  site, since it is	 a convenient  way  to	 impress  my  potential  employers or PhD advisors. However, it	 is  possible that  some companies  would  use  my  work for commercial	 use  without  my  permission.  If  there  are	 effective  ways  to protect 
+my intellectual  property  right,	 I	 am  in	 favor  of  the	 open-­‐access."
+
+"If I spend much efforts on a  project,	  I  would  prefer  to	 post  my name on  it,  since  it  shows  my  hard work."
+
+"I hope	 people  could tell me more about  their  opinions of my  work.  Receiving	 feedbacks  (whether  positive	 or  negative)  helps  me to  think through  the  work critically."
+
+"If I spend much efforts on the project, I would like to post my name on it, as it shows my hard work. But if I didn't try hard, I won't do it cause it's not my work."
+
+"When taking computing courses in my undergraduate studying, the previous papers can be viewed online by all of the students. It’s a great way as we could learn from each other and have more motivation to improve our work when we see some excellent papers."
+
+"It is great that I can link my project on the course Github site, as it is a convenient way to show my work to my potential employers. And it's relatively convincing."
+
+"An open-access course project with our names on it will do help for our future career, no matter of we are going to find jobs in industry or academia. As long as we finish the project with our efforts, it is beneficial for us if others can see what we achieve in this course. Moreover, since I am not going to cheat, I believe that, open-access work is a good way to keep it fair because people dare not cheat on the project that everyone can access."
+
+"Sharing what we learn is always helpful our future study. Therefore, reading others' analysis of time series can help us to think what we miss in our own projects. This will be great help for our final projects."
+
+"Future students can even contact us if they want to discuss the projects. It is always good to share experience with others."
+
+"In the midterm project, it will be our first try to apply the methods we learn in the half semester to a real case analysis. Therefore, I suggest that we only have the final project fully open-access because the final one will be more comprehensive. However, we can still keep the midterm project open-access within the class to share our idea."
+	
+"If it is possible, I would like to have access on the former students' project of this course."
+
+"I do not think it is wise to upload the project without anonymity. It's not about the reason of academic integrity. It's about privacy. Because it’s sort of the past of history of the person. We should have the right to deal with it at any time for any reason. If you upload it on the web, it is not easy to deal with it after we graduate. Someone may easily find your past on the web. It’s not at all satisfactory."
+
+"Sharing between classmates are acceptable. We can learn much through the class presentation. But if there are too many sources to read from, and no selection for the future students... Thus, I think sharing through canvas should be based on the selection of some good projects. And before uploading, we should get the consent of the specific student. Everyone should have the right to choose whether upload or not based on the specific projects."
+
+"Considering it as an academic project, I think it would be good to put it online and let everybody see your thoughts."
+
+"Posting our project online is a very good way to building a data base for students will take this class in the future or students just who are interested in this topic. It could give them a brief though at first. I think it doesn't matter if it is anonymous or not. Both ways are good to me."
+
+"I am looking for intern and full time and would like to gain some presence on Internet."
+
+"Think before you post. I think posting the mid/final project will just be fine."
+
+"I would suggest that rules should be the same for everybody unless for situations like publication or confidential data."
+
+"I would much rather share our projects online. I think the online aspect represents an opportunity to learn more about github and also to learn more about time series by looking at the work of our peers."
+
+"In this case, I believe the benefit [of open access] outweighs the risk."
+
+"Well, at the first thought, you might think that standing on the caution side should be a better choice when seeing no actual benefits. However, we really need to balance the advantages and shortcuts carefully before making decision. Choosing a conservative road blindly without careful consideration may lead to potential loss which may not be reflected very soon. After considering this issue in details, unless somebody find their own reason again this proposal, if we can find no reason to object that versus several benefits listed, we should bravely stand under the light and accept the unanonymity."
+
+"That is another strong standpoint for open-access without anonymity. That makes it convenient for project searching and source code reference, also name linked on that enables free discussion regarding those charming topics. Also, putting the projects under light is a good way for scrutinizing, other people may help you check if there is calculation or logic error existing in your paper which is a critical for you. In addition, your statement and method might provoke other people’s idea based on your result which might be a potential chance for further development and extension of your project if readers are happy to discuss their thoughts."
+
+"Sharing work online and having it accessible outside of class is beneficial for multiple reasons. Having this option compulsory seems a little unnecessary – however encouraging it seems reasonable."
+
+"I think [anonymous posting on Github] is a good option for those who don't want to be identified. Perhaps combining this and [an option of including your name] would be nice. It's clear to me that if that was offered, there would be a potential situation of enough people choosing non-anonymity that would result in those wanting anonymity to be identified, but I suppose that’s a chance I’m willing to take( although I’d probably go with non-anonymity so I’m biased)."
+
+"While I’m generally mortified by giving presentations, I do think work-sharing is good among academic communities. When one looks at open-source projects in general – good things have come out of them. This would be a way for those particularly interested in time series to come together, ask questions about projects, and delve into the material a little more."
+
+"Most of the employers in data science ask for github link."
+
+"I agree that post our works with the names with open access will help us be seen by potential employers or people who have similar research interest. I don’t mind doing it at all, but I wonder if it will be better if we just post our project on our own github, so we will have better control for our repository and we can update our project anytime."
+
+"I am not super familiar with R, so read people’s code will help a lot. Also I know people in the class coming from different backgrounds (EEB, STAT, EPID, etc) I am excited to see different interesting projects."
+
+"I wonder if it is possible to make people choose if they want to publish their work on github. For example, maybe people all turn in their work to Canvas, and students who are willing to share their work can update to either their own github account or the course account."
+
+"I agree to share my project report privately within the course via the Canvas site. However, I hope that we could share only part of the source code. And I also hope that we can choose to be anonymous or identified based on individual choice."
+
+
+"When participating in the Mathematical Contest of Modeling, the previous excellent papers can be viewed online under the approval of the authors without anonymity. But the source code in the appendix is confidential. I think this is a proper way to share academic works. Personally speaking, I am not very comfortable with sharing all of my code, but I am happy with sharing my ideas and research findings."
+
+"I don't know about an academic advantage, but it would be cool to see how people applied time series analysis to real data. I agree that I hope I learn something new from other students."
+
+"I don't know if I would ever link to github, as I have my own website, but I agree that you have more to gain than lose with open access, and I am completely for it."
+
+"By now it’s difficult for our students to do our projects. If we could have got the projects by the previous students as references, we may perform better for these projects. Then I think if we could help the students in future for the project, it will be great."
+
+
+"I think it would greatly benefit the course in the long term to have an archive of past projects."
+
+"From my point of view, if we want to have an open-access of our project, it is better to open to anyone online instead of opening partially. It does not make much sense to share our projects in a small group when we all agree to share those. Once we want to share, it is better to share them to all."
+
+## Appendix: Letter-graded questions
+
+This is an extract from the [homework assignment](http://ionides.github.io/531w16/hw/hw06.html).
+
+* A goal for this course is to participate in the development of open-access online academic materials. A question that arises is to what extent products of student work can and should be part of this open-access project. 
+
+
+**<big>Question 6.1</big>**. What level of anonymity is appropriate, if the class favors posting either or both of the midterm and final projects? There are many options. Please give each one a letter grade; **A** for entirely acceptable to you; **B** for satisfactory, suggesting you have no serious objections but it would not be among your most favored choices; **C** for minimally satisfactory, suggesting that you have some reservations but don't see anything fundamentally wrong with the option; **D** for failing, suggesting that you would be unhappy if anyone required you to comply with this option; **E** for objectionable, suggesting that you feel this option is unreasonable and should not be given further consideration. You can add $\pm$ values to your grades if you like. You may like to come back to answer Question 6.1 after responding to Question 6.2.
+
+Options for you to give an A--E letter grade:
+
+Q6.1.1. Open-access without anonymity. Your project, with your name, is posted on the Github repository. If your project has confidential data, or research results that you hope to publish and wish to keep private until that time, you can ask for an exception and your project will be turned in directly to me and not posted on the course Github site.
+
+Q6.1.2. Open-access with partial anonymity. Your project is un-named. You upload and edit your project on the class Github site, so someone could in principle search through the revision logs and unblind you. However, no internet search engine could associate your project with your name.  If your project has confidential data, or research results that you hope to publish and wish to keep private until that time, you can ask for an exception and your project will be turned in directly to me and not posted on course Github site.
+
+Q6.1.3. Open-access with full anonymity. You submit your project via Canvas, un-named, and Dao or I post it on the class Github site.  If your project has confidential data, or research results that you hope to publish and wish to keep private until that time, you can ask for an exception and your project will not be posted on course Github site.
+
+Q6.1.4. No open access. Your project and source code are submitted via Canvas, but will not appear on the course Github site.
+
+
