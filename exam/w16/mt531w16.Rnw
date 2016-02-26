@@ -1,0 +1,303 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx,fullpage}
+\pagestyle{plain}
+\headheight0in
+\headsep0in
+\topmargin -0.1in
+\textheight 9.0in
+\oddsidemargin -0.0in
+\textwidth 6.5in
+\baselineskip 3ex
+\renewcommand\baselinestretch{1}
+\parindent 0in
+\parskip 0.1in
+\def\bc{\begin{center}}
+\def\ec{\end{center}}
+\def\qskip{\vspace{1.5in}}
+\def\qspace{\vspace{1.5in}}
+
+
+
+% show exam formatting and hide solutions
+\newcommand\exam[1]{#1}    \newcommand\solution[1]{} 
+
+% hide exam formatting and show solutions
+%\newcommand\exam[1]{}      \newcommand\solution[1]{{\bf #1}} 
+
+<<prelim,echo=F>>=
+broman_round <-
+    function(x, digits=1)
+{
+    if(digits < 1)
+        stop("This is intended for the case digits >= 1.")
+
+    if(length(digits) > 1) {
+        digits <- digits[1]
+        warning("Using only digits[1]")
+    }
+
+    tmp <- sprintf(paste("%.", digits, "f", sep=""), x)
+
+    # deal with "-0.00" case
+    zero <- paste0("0.", paste(rep("0", digits), collapse=""))
+    tmp[tmp == paste0("-", zero)] <- zero
+
+    tmp
+}
+@
+
+\begin{document}
+\begin{center}
+{\bf 
+ Stats 531\\
+ Winter, 2016\\
+ Midterm Exam\\
+}
+
+\exam{
+
+ \vspace{7 mm}
+{\bf Name: \hrulefill UMID \#: \hrulefill}\\
+
+\vspace{7 mm}
+\end{center}
+{\bf There are 3 sections (A, B and C) containing a total of 20 points. Points will be awarded for clearly explained and accurate answers. 
+
+Only pens and/or pencils should be out of your bag for the duration of the exam. You may not use access any electronic device, paper notes, or books during the exam.
+
+}
+\begin{center}
+\renewcommand{\arraystretch}{2}
+\begin{tabular}{||c|c|c||}
+\hline
+\hline
+{Section} & {Points} & {Score}\\
+\hline
+\hline
+A & 5 & \\
+\hline
+B & 11 & \\
+\hline
+C & 4 & \\
+\hline
+\hline
+Total & 20 &  \\
+\hline
+\hline
+\end{tabular}
+}
+
+\end{center}
+
+
+\exam{
+  \newpage
+}
+
+We consider Google flu trends as a proxy for nationwide epidemiological reporting data on flu. Google flu trends (GFT) is a time series that was published by Google from 2008 to 2015. GFT uses search query data to try to reproduce the Centers for Disease Control time series of influenza-like illness (ILI). ILI is measured as the percentage of all hospital visits in the USA that are caused by flu-like symptoms (high fever with a cough). So far as GFT is a reliable proxy for ILI, it has the advantage that it is instantaneously available. It takes a few weeks for the ILI data to be assembled.
+
+The two time series are shown in Figure~\ref{timeplot}. Both ILI and GFT are published each week.
+
+\begin{figure}[h]
+<<read_ili,echo=FALSE,fig.height=4>>=
+cdc <- read.table(file='ILINet.csv',header=TRUE,sep=",",
+  as.is=c("PERCENT_WEIGHTED_ILI","PERCENT_UNWEIGHTED_ILI")
+)
+cdc <- cdc[cdc$YEAR >= 2003,]
+ILI <- as.numeric(cdc$PERCENT_WEIGHTED_ILI)
+time <- cdc$YEAR + (cdc$WEEK-1)/52 
+
+gft <- read.table(file='yang_GFT.csv',header=TRUE,sep=",")
+gft <- subset(gft,!is.na(United.States))
+gft_date <- as.POSIXlt(gft$Date,format="%Y-%m-%d")
+gft_time <- gft_date$year + 1900 + gft_date$yday/365
+
+ILI <- ILI[time<max(gft_time) & time > min(gft_time)]
+time <- time[time<max(gft_time) & time > min(gft_time)]
+GFT <- gft$United.States/1000
+
+x <- ts(cbind(ILI,GFT),start=min(time),deltat=7/365.25)
+# plot(x,main="",xlab="Year")
+
+par(mai=c(0.4,0.8,0,0.2))
+matplot(time,cbind(ILI,GFT),
+ #col=c("black","red"),
+ col="black",
+ type="l", lty=c("solid","dashed"),log="y",ylab="Percent influenza-like illness",main="",xlab="")
+@
+\caption{ILI (solid line) and GFT (dashed line) from September 2003 to June 2015, plotted on a log scale.}\label{timeplot}
+\end{figure}
+
+
+
+\noindent {\bf Section A. Exploratory data analysis}. 
+
+A1. [3 points]. Look at Figures~\ref{timeplot} and~\ref{spec}. Interpret these figures to describe strengths and weaknesses of GFT as a proxy for ILI.
+
+\solution{
+GFT captures the main features of the ILI data. We can see this from the timeplot, corroborated with the lower power of GFT compared to ILI at high frequencies.
+It is smoother (has lower power at high frequencies). In particular, ILI has a more complex, less sinusoidal, seasonality than GFT, since ILI has considerably more power at the high seasonal frequencies, with frequencies at an integer number of cycles per year.
+From Fig.~1, we see that GFT sometimes substantially mis-estimates peaks and troughs in ILI (e.g., the 2013 peak and 2004 trough are over-estimated by a factor of about 2).
+}
+
+\exam{\newpage}
+
+\begin{figure}[h]
+<<spectrum,fig.height=4,echo=F>>=
+par(mai=c(0.4,0.8,0,0.2))
+x <- ts(cbind(log(ILI),log(GFT)),start=min(time),deltat=7/365.25)
+spectrum(x,main="",spans=c(5,3),col="black")
+abline(v=1:25,lty="dotted")
+@
+\caption{Smoothed periodogram for log(ILI) (solid line) and log(GFT) (dashed line).}\label{spec}
+\end{figure}
+
+A2. [2 points]. What are the units of frequency in Fig.~\ref{spec}? Explain how you reach your answer.
+
+\solution{
+Cycles per year.
+}
+
+\exam{\vspace{1in}}
+
+\noindent {\bf Section B. Fitting a model}.
+
+Can we do better than GFT? A simple way to do that would be to model the error arising from GFT, together with considering a linear transformation of GFT. This can be done by fitting a regression with ARMA errors model, as follows.
+
+<<xreg, echo=F>>=
+a1 <- arima(log(ILI),xreg=log(GFT),order=c(1,0,1))
+a1
+@
+
+\exam{\newpage}
+
+B1. [5 points]. Write in full detail the model for which the above computation gives a maximum likelihood estimate. 
+
+\solution{
+Write $y^*_{1:N}$ for the $N$ values of log(ILI), at times $t_{1:N}$. Write $z_{1:N}$ for the corresponding values of log(GFT). We model $y^*_{1:N}$ conditional on $z_{1:N}$ as a realization of the time series model $Y_{1:N}$ defined by
+$$Y_n = \alpha + \beta z_n + \epsilon_n,$$
+for which $\epsilon_{1:N}$ is a stationary, causal, invertible, Gaussian ARMA(1,1) model satisfying a stochastic difference equation,
+$$\epsilon_n = \phi\epsilon_{n-1}+\omega_n+\psi\omega_{n-1},$$
+where $\{\omega_n\}$ is Gaussian white noise, $\omega_n\sim N[0,\sigma^2]$.
+
+The maximum likelihood estimate computed above corresponds to $\sigma^2=0.0094$, $\phi=0.92$, $\psi=-0.16$, $\alpha=0.038$ and $\beta=0.84$.
+}
+
+\exam{\vspace{3.5in}}
+
+Now we consider a table of AIC values for different ARMA(p,q) error specifications:
+
+<<aic,echo=F,warning=F,cache=T>>=
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("AR",0:P, sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+ili_aic_table <- aic_table(log(ILI),4,4,xreg=log(GFT))
+kable(ili_aic_table,digits=2)
+@
+
+\vspace{2mm}
+
+B2. [2 points]. What do the results in this table suggest about the suitability of the ARMA(1,1) choice made above for the regression error model.
+
+\solution{In this table, only the ARMA(3,1) model has a lower AIC and this difference is small. We prefer to work with a smaller model. Although AIC rewards model simplicity, does so only as far as complexity leads to poor prediction from overfitting. Other considerations are that smaller models reduce problems with parameter identifiability, invertibility, and numerical stability which we know are common when fitting larger ARMA models. There is no compelling reason from this table to choose something other than ARMA(1,1).
+}
+
+\exam{
+\vspace{3in}
+
+\newpage
+}
+
+B3. [2 points]. Explain the evidence in this AIC table for or against numerical difficulties in maximization and/or evaluation of the likelihood.
+
+\solution{
+Adding a parameter in a nested model should not logically be able to increase the AIC by more than 2 units. We can find plenty of situations where that logic is violated. 
+}
+
+\exam{
+\vspace{2in}
+}
+
+B4. [2 points]. The two panels in Figure~\ref{resid} show a smoothed periodogram and a sample autocorrelation function for the residuals of the above regression with ARMA errors. Interpret these figures to help assess this model specification and suggest possible improvements.
+
+\solution{
+  The estimated spectrum has peaks at many seasonal frequencies (multiples of 1/52 yr$^{-1}$) and the sample ACF has a substantially nonzero value at the seasonal period (1yr=52week).
+Apart from this evidence of modest but non-negligible seasonality in the residuals, there is not much other deviation from white noise: the spectrum is otherwise flat, apart from the seasonal peaks, and the sample ACF values at lags other than 52 are small. We could try adding a seasonal component to the model, such as SARMA(1,1)$\times$(1,0)$_{52}$. 
+}
+
+\exam{
+  \vspace{1.5in}
+}
+
+\begin{figure}[h]
+<<resid,fig.height=4,echo=F>>= 
+par(mfrow=c(2,1),mai=c(0.4,0.8,0,0))
+spectrum(resid(a1),main="",spans=c(5,3))
+abline(v=seq(from=1/52,to = 0.49,by=1/52),lty="dotted")
+acf(resid(a1),lag.max=75)
+@
+\caption{Spectrum and sample autocorrelation function for the residuals of the regression with ARMA errors fitted above}\label{resid}
+\end{figure}
+
+\exam{
+\newpage
+}
+
+\noindent {\bf Section C. Consideration of the logarithmic transformation}. 
+
+<<log_calc,echo=F>>=
+a2 <- arima(ILI,xreg=GFT,order=c(1,0,1))
+@
+
+C1. [4 points]. What issues would you consider when deciding whether to analyzing ILI and GFT on a logarithmic scale, as we have done above, or on an untransformed scale? As part of your answer, you may consider the analysis below. 
+
+\solution{
+Gaussian white noise is a better model for the residuals on a log scale. To see that, notice the heteroskedasticity in the right hand, untransformed, panel of Fig.~4. Larger values of ILI correspond to larger residuals.
+
+It might be expected that errors in predicting ILI should be larger, in absolute terms, when ILI itself is more prevalent. Fitting on the log scale respects that expectation.
+
+The regression coefficient for GFT is closer to 1 on the log scale, which might be taken to indicate that this is a better scale for approximating ILI with GFT.
+
+AIC values are not directly comparable. However, we can do a Jacobian transformation of the likelihoods, by transforming the likelihood for the log data back to the natural scale. The Jacobian transformation tells us that, if $Z=\log(Y)$, then
+$$f_Z(\log(y))=\frac{1}{y}f_Y(y).$$
+Thus, if the data are $z^*=\log(y^*)$, the log likelihood is
+$$\log f_Z(z^*) = \log f_Y(y^*) - \log(y^*).$$
+Therefore, we should compare the log likelihood of $\Sexpr{broman_round(logLik(a2),1)}$ (on the untransformed scale) with
+$$\Sexpr{broman_round(logLik(a1),1)}-\sum_{n=1}^N\log y^*_n= \Sexpr{broman_round(logLik(a1)-sum(log(ILI)),1)}.$$
+Comparing these log likelihoods shows that the model fits much better on the log scale.
+
+One can ask whether it is more or less scientifically meaningful to model on a log scale. However, this is not too important: One can always transform a fit on a log scale back to the untransformed scale.
+}
+
+\exam{
+\vspace{2.7in}
+}
+
+\vspace{-2mm}
+
+Fitted regression with ARMA errors on an untransformed scale:
+<<log,echo=F>>=
+a2
+@
+
+\vspace{-2mm}
+
+\begin{figure}[h]
+<<resid_v_fitted,fig.height=2.5,echo=F>>=
+par(mfrow=c(1,2),mai=c(0.6,1.2,0,0))
+plot(log(ILI)-a1$resid,a1$resid,xlab="",ylab="residual (log scale)")
+mtext("fitted value (log scale)", side=1,line=2)
+plot(ILI-a2$resid,a2$resid,xlab="",ylab="residual (untransformed)")
+mtext("fitted value (untransformed)", side=1,line=2)
+@
+\caption{Residual vs fitted value plots for the regression on the log scale (left hand side) and natural, untransformed scale (right hand side).}\label{transform}
+\end{figure}
+
+\end{document}

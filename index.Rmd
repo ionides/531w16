@@ -112,6 +112,8 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * The best predictor of the style of the exam may be the following two past papers from a somewhat similar course:
 
+    +  [Midterm exam for Stats531 Winter 2016](exam/w16/mt531w16.pdf). [Solutions](exam/w16/mt531w16sol.pdf).
+
     +  [Midterm exam for Stats531 Winter 2009](exam/w09/mt531w09.pdf). [Solutions](exam/w09/mt531w09sol.pdf).
 
     + [Midterm exam for Stats531 Winter 2007](exam/w07/mt531w07.pdf). [Solutions](exam/w07/mt531w07sol.pdf).
