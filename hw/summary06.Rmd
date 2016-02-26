@@ -1,12 +1,3 @@
----
-title: "Summary of responses for Homework 6"
-output:
-  html_document:
-    theme: flatly
-    toc: yes
-csl: ecology.csl
----
-
 \newcommand\prob{\mathbb{P}}
 \newcommand\E{\mathbb{E}}
 \newcommand\var{\mathrm{Var}}
@@ -61,10 +52,10 @@ The full questions are copied in an [appendix](summary06.html#appendix-letter-gr
 
 Question                               | A | B | C | D | E |
 ---------------------------------------|---|---|---|---|---|
-1. Full open access without anonymity  |   |   |   |   |   | 
-2. Open access with partial anonymity  |   |   |   |   |   | 
-3. Open access with full anonymity     |   |   |   |   |   | 
-4. No open access                      |   |   |   |   |   | 
+1. Full open access without anonymity  | 12|  7|  4|  3|   | 
+2. Open access with partial anonymity  |  7| 12|  3|  3|  1| 
+3. Open access with full anonymity     |  9| 10|  2|  4|  1| 
+4. No open access                      |  5|  7| 10|  3|  1| 
 
 
 ## Summary of text feedback

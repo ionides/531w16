@@ -98,7 +98,7 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 5](hw/hw05.html), due in class on 2/16. [Solution](hw/sol05.html).
 
-* [Homework 6](hw/hw06.html), due in class on 2/23. 
+* [Homework 6](hw/hw06.html), due in class on 2/23. [Responses](hw/summary06.html).
 
 ------------
 
