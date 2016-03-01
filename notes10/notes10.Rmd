@@ -109,7 +109,7 @@ options(
 
 * @ogburn22 were among the first to report **pro-cyclical** mortality. This is a phenomenon when mortality tends to be above trend during periods when economic activity is above trend. Procyclical mortality, if it is present, indicates that one key measure of population health is worse in economic booms than in economic recessions.
 
-* Noone disputes that both the economy and life expectancy have grown over the last century. However, these phenomena have not always come together. For example, 1950--1980 saw rapid growth in life expectancy in India and China, periods of relatively slow economic growth for these countries. The rate of improvement in life expectancies has tapered off during the recent economic surges in India and China.
+* No one disputes that both the economy and life expectancy have grown over the last century. However, these phenomena have not always come together. For example, 1950--1980 saw rapid growth in life expectancy in India and China, periods of relatively slow economic growth for these countries. The rate of improvement in life expectancies has tapered off during the recent economic surges in India and China.
 
 * The link between economic growth and health improvement is controversial, since it has political implications. 
 
