@@ -1,5 +1,5 @@
 ---
-title: "11. Introduction to partially observed Markov process models"
+title: "11. Statistical methodology for nonlinear partially observed Markov process models"
 author: "Edward Ionides"
 date: "3/8/2016"
 output:
