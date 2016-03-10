@@ -138,15 +138,20 @@ options(
 
 * Many applications arise in epidemiology, studying the transmission of infectious diseases.
 
-    + Infectious disease dynamics can be highly nonlinear. This arises primarily because transmission arises when an infected individual contacts a susceptible individual, which should happen at a rate proportional to 
-$$ \mbox{Fraction of individuals infected} \times \mbox{Fraction of individuals susceptible}$$
-and secondarily because each new infection depletes the pool of susceptible individuals. 
+* Infectious disease dynamics can be highly nonlinear:
 
-    + Data on infectious diseases are generally limited to diagnosed cases. Much of the transmission dynamics cannot be directly observed. 
+    1. Transmission arises when an infected individual contacts a susceptible individual. This leads to a quadratic term in the rate of infections, which should be proportional to
+$$\begin{array}{ll}
+\mbox{Fraction of individuals infected}\\
+\quad\times\quad \mbox{Fraction of individuals susceptible to infection}
+\end{array}$$
+    2. Each new infection depletes the pool of susceptible individuals. 
 
-    + Infectious disease epidemiology has motivated developments in statistical methodology and software for NL-POMP models. 
+    3. Without depletion of susceptibles, the fraction of individuals susceptible to infection is constant and the epidemic grows exponentially. Then, the system is linear on a log scale.
 
-    + These class notes derive from a course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/).
+* Data on infectious diseases are generally limited to diagnosed cases. Much of the transmission dynamics cannot be directly observed. 
+
+* Infectious disease epidemiology has motivated developments in statistical methodology and software for NL-POMP models. In particular, these class notes derive from a course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/).
    
 
 * Many other biological populations have similar nonlinearities: the population grows exponentially until limited by some constraint (which could be a food resource or a predator). When the resource is used up, or the predator becomes abundant, the population crashes. Then a new cycle begins.
@@ -228,7 +233,7 @@ upper case POMP is a class of models.
  
 * Following modern practice, most methodology in **pomp** is simulation-based, so does not require specification of `dprocess()`.
 
-* **pomp** has facilities to help construct `rprocess()`, `rmeasure()`, and `dmeasure()` functions for model classes of epidemiological interest.
+* **pomp** has facilities to help construct `rprocess()`, `rmeasure()`, and `dmeasure()` functions for model classes of scientific interest.
 
 * **pomp** provides a forum for development, modification and sharing of models, methodology and data analysis workflows.
 
@@ -297,6 +302,16 @@ upper case POMP is a class of models.
 ------
 
 --------
+
+### Question: does adding Gaussian noise mean we have a Gaussian latent process model?
+
+* What does it mean to say that the model for $P_{0:N}$ described by equation [R2] is Gaussian?
+
+<br>
+
+-----
+
+-----
 
 ### Adding measurement error to the Ricker model
 
@@ -386,6 +401,43 @@ x <- simulate(ricker)
 class(x)
 plot(x)
 ```
+
+
+<br>
+
+------
+
+-----
+
+### Question: What is a generic function?
+
+* How does the concept of a [**generic function**](https://en.wikipedia.org/wiki/Generic_function) fit in with the following related concepts,
+
+    + [**object-oriented programming**](https://en.wikipedia.org/wiki/Object-oriented_programming).
+
+    + assigning a [**class**](https://en.wikipedia.org/wiki/Class_%28computer_programming%29) to an object.
+
+    + [**overloading**](https://en.wikipedia.org/wiki/Function_overloading) of functions or operators.
+
+* How does object-oriented programming work in R? How is this similar or different from any other environment in which you have seen object-oriented programming?
+
+* For current purposes, we don't need to be experts in object-oriented programming in R. However, we should know of the existence of the two main object-oriented systems in R,
+
+    + [**S3 classes**](http://adv-r.had.co.nz/OO-essentials.html#s3)
+
+    + [**S4 classes**](http://adv-r.had.co.nz/S4.html)
+
+* We should be able to recognize when code we are using employs S3 and S4 classes.
+
+* We should know where to turn to for help if we find ourselves needing to know more details about how these work.
+
+* **pomp** uses the S4 class system, so that system is of more immediate relevance. Many older R packages use S3 classes.
+
+<br>
+
+----------
+
+--------
 
 * Why do we see more time series in the simulated `pomp` object?
 

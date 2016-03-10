@@ -380,8 +380,9 @@ We will not work on understanding it right now.
 The relevant point here is that investigators often find it useful to write down models for how a dynamic system progresses through time, and this gives rise to the time series analysis goals of estimating unknown parameters and assessing how successfully the fitted model describes the data.
 
 $$
-\begin{aligned} Y_n &= \exp\{H_n/2\} \epsilon_n, \\
-H_n &= \mu_h(1-\phi) + \phi H_{n-1} + Y_{n-1}\sigma_\eta\sqrt{1-\phi^2}\tanh(G_{n-1}+\nu_n)\exp\{-H_{n-1}/2\} + \omega_n,\\
+\begin{aligned} Y_n &= \exp\left\{\frac{H_n}{2}\right\} \epsilon_n, \\
+H_n &= \mu_h(1-\phi) + \phi H_{n-1} \\
+&\quad\quad +  Y_{n-1}\sigma_\eta\sqrt{1-\phi^2}\tanh(G_{n-1}+\nu_n)\exp\left\{\frac{-H_n}{2}\right\} + \omega_n,\\
 G_n &= G_{n-1}+\nu_n,
 \end{aligned}
 $$

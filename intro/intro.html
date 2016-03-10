@@ -313,8 +313,9 @@ cat(&quot;mu2 =&quot;, mu2, &quot;,  se2 =&quot;, se2, &quot;\n&quot;)</code></p
 <li><p>Financial mathematicians have postulated the following model. We will not work on understanding it right now. The relevant point here is that investigators often find it useful to write down models for how a dynamic system progresses through time, and this gives rise to the time series analysis goals of estimating unknown parameters and assessing how successfully the fitted model describes the data.</p></li>
 </ul>
 <p><span class="math">\[
-\begin{aligned} Y_n &amp;= \exp\{H_n/2\} \epsilon_n, \\
-H_n &amp;= \mu_h(1-\phi) + \phi H_{n-1} + Y_{n-1}\sigma_\eta\sqrt{1-\phi^2}\tanh(G_{n-1}+\nu_n)\exp\{-H_{n-1}/2\} + \omega_n,\\
+\begin{aligned} Y_n &amp;= \exp\left\{\frac{H_n}{2}\right\} \epsilon_n, \\
+H_n &amp;= \mu_h(1-\phi) + \phi H_{n-1} \\
+&amp;\quad\quad +  Y_{n-1}\sigma_\eta\sqrt{1-\phi^2}\tanh(G_{n-1}+\nu_n)\exp\left\{\frac{-H_n}{2}\right\} + \omega_n,\\
 G_n &amp;= G_{n-1}+\nu_n,
 \end{aligned}
 \]</span></p>
