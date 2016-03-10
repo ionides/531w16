@@ -563,7 +563,7 @@ Here, the particle filtering has been performed with only `r unique(pf@Np)` part
 ## Building a custom `pomp` object
 
 A real **pomp** data analysis begins with constructing one or more `pomp` objects to hold the data and the model or models under consideration.
-We'll illustrate this process a dataset of *Parus major* abundance in Wytham Wood, near Oxford [@mccleery91].
+We'll illustrate this process a dataset of the abundance of the [great tit (*Parus major*)](https://en.wikipedia.org/wiki/Great_tit) in Wytham Wood, near Oxford [@mccleery91].
 
 Download and plot the data:
 ```{r parus-data}
