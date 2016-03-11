@@ -1,0 +1,55 @@
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+
+--------
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+prefix <- "HW4"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+## Posting policy for the midterm project
+
+Based on a [class survey](http://ionides.github.io/531w16/hw/summary06.html), we arrived at the the following sharing policy.
+
+Projects are submitted as Rmd files and posted anonymously on the class Github site. There will be an option to attach your name at the end of the course, once you've decided whether this is among the courses for which you think your coursework does you credit. Between classmates, the projects will be unblinded by the class presentations. If you see a project presentation for which you'd particularly like to study the report, you can contact either the author or me to help you find it among the anonymous reports.
+
+Exceptions to posting, even anonymously, can be made for those who either (i) have confidential data; (ii) expect to publish the results and do not want to circulate any preliminary results before publication---noting that presenting preliminary results before publication has risks but also benefits that may outweigh the risks, for example, most successful scientists will present results in professional conferences that are not yet published on the assumption that the chance of useful feedback and the opportunity to communicate ideas outweighs the small danger of theft of intellectual property.
+
+Let me know if you have any questions or concerns about this policy.
+
