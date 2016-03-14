@@ -1,0 +1,177 @@
+---
+title: "Mid-term Project Report"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+---
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+-----------
+
+### Introduction
+In this project, I would like to explore the time series pattern of the thickness of the total Ozone in the Earth. The data is obtained from [Earth System Research Laboratory](http://www.esrl.noaa.gov/gmd/ozwv/dobson/index.html). The data is collected by Dobson Ozone Spectrophotometer at various locations. I selected the observation site that closest to the pole area in order to study the Ozone thickness trend that are not directly influenced by local air
+pollution. The South Pole station is located at Latitude -89.98 and Longitude -24.80. Due to the severe weather
+condition in the South Pole, there are some missing data.
+
+The questions we would like to answer in this project include as follow:
+
+- Is there any intrinsic seasonal variation of the Ozone thickness that is caused by the inclination between the Earth spin and rotation planes?
+
+- Is there any significant decrease of the Ozone thickness in recent years due to the increase of the industry Carbon emission? Can we draw any conclusion from quantitative analysis?
+
+### Data manipulation
+
+1. Read in the daily Ozone thickness data from 1963 to 2015.
+```{r}
+x <- read.table(file="amsTOTo3.txt",sep=',',header=TRUE)
+t = x$YYYY+x$MM/12+x$DD/365
+plot(x$Total_Ozone~t,type='l', xlab='Year', ylab='Total Ozone')
+```
+
+By just examining the time series plot, we can find several interesting features:
+
+- There are some missing data in the daily time series data. What we will do next is to reduce the daily data to monthly average data in order to decrease the number of missing data.
+
+- The seasonal variation is obvious, but we still need to confirm the monthly fluctuation by quantitative methods.
+
+- Besides the seasonality, it seems that there is a trend that the Ozone becomes thinner from 1970 to 1990, and slightly thicker after 2000. But whether it is statistically significant or not requires more quantitative analysis.
+
+First let us reduce the daily data to monthly averaged data.
+
+```{r}
+N_year = length(unique((x$YYYY)))
+tmp = rep(unique(x$YYYY),12)
+dim(tmp) = c(N_year,12)
+Year = as.vector(t(tmp))
+Month = rep(1:12, N_year)
+ozone_ave = rep(0, N_year*12)
+for (i in 1:N_year)
+{
+  for (j in 1:12)
+  {
+    y = unique(x$YYYY)[i]
+    m = j
+    ozone_ave[12*(i-1)+j] = mean(x[(x$YYYY==y & x$MM==m), ]$Total_Ozone)
+  }
+}
+data = data.frame(Year, Month, ozone_ave)
+data$time = data$Year+data$Month/12
+plot(data$ozone_ave~data$time,type='l', xlab='Year', ylab='Monthly Average Ozone')
+```
+
+It should be noticed that, although we have reduced data to monthly average, there are still some missing data, especially in Sep. when it is winter in the South Pole.
+
+### Finding period
+I would like to examine all possible periods that appear in this Ozone time series data.
+
+1. The auto-correlation function for each lag is calculated and plotted below.
+```{r}
+abc = data$ozone_ave
+abc[abc=='NaN']=0
+acf(abc, main='Ozone auto-correlation function')
+```
+
+From the auto-correlation function plot, we can see that the ACF peaks specifically at 12 and 24 month lag. This suggests that there exists a apparent seasonal variation.
+
+2. Spectrum density plot
+```{r}
+spectrum(abc, spans=c(3,5,3))
+abline(v=1/3.,lty=2)
+abline(v=1/6.,lty=2)
+abline(v=1/12.,lty=2)
+abline(v=1/24.,lty=2)
+```
+
+The above spectrum density plot demonstrates this seasonal variation clearer. The unit of the x-axis is per month. The dashed lines from left to right represent the periods of 24, 12, 6, and 3 months. We can see that this seasonal variation is so strong that we have to take great care of it in order to draw reasonable conclusions.
+
+### Seasonal features
+I will fit this time series with ARMA models with seasonality. Also there exists 3 and 6 months periods in the spectrum, they can be considered as the harmonic of the 12 months period. The general $\rm SARMA(p,q)\times(P,Q)_{12}$ model is give by
+$\phi(B)\Phi(B^{12})(X_n-\mu)=\psi(B)\Psi(B^{12})\epsilon_n$. For simplicity, I try $p=q=P=Q=1$ to fit this SARMA model.
+
+```{r}
+sarma = arima(data$ozone_ave, order=c(1,0,1), seasonal = list(order=c(1,0,1), period=12))
+sarma
+```
+
+From the result above, the parameters for both SAR1 and SMA1 is significant. The confidence interval of these two parameters lies well outside the 0. This indicates that the seasonal variation is apparent. We can also see that the parameter of MA1 has mean 0.0792 and standard deviation 0.0878. This means that the MA1 model may not be necessary. I then let $q=0$ and refit the data.
+
+```{r}
+sarma = arima(data$ozone_ave, order=c(1,0,0), seasonal = list(order=c(1,0,1), period=12))
+sarma
+acf(resid(sarma), na.action = na.pass)
+```
+
+The AIC value of $q=0$ model is 4382.43, lower than 4383.59 for $q=1$ model. This AIC value together with the low value of the MA1 parameter in $q=1$ model may suggest that the MA1 model is not needed, and AR(1) model is good for the fit. By checking the auto-correlation function of the residual of the fit, we find that there is no significant peaks appears in the plot and the ACF value is under the $1/\sqrt{N}$ CI. This suggests that the residual is basically white noise and
+the AR(1) model with seasonality is a good representative of this time series data.
+
+### Trend
+
+1. Data smoothing
+
+I extract the Ozone thickness data for each Jan. data from 1963 to 2015. I use loess smoothing to fit the trend of the data. This smoothing is a non-parametric method and is good for first check of the data.
+
+```{r}
+Jan = data[data$Month==1,]
+ozone_smooth <- loess(Jan$ozone_ave~Jan$Year,span=0.5)
+plot(Jan$Year, Jan$ozone_ave,type = 'l',col='red')
+lines(ozone_smooth$x, ozone_smooth$fitted,type='l')
+```
+
+The Jan. Ozone data together with the smoothed curve suggests that there is a decrease of Ozone thickness from 1980 to 2000, and a slightly rise from 2000 to 2015. This is consistent with that was reported by news.
+
+2. Model selection with and without trend by AIC table
+
+I fit the Jan. data with ARMA(p,q) model with and without trend. I also extract the AIC value for each p and q from 0 to 4. The result is listed below.
+
+```{r}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+
+e_aic_table <- aic_table(Jan$ozone_ave,4,4)
+require(knitr)
+kable(e_aic_table,digits=2)
+
+e_aic_table <- aic_table(Jan$ozone_ave,4,4,xreg=Jan$Year)
+require(knitr)
+kable(e_aic_table,digits=2)
+```
+
+From the AIC table above, we prefer the ARMA(1,2) model in the cases both with and without trend. Also from the AIC value, we can see that the model with trend has better fit to the data. The slope of the linear trend is -0.59+-0.29. First, this CI does not contain 0, which means that the trend is significant. Second, the slope has negative value and it suggests that there exists a general decrease of the Ozone thickness.
+
+
+### Hypothesis test
+
+In the above section, I used the AIC value to distinguish between models with and without trend, and concluded that the trend is apparent. Here I would like to use the likelihood ratio test to make inference again, since these two models are nested. Again, we fit the time series data with ARMA(1,2) model with and without trend, and get the log likelihood.
+
+```{r}
+fit0 = arima(Jan$ozone_ave, order=c(1,0,2))
+fit0
+fit1 = arima(Jan$ozone_ave, order=c(1,0,2), xreg = Jan$Year)
+fit1
+```
+
+$D=2(\log{L_{alt}}-\log{L_0})=2.46$. The p-value of the $\chi^2_1$ in one degree of freedom is 0.12. If we use $\alpha=0.05$ as the statistical significance, we cannot reject the null hypothesis that the time series has no trend. This may possibly due to the fact that there exist a rise from 2000 to 2015, so that the trend is not linearly dependent on the time. What we can do in the future is to fit the trend with higher order polynomials rather than single linear
+term.
+
+### Conclusions
+
+- We found some missing data in the Ozone thickness data in the South Pole, especially for Sep. when it is winter there and the observation condition is severe.
+
+- We found a strong seasonality for the monthly averaged data, by both the ACF and spectrum density plot. The period is 12 months, consistent with the Earth/solar activity.
+
+- By using Loess method, we smoothed the time series and got a non-parametric trend. We find there exists a drop of Ozone level from 1980 to 2000, and slightly rise from 2000 to 2015.
+
+- Using AIC table, we find that the Jan. Ozone data can be best fitted by ARMA(1,2) model with and without trend. AIC also suggests that the linear trend is preferred, although this conclusion is not strongly supported by the likelihood ratio test.
+
+- In the future, we can fit the time series using ARMA model with the trend that contains higher order polynomials rather than single linear term.
+
+- One thing we could also do is to have a joint analysis of both the ozone and the CO2 emission (or even the global GPD) time series data in order to conclude the causality between the Ozone level and human activities.

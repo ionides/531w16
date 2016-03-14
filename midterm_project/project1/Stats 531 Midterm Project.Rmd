@@ -1,0 +1,334 @@
+---
+title: "A Study on Crude Oil Price and CPI Value"
+author: "Stats 531 Midterm Project"
+date: "March 10, 2016"
+output:
+  html_document:
+    toc: true
+    theme: flatly
+---
+
+
+------
+
+------
+
+#1. Introduction
+
+Crude oil has always been a crucial resource to various industries as many different derivatives can be produced from it including fuel, wax, even the plastic bags that we use everyday. It is understandable that any change in the oil price may more or less cause chain effect to everyone's daily life.
+
+The consumer price index, or CPI, is a measure that examines the weighted average of prices of various representative items of consumer goods and services and the prices are collected periodically. It is calculated by taking price changes for each item and averaging them while the weights of each item are determined by its importance. In most countries, the CPI is one of the most closely watched national economic statistics.
+
+By our intuition, we believe that these two are connected. In this project, we try to find out the association between the crude oil price and the CPI value. We seek to know whether they are associated by some certain law.
+
+------
+
+------
+
+#2. Data Overview
+
+In this project, we look at the crude oil price for the last twenty years, as well as the U.S. national CPI value of the urban consumers for the same time period. Since the latest CPI value available at the time of this project is the data for January 1, 2016, we therefore analyze the data starting from January 1, 1996. The historical prices of crude oil are downloaded from [http://www.macrotrends.net/1369/crude-oil-price-history-chart](http://www.macrotrends.net/1369/crude-oil-price-history-chart) and the raw data for the CPI value are downloaded from [https://research.stlouisfed.org/fred2/series/CPIAUCSL/downloaddata](https://research.stlouisfed.org/fred2/series/CPIAUCSL/downloaddata). 
+
+For the convenience of the data processing, two datasets have been combined into one .csv file and here is a quick look at the datasets after we read them.
+
+```{r}
+data = read.csv("data.csv", header = T)
+data$date = as.Date(data$date)
+head(data)
+```
+
+A time plot for both datasets may give a general idea of their behavior.
+
+```{r, fig.align='center'}
+date = data$date
+oil = data$oil_price
+cpi = data$cpi_value
+par(mar=c(5, 4, 4, 6) + 0.1)
+plot(date, cpi, xlim = c(as.Date("1995-01-01"), as.Date("2016-06-01")), col = "blue", main = "Time Plot of Crude Oil Price and CPI Value", xlab = "", ylab = "CPI Value", col.lab = "blue", type = 'l')
+par(new = T)
+plot(date, oil, xlim = c(as.Date("1995-01-01"), as.Date("2016-06-01")), col = "red", axes = F, xlab="Year", ylab = "", type = 'l')
+axis(side = 4, col = "red")
+mtext("Crude Oil Price ($/barrel)", col = "red", side = 4, line = 3)
+```
+
+In the above plot, the red line represents the behavior of the crude oil price versus time and the blue line represents the CPI value. There are some features shared by both of the datasets that draw our interest.
+
+- First of all, we see that both lines have an increasing trend with time. Even though the crude oil price tends to oscillate more with a larger amplitude, there is still a clear increasing trend by the looks of it. A dramatic drop that violates the trend in late 2014 was due to several different causes that will be discussed later.
+
+- Secondly, for both of the datasets, the time intervals in which the significant fluctuations occur are matched. For example, starting from early 2008, both of them experienced a sharp rise followed by an even more severe drop and then both of them came back to normal (following the previous trend). Besides, we see that when the oil price dropped significantly in late 2014, the CPI value dropped as well. Even though the decrease of CPI value in the time period seemed much less than the oil price, it was indeed a big drop if compared with previous fluctuations.
+
+As discussed above, it is reasonable for us to believe that these two datasets are somehow associated. We are interested in finding the law behind their similar behavior pattern. Notice the fact that the sudden rise or drop may be caused by external forces such as political reasons, warfares, global financial condition, etc., and a brief discussion will be followed later in the project.
+
+------
+
+------
+
+#3. Detailed Analysis
+
+We are interested in whether their fluctuations are related in some certain way. In order to analyze this, we need to first eliminate the trend. With the trend removed, we seek to fit a regression with an ARMA errors model to the two datasets to study whether they are associated. Some diagnostics need to be performed to check the fitting.
+
+------
+
+##3.1 Detrending the Data
+
+Here we use Hodrick-Prescott (HP) filter to achieve this. For a time series ${y_{1:N}^*}$, the HP filter is the time series ${s_{1:N}^*}$ constructed as
+$$
+{s_{1:N}^*} =  \arg\min_{s_{1:N}} 
+  \left\{ 
+    \sum^{N}_{n=1}\big({y_n^*}-s_{n}\big)^2 + \lambda\sum^{N-1}_{n=2}\big(s_{n+1}-2s_{n}+s_{n-1}\big)^2 
+  \right\}.
+$$
+A standard econometric choice of the smoothing parameter $\lambda$ in monthly data is $\lambda = 14400$.
+
+<a name="aaa"/>
+```{r, message=FALSE, warning=FALSE, fig.align='center'}
+require(mFilter)
+oil_hp = hpfilter(oil, freq = 14400, type = "lambda", drift = F)$cycle
+cpi_hp = hpfilter(cpi, freq = 14400, type = "lambda", drift = F)$cycle
+par(mar=c(5, 4, 4, 6) + 0.1)
+plot(date, cpi_hp, xlim = c(as.Date("1995-01-01"), as.Date("2016-06-01")), col = "blue", ylim = c(-4.5, 7),  main = "Detrended Crude Oil Price and Detrended CPI Value", xlab = "", ylab = "Detrended CPI Value", col.lab = "blue", type = 'l')
+par(new=TRUE)
+plot(date, oil_hp, xlim = c(as.Date("1995-01-01"), as.Date("2016-06-01")), col = "red", ylim = c(-50, 75), ylab = "", axes = F, xlab="Year", type = 'l')
+axis(side = 4, col = "red")
+mtext("Detrended Crude Oil Price ($/barrel)", col = "red", side = 4, line = 3)
+```
+
+There seems to be a very strong tendency that these two datasets fluctuate in a similar pattern once we eliminated the trend. This pattern draws our interest in further analysis of their relationship.
+
+------
+
+##3.2 Regression with ARMA Errors Model
+
+In order to study the relationship between these two datasets, we try to use a regression with ARMA errors model. Let $o^{HP*}_n$ denote the observed crude oil price, $c^{HP*}_n$ denote the observed CPI value, and $C^{HP}_n$ denote the fitted CPI value. We can analyze $c^{HP*}_n$ by the following model
+$$
+C^{HP}_n = \alpha + \beta o^{HP*}_n + \epsilon_n,
+$$
+where $\{\epsilon_n\}$ is a Gaussian ARMA process.
+
+We construct an AIC table to choose a proper model for $\{\epsilon_n\}$.
+
+```{r, message=FALSE, warning=FALSE}
+aic_table = function(data, P, Q, xreg = NULL){
+  table = matrix(NA, (P+1), (Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1, q+1] = arima(data, order = c(p, 0, q), xreg = xreg)$aic
+    }
+  }
+  dimnames(table) = list(paste("<b> AR", 0:P, "</b>", sep = ""), paste("MA", 0:Q, sep = ""))
+  table
+}
+e_aic_table = aic_table(cpi_hp, 5, 5, xreg = oil_hp)
+require(knitr)
+kable(e_aic_table, digits = 2)
+```
+
+------
+
+Generally, we tend to pick the model that comes with the smallest AIC value. Suggested by the above table, we see that ARMA(2,4) should be the best choice. However, there are some problems with this.
+
+- Firstly, there is inconsistency within this table. By adding one more parameter to the model, the AIC value should increase at most by 2, but if we compare the AIC value for ARMA(3,4) and the one for ARMA(2,4), the increase is much larger than 2, hence suggesting the use of ARMA(2,4) is not proper here.
+
+- Secondly, ARMA(2,4) is a very large model which may lead to unwanted complexity for the calculation. Using a large model may also cause the model to be non-causal or non-invertible and we need to check this by calculating the roots for the polynomial with AR and MA coefficients; if the roots are outside the unit circle then the model is in a good shape; otherwise we may have some problem.
+
+We hence look for other candidates with a smaller model size. The AIC value for ARMA(3,0), ARMA(1,1), and ARMA(1,2) are very close to each other so it is reasonable to choose ARMA(1,1) as our model since it is the one with the smallest model size (only two parameters) and its AIC value is merely greater than the other two by less than 0.1. Therefore we use ARMA(1,1) for the ARMA errors model.
+
+```{r}
+arima(cpi_hp, xreg = oil_hp, order = c(1, 0, 1))
+```
+
+The standard error of `oil_hp`, compared with the value of `oil_hp` itself, suggesting that there is a statistically significant association between the fluctuations in crude oil price and CPI value.
+
+Another way to verify the significance of the association between these two datasets is to compute a p-value from likelihood ratio tests. This is to test the nested hypotheses
+$$
+\begin{eqnarray}
+H^{\langle 0\rangle} &:& \theta\in \Theta^{\langle 0\rangle}
+\\
+H^{\langle 1\rangle} &:& \theta\in \Theta^{\langle 1\rangle}
+\end{eqnarray}
+$$
+defined via two nested parameter subspaces, $\Theta^{\langle 0\rangle}\subset \Theta^{\langle 1\rangle}$, with respective dimensions $D^{\langle 0\rangle}< D^{\langle 1\rangle}\le D$.
+
+We consider the log likelihood maximized over each of the hypotheses,
+$$
+\begin{eqnarray}
+\ell^{\langle 0\rangle} &=& \sup_{\theta\in \Theta^{\langle 0\rangle}} \ell(\theta),
+\\
+\ell^{\langle 1\rangle} &=& \sup_{\theta\in \Theta^{\langle 1\rangle}} \ell(\theta).
+\end{eqnarray}
+$$
+
+By Wilks approximation, under the hypothesis $H^{\langle 0\rangle}$,
+$$
+\ell^{\langle 1\rangle} - \ell^{\langle 0\rangle} \approx (1/2) \chi^2_{D^{\langle 1\rangle}- D^{\langle 0\rangle}}
+$$
+where for our case `df` for the $\chi^2$ distribution is $D^{\langle 1\rangle}- D^{\langle 0\rangle} = 1$.
+
+```{r}
+log_lik_ratio = as.numeric(logLik(arima(cpi_hp, xreg = oil_hp, order = c(1, 0, 1))) - logLik(arima(cpi_hp, order = c(1, 0, 1))))
+pval = 1 - pchisq(2*log_lik_ratio, df = 1)
+pval
+```
+
+By R, the p-value is calculated to be $4.18\times 10^{-12}$, indicating that the null hypothesis $H^{\langle 0\rangle}$ should be rejected and hence the association is indeed significant.
+
+------
+
+##3.3 Diagnostic Analysis
+
+So far we have seen an association between the crude oil price and CPI value. In order for the rigorousness of the modeling, we should check the residuals for the fitted model, and look at their sample autocorrelation.
+
+We start with the residual of the fitted model.
+
+<b name="bbb"/>
+```{r, fig.align='center'}
+r = resid(arima(cpi_hp, xreg = oil_hp, order = c(1, 0, 1)))
+plot(date, r, xlim = c(as.Date("1995-01-01"), as.Date("2016-06-01")), xlab = "Year", ylab = "Residuals", main = "Residuals of the Fitted Model", type = "l")
+```
+
+With the residuals plotted, our first impression of its behavior is that there seems to exist heteroskedasticity. Particularly, the residuals are worth our attention around early 2006, mid 2008, and late 2013. This is believed to be a result of the sudden change in oil price, which will be discussed later. For now, we are more interested in whether the above regression model is acceptable.
+
+We use the techniques of Breusch–Pagan test (`bptest`) to test for heteroskedasticity in a linear regression model. It tests the null hypothesis of homoskedasticity. A general threshold for the p-value is 0.05. If the tested p-value is below the threshold then the null hypothesis of homoskedasticity is rejected and heteroskedasticity is assumed. In order to perform the `bptest` in R, we need to use the package `lmtest`.
+
+```{r, message=FALSE}
+require(lmtest)
+lmodel = lm(cpi_hp ~ oil_hp)
+bptest(lmodel)$p.value
+```
+
+The p-value turns out to be 0.09069533 > 0.05. We are therefore comfortable to conclude that the heteroskedasticity of our regression model is not significant and hence the above regression model is acceptable for the datasets.
+
+Now we check the ACF of the residuals 
+
+```{r, fig.align='center'}
+acf(r, lag = 20)
+```
+
+For the 20 lags only one is narrowly out of the dashed line. This suggests that the residuals are well following the null hypothesis of Gaussian white noise.
+
+Hence, according to all the diagnostics performed above, it is reasonable to conclude that our regression model works for the datasets and there is a significant association between the crude oil price and the CPI value.
+
+------
+
+##3.4 Fitted Value versus the Original
+
+As discussed, the regression model with ARMA errors is able to represent the association between the fluctuations of crude oil price and the CPI value. At this point, it is wanted to plot the fitted value and the original data on the same plot for us to visually check how good the fitting is. To do this, the `forecast` package is needed.
+
+```{r, message=FALSE, fig.align='center'}
+require(forecast)
+fit = Arima(cpi_hp, xreg = oil_hp, order = c(1, 0, 1))
+plot(date, fit$x, col = "blue", type = "l", xlim = c(as.Date("1995-01-01"), as.Date("2016-06-01")), xlab = "Year", ylab = "Detrended CPI Value", main = "Fitted Value and Original Value for Detrended CPI")
+lines(date, fitted(fit), col = "red")
+legend(as.Date("1995-06-01"), 6, c("Fitted Value", "Original Value"), lty = c(1, 1), col = c("red", "blue"),  bty = "n")
+```
+
+By comparing the two lines in the plot, it is reasonable to say that the fitted CPI value is very close to the original value. This again shows that our fitting is indeed good. There are also some facts that we need to notice in the above plot.
+
+One can immediately see that the fitted value tends to fluctuate more than the actual value. This is the direct result of the unstable behavior (compared to the CPI value) of the crude oil price, which can be checked by the plot of [Detrended Crude Oil Price and Detrended CPI Value](#aaa) in the previous section.
+
+Also, there is a considerable difference between the fitted value and the original value for the data around mid 2008. This corresponds to the most negative residual (the one that deviates most from the original value) in the plot of [Residuals of the Fitted Model](#bbb) in the diagnostics.
+
+Despite the issues discussed above, the fitting looks pretty good. Hence we conclude that it is reasonable to use this fitting to predict the CPI value if the crude oil price is given.
+
+------
+
+------
+
+#4. Cycles and Seasonality
+
+Since both of the crude oil price and the CPI value are closely related to many different factors including politics, warfares, global financial condition, etc., we therefore want to check whether they have any patterns of business cycles or the seasonal behavior.
+
+Note that a cyclic pattern is different from a seasonal pattern in that seasonality always means a fixed and known period so it is periodic while a cyclic pattern means data exhibiting rises and falls without any fixed period.
+
+------
+
+##4.1 A Study on Cycles with Band Pass Filter
+
+For a times series dataset, high frequency variation is generally considered as “noise” and low frequency variation can be regarded as trend. The mid-range frequency variation is believed to correspond to the business cycle. In order for extracting the business cycle, we can process the raw data by removing the high frequency and low frequency variation.
+
+We first take a look at the CPI value. As CPI value measures the weighted average of prices of a variety of consumer goods and services, we expect to observe a cyclic behavior similar to business cycle since it considers the economic condition in almost every industry.
+
+```{r, fig.align='center'}
+cpi_low = ts(loess(cpi ~ as.numeric(date), span = 0.35)$fitted, start = 1996, frequency = 12)
+Trend = cpi_low
+cpi_hi = ts(cpi - loess(cpi ~ as.numeric(date),  span = 0.16)$fitted, start = 1996, frequency = 12)
+Noise = cpi_hi
+cpi_cycles = cpi - cpi_hi - cpi_low
+Cycles = cpi_cycles
+plot(ts.union(cpi, Trend, Noise, Cycles), type = "l", xlab = "Year", main = "Decomposition of CPI Value as Trend + Noise + Cycles")
+```
+
+The plot actually shows a clear cyclic pattern. From year 1996 to year 2016, seven peaks are observed within the 20-year timespan and the time interval between the peaks are roughly 3 years. This corresponds to the pattern of business cycles discussed in class and agrees with our expectation.
+
+Now we perform the same decomposition method to the oil price.
+
+```{r, fig.align='center'}
+oil_low = ts(loess(oil ~ as.numeric(date), span = 1)$fitted, start = 1996, frequency = 12)
+Trend = oil_low
+oil_hi = ts(cpi - loess(oil ~ as.numeric(date), span = 0.1)$fitted, start = 1996, frequency = 12)
+Noise = oil_hi
+oil_cycles = oil - oil_hi - oil_low
+Cycles = oil_cycles
+plot(ts.union(oil, Trend, Noise, Cycles), type = "l", xlab = "Year", main = "Decomposition of Crude Oil Price as Trend + Noise + Cycles")
+```
+
+The plot above does not show any obvious cyclic pattern. Also, according to the plot, the cyclic component even vibrates more than the noise component, indicating the above decomposition is not properly done for this dataset. Actually, I have tried many different values for the threshold frequency and the results are similar. This may be due to the fact that the oil price can be influenced by many unpredictable factors including the demand of the product, the breakthrough in the technology of the oil extraction, the issuance of a new policy, even the outbreak of warfare; and each of this can make a sudden change on the crude oil price. Therefore there is not much information can be obtained by the above decomposition.
+
+------
+
+##4.2 A Study on Seasonality with Spectrum Analysis
+
+There is not much expectation of the seasonality for these two datasets by the looks of the previous plot. However, we want to verify this by spectrum analysis. We set `spans = c(3)` because we do not want to smooth it too much as we are focusing on finding the peaks.
+
+```{r, fig.align='center'}
+oil_spec = spectrum(ts(oil_hp, start = 1996, frequency = 12), spans = c(3), plot = F)
+plot(oil_spec, ylab = "Spectrum", xlab = "Frequency (Cycles per Year)", main = "Smoothed Periodogram for Detrended Crude Oil Price")
+cpi_spec = spectrum(ts(cpi_hp, start = 1996, frequency = 12), spans = c(3), plot = F)
+plot(cpi_spec, ylab = "Spectrum", xlab = "Frequency (Cycles per Year)", main = "Smoothed Periodogram for Detrended CPI Value")
+```
+
+By the above plots, there is no clear peak and hence there is no clear seasonal behavior for either of the datasets.
+
+------
+
+------
+
+#5. A Discussion on Crude Oil Price
+
+From the above analysis, it is clear that the crude oil price tend to be more fluctuating and therefore there is no clear pattern for either cycles or seasonality. As said previously, there are complicated reasons behind the ups-and-downs of the crude oil price. In this section, we will briefly study the reasons for the major fluctuations.
+
+The crude oil price experienced a considerable drop in late 1997 until early 1999. This was caused by the combined effect of the increase in supply and decrease in demand. In December 1997, OPEC increased its quota to 27.5 million barrels per day, which was an increase of 10 percent. On the other hand, the rapid growth in Asian economies came to a halt. In 1998, Asian Pacific oil consumption declined for the first time since 1982. The price continued down through December 1998 and started to recover in early 1999 as  OPEC cut the quota eventually.
+
+Another significant drop of the crude oil price occurred during late 2000 to late 2003. One reason was again the supply was over the demand, which was caused by the increase in OPEC quota and non-OPEC Russia's production. In 2001, the 9-11 terrorist attack furthered the drop in crude oil price because investors lost confidence in the U.S. economy and had the concern that this might disrupt the global economy.
+
+From late 2007 to late 2008, the crude oil price first rose remarkably and then dropped even more dramatically. The rising period of the price was due to the insufficient supply caused by cutting back of the quota, natural disasters, and rapid growth in Asian economies and their petroleum consumption. However, it was a different story in late 2008 when the Great Depression occurred. As a combined effect of recession and falling petroleum demand, the price fell throughout the remainder of the year to the below $40 in December.
+
+In the year 2014, another sharp decrease in the crude oil price catches our attention and there were multiple reasons behind this. Firstly, there was a boost in the U.S. crude oil production level that oversupplied the demand. Secondly, there were political reasons to inhibit the economy growth in Russia since Russia was one of the major supplier in the market.
+
+The above was just a rough discussion on the change in crude oil price and that may also explain why we need to be extra cautious when analyzing it with a statistical model. Too many factors can influence the price and the price really can vary by a large amount.
+
+------
+
+------
+
+#6. Conclusion
+
+If we compare the individual behavior of CPI value and the crude oil price, we would like to conclude that the CPI value behaves more predictable than the crude oil price in that it shows consistency in trend and a cyclic pattern; while the trend of crude oil price is unclear and we can hardly see any cyclic pattern in it. In this sense, it seems that the crude oil price could be possibly regarded as one factor that has influence on the CPI value even though both of the crude oil price and the CPI value may be associated to other common confounding factors.
+
+To conclude, our study on the association between crude oil price and the CPI value reveals that they are fluctuating together and the association is statistically significant. However, we cannot simply determine which causes which. More likely, they are both related to many other confounding factors yet we suspect that the crude oil price might act as one of the factors that determines the CPI value. Nevertheless, as shown in previous sections, it is statistically reasonable for us to consider the crude oil price as a proxy variable for the CPI value.
+
+------
+
+------
+
+#7. Reference
+
+1. Consumer Price Index - CPI. (n.d.). Retrieved from http://www.investopedia.com/terms/c/consumerpriceindex.asp
+
+2. Consumer price index. (2016, February). Retrieved from https://en.wikipedia.org/wiki/Consumer_price_index
+
+3. hpfilter. (n.d.). Retrieved from http://www.mathworks.com/help/econ/hpfilter.html
+
+4. Breusch–Pagan test. (2016, January). Retrieved from https://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
+
+5. Oil Price History and Analysis. (n.d.). Retrieved from http://www.wtrg.com/prices.htm

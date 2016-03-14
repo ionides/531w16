@@ -1,0 +1,245 @@
+---
+title: "Crude Oil Price Modeling and Prediction"
+date: "March 7, 2016"
+output: 
+  html_document:
+    toc: true
+
+---
+
+
+-------------------
+
+##1. Introduction
+* Oil, one of the most important energy resources in the world, exhibits wide fluctuation. Its flutuation have significant effects on the sales and profits of major industries worldwide, and influence capital budgeting plans as well as the economic instability in both oil exporting and oil consuming countries. Therefore, modeling and forecasting oil price are important to economic agents and policy makers. 
+
+* In reality, there are different types of crude oil – the thick, unprocessed liquid that drillers extract below the earth – and some are more desirable than others. Also, where the oil comes from also makes a difference. Because of these nuances, we need benchmarks to value the commodity based on its quality and location. Thus, Brent, WTI and Dubai/Oman serve this important purpose. Here, we use the most important two benchmarks, WTI and Brent, to demonstrate the world crude oil price changes. 
+
+* West Texas Intermediate (WTI) – WTI refers to oil extracted from wells in the U.S. and sent via pipeline to Cushing, Oklahoma. The product itself is very light and very sweet, making it ideal for gasoline refining, in particular. WTI continues to be the main benchmark for oil consumed in the United States. Brent Blend – Roughly two-thirds of all crude contracts around the world reference Brent Blend, making it the most widely used marker of all. These days, “Brent” actually refers to oil from four different fields in the North Sea: Brent, Forties, Oseberg and Ekofisk. Crude from this region is light and sweet, making them ideal for the refining of diesel fuel, gasoline.
+
+--------------------
+
+##2. WTI and Brent visuliazation 
+```{r, echo=FALSE,message=FALSE}
+library('plyr')
+library(XLConnect)
+library(forecast)
+require(mFilter)
+require(doParallel)
+registerDoParallel()
+WTI=readWorksheetFromFile('RWTCd.xls', sheet=1)
+BRT=readWorksheetFromFile('RBRTEd.xls', sheet=1)
+names(WTI)[names(WTI)=="Cushing..OK.WTI.Spot.Price.FOB..Dollars.per.Barrel."]="price"
+names(BRT)[names(BRT)=="Europe.Brent.Spot.Price.FOB..Dollars.per.Barrel."]="price"
+WTI$year=as.numeric(format(WTI$Date, format="%Y"))
+WTI$month=as.numeric(format(WTI$Date, format="%m"))
+BRT$year=as.numeric(format(BRT$Date, format="%Y"))
+BRT$month=as.numeric(format(BRT$Date, format="%m"))
+t=intersect(WTI$Date,BRT$Date)
+WTI<- WTI[WTI$Date %in% t,]
+BRT<- BRT[BRT$Date %in% t,]
+```
+
+* In order to get a basic knowledge of the crude oil price, we plot the daily WTI and Brent crude oil price from May 1987 to Februray 2016. 
+* From the plot below, we find that WTI and Brent spot oil price almost follows the same trajectory except for some small divergence from 2011 to 2014.
+* The spot prices of crude oil have been profoundly influenced by events that have economic and geo-political aspects. 
+    + (1) the remarkable price falls in the period 1997–1998, due to the slowdown of Asian economic growth; 
+    + (2) OPEC (Organization of Petroleum Export Countries) curtailed the production of crude oil by 4.2 million barrels per day between 2000 and 2001, resulting in an increase in crude oil prices;
+    + (3) In 2001-2003, 911 attacks and the invasion of Iraq raise concerns about the stability of the Middle East’s production. 
+    + (4) Then, Crude oil prices keep rising for a variety of reasons, including North Korea's missile launches, the crisis between Israel and Lebanon, and Iranian nuclear brinksmanship. 
+    + (5) In 2008, The global financial crisis causes a bubble-bursting sell-off. Prices plummet 78.1% from July to December. 
+    + (6) In 2014, Strong production in the United States and Russia cause prices to crash from July to December. OPEC’s November decision to maintain production further damages the market heading into 2015. 
+    + (7) In 2015, U.S. output reaches its highest level in more than 100 years. Prices hover near $50 a barrel as of July 22.
+
+```{r, echo=FALSE}
+plot(WTI$Date,WTI$price,type='l',xlab='Date',ylab='Price',main='WTI(black) and BRT(red) crude oil spot price')
+par(new=TRUE)
+plot(BRT$Date,BRT$price,type='l',xlab='',ylab='',col='red',axes=FALSE)
+```
+
+* Here, we give the quantative summary of WTI and Brent spot price. 
+```{r}
+summary(WTI$price)
+```
+
+```{r}
+summary(BRT$price)
+```
+
+
+-----------------------
+
+##3. Modeling
+###1. Data manipulation
+* Since WTI and Brent crude oil price are quite similar, we only take WTI for prediction and modeling. To make the time series smoother and easier for analysis, we compute the monthly mean of the WTI. We select monthly data from May 1987 to December 2014 for modeling, and data from January 2015 until now for prediction.
+```{r}
+wti_month=aggregate(WTI[,2], list(WTI[,3],WTI[,4]), mean)
+names(wti_month)[names(wti_month)=='Group.1']='year'
+names(wti_month)[names(wti_month)=='Group.2']='month'
+names(wti_month)[names(wti_month)=='x']='price'
+wti_month=wti_month[order(wti_month$year,wti_month$month),]
+wti_month$time <- wti_month$year + wti_month$month/12
+#train and predict
+wti=wti_month[(wti_month$year<=2014)&(wti_month$month<=12),]
+wti_test=wti_month[wti_month$year>2014,]
+plot(wti$price,type='l',xlab='Time',ylab='WTI monthly price')
+```
+
+###2. Detrend
+* Seen from the WTI monthly price, it's not at all stationary. We can see obvious fluctuation in crude oil price. So we can not fit the ARMA model directly. We need detrend the monthly data as first.
+
+####1. hp-filter
+* Hp-filter is a smoothing spline with a particular choice of smoothing parameter. We try various parameters and select the one which separates the trend and cycle for this specific dataset.
+
+```{r}
+wti_hp=hpfilter(wti$price, freq=100,type="lambda",drift=F)
+trend=ts(wti_hp$trend)
+cycle=ts(wti_hp$cycle)
+plot(ts.union(trend,cycle),type="l",xlab="Time",ylab="", main='Decomposition of WTI monthly price as trend and cycle')
+```
+
+* Since there is a sudden decrease in 2008, the shock change in the trend can not be removed. It shows in both trend part and cylce part. 
+* In addition, the fluation is more intensive after 2005. The cycling pattern is quite different before and after 2005. 
+* Therefore, even after hp smoothing, the new time series is not appropriate for arma modeling.
+
+####2. loess-filter
+* We turn to another filter, loess filter to remove the trend of the data, since hp filter does not work well in this problem.
+* Loess filter is a local linear regression approach. The basic idea is quite simple: at each point in time, we carry out a linear regression using only points close in time. Thus, it is just like a moving window of points included in the regression.
+* In this time series, high frequency variation might be considered “noise” and low frequency variation might be considered trend. A band of mid-range frequencies might be considered to correspond to the cycle. Thus, we can set different frequency to extract the trend, cylce and noise.
+
+```{r}
+wti_low <- ts(loess(wti$price~wti$time,span=0.4)$fitted)
+wti_hi <- ts(wti$price - loess(wti$price~wti$time,span=0.07)$fitted)
+wti_cycles <- wti$price - wti_low - wti_hi
+plot(ts.union(wti$price, wti_low,wti_hi,wti_cycles),
+     main="Decomposition of WTI monthly price as trend + noise + cycles")
+```
+
+* After this decomposition, seen from the plot above, trend part extracts the main trend of the oil price
+* But noise part seems extracting more, it even includes some cycle pattern. It is partly because the monthly data don not show very intensive noise process, since it has been smoothed through average.
+* Therefore, it seems that loess filter fails in this problem.
+
+####3. Log transformation and Difference
+
+* In order to eliminate the effects of the high fluctuation pattern, we do the log transformation of the monthly WTI price time series. Compared with untransfromed data, the fluctuation and the difference of the time period decrease a lot.
+
+```{r}
+plot(wti$price,type='l',ylab='wti price')
+```
+
+```{r}
+plot(log(wti$price),type='l',ylab='log(wti)')
+```
+
+
+* However, there is still trend in the data. We eliminate this by taking difference. Seen from the plot below, the time series are generally stationary except for two obivious increas and decrease. It is owing to the sudden crude oil price increase and decrease in 1997 and 2008.
+
+* We can also do difference of 2. The plot is as follows. It actually increase the stationary, but not brings large improvement. Thus, for the simplicity of the model, we take difference as 1.
+
+```{r}
+plot(diff(log(wti$price),differences = 1),type='l',ylab='difference of log(wti)')
+```
+
+```{r}
+plot(diff(log(wti$price),differences = 2),type='l',ylab='difference of log(wti)')
+```
+
+###3. Model Selection
+####1. Frequency domain
+* After the transformation and difference of the WTI price time series, the time series are generally stationary. Before we fit the arima model, we first explore the data in frequency domain.
+* From the plot below, it shows many peaks, implying periodic pattern. The highest peak has the frequence of 0.094, equvilantly period of 10.6, which approaches 12 months. Therefore, we should add seasonality parameter in the model.   
+```{r}
+diff_logprice=diff(log(wti$price),differences = 1)
+f=spectrum(diff_logprice,spans=c(2,2), main="Smoothed periodogram")
+1/f$freq[which.max(f$spec)]
+```
+
+####2. ARMA model
+* Now, Let’s start fitting a stationary ARMA(p,q) model under the null hypothesis that the time series are stationary. 
+* We seek to fit a SARIMA$(p,1,q)\times(1,0,1)_{12}$ model for nonstationary monthly data, given by
+$$ {\phi}(B){\Phi}(B^{12}) \big((1-B)X_n-\mu\big)={\psi}(B){\Psi}(B^{12})\epsilon_n $$
+where ${\epsilon_n}$ is a Gaussian white noise process, the intercept $\mu$ is the mean of the differenced process $(1-B)X_n-\mu$, and we have 
+$$ {\phi}(B) = 1-{\phi}_1 B - {\phi}_2 B^2 - \dots - {\phi}_p B^p $$
+$$ {\Phi}(B^{12}) = 1-{\phi}_1 B^{12} $$
+$$ {\psi}(B) = 1+{\psi}_1 B + {\psi}_2 B^2 + \dots + {\psi}_q B^q $$
+$$ {\Psi}(B^{12}) = 1+{\psi}_1 B^{12} $$
+* We We need to decide what to choose in terms of values of p and q. AIC is viewed as a way to select a model with reasonable predictive skill from a range of possibilities.
+* From the AIC table, SARIMA$(2,1,2)\times(1,0,1)_{12}$ is selected because of the low AIC. There are larger models with smaller AIC values, but it does not decrease a lot. 
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  foreach(p=0:P) %do% {
+    foreach(q=0:Q) %do% {
+      table[p+1,q+1] <- try(arima(data,order=c(p,1,q),seasonal=list(order=c(1,0,1),period=12))$aic)
+    }
+  }
+  dimnames(table) <- list(paste("AR",0:P,sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+temp_aic_table <- aic_table(log(wti$price),4,4)
+require(knitr)
+kable(temp_aic_table,digits=2)
+```
+
+* The coefficients of the model are shown as below. It is invertible and casual model SARMA model. 
+```{r}
+sarima=arima(log(wti$price),order=c(2,1,2),seasonal=list(order=c(1,0,1),period=12))
+sarima
+```
+
+
+##4. Model Diagnosis
+* Now, we move on to do model diagnosis. 
+* We should check the residuals for the fitted model, and look at their sample autocorrelation. 
+    + From the first ACF plot, we can see the residuals are generally inside the dashed line showing pointwise acceptance regions at the 5% level under a null hypothesis of no correlation between noise.
+    + From the second plot, the residuals are mostly distributed around the line even though there is small deviation from the qqline on the left. Thus the residuals follow normal distribution. 
+    + From the third plot, we can see the residuals generally distributed aroud the line=0. It is not disasterous to have some points extremly high. 
+* Therefore, from the above test, we can not reject the null hypothesis of Gaussian noise.  
+
+```{r, echo=FALSE,message=FALSE}
+acf(sarima$residuals,lag=365)
+qqnorm(sarima$residuals)
+qqline(sarima$residuals)
+plot(sarima$residuals)
+abline(h=0,col='red')
+```
+
+
+##5. Model Evaluation
+###1. Fit
+* We plot the fitted value and the real value of WTI monthly price below. It shows very high consistency, which implies good performance of our SARMA model.
+* However, there is some translation between fitted and real data. Fitted data seems one month lag from the real data. It may be owing to the algortihm of predict.Arima in R. Since we model the SARMA model with d=1, the initialization of the data may make a difference.  
+```{r, echo=FALSE,message=FALSE}
+plot(log(wti$price),type='l',col='red',xlab='Time',ylab='log(wti)',main='fitted(black) and real(red) wti price')
+par(new=TRUE)
+fit1 <- Arima(log(wti$price), model=sarima)
+onestep <- forecast.Arima(fit1)
+plot(onestep$fitted,type='l',col='black',axes=FALSE,xlab='',ylab='')
+```
+
+
+###2. Predict
+* We then use the model above to predict the monthly WTI price from January 2015 to February 2016, 14 months in total. It captures the main trend of the monthly WTI price fluctuation.
+* Same as the fitted data, it also shows one month lag. Thus we need to explore the function in R in order to tackle this problem.
+* In general, our model shows good performance both in terms of modeling and prediction.
+```{r,echo=FALSE}
+plot(log(wti_test$price),type='l',col='red',xlab='Time',ylab='log(wti)')
+par(new=TRUE)
+fit1 <- Arima(log(wti_test$price), model=sarima)
+onestep <- forecast.Arima(fit1)
+plot(onestep$fitted,type='l',col='black',axes=FALSE,xlab='',ylab='',main='fitted(black) and real(red) wti price')
+```
+
+##6. Conclusion
+* Crude oil prices are highly fluctuated time series. It is affected by many economic and political factors. Specially, there are several sudden increase and decrease throughout the time. In order to eliminate the irregular trend. We try several methods, hp-filter, loess filter, log transformation and difference. It shows that log transformation and difference have the best performance. After this manipulation, the data is generally stationary.
+* From the frequency exploration, we find that the oil price have anual seasonality. Thus, we seek to fit SARMA model with difference equals 1. We use AIC as a criterion to select the model. Eventually, we fit SARIMA$(2,1,2)\times(1,0,1)_{12}$ model. Diagnosis shows residuals follow Guassian noise process. We also use the model to predict oil price, it captures the main features, which implies this SARMA is suitable for prediction.  
+* Based on the whole modeling and prediction, we can conclude that our model is relatively easy to handle and capture the main feature. But the crude oil price is not that stationary for analysis, and exhibits intensive flucatuation even after transformation. The crude oil price can suffer sudden increase and decrease. Thus, only analysis of the crude oil price itself can hardly predict the sudden change. Maybe, we can find some latent variable to improve modeling and prediction. 
+
+
+
+##7. Reference
+* [1] http://wallstreetexaminer.com/2015/07/25-important-events-in-crude-oil-price-history-since-1862/
+* [2] http://www.investopedia.com/articles/investing/102314/understanding-benchmark-oils-brent-blend-wti-and-dubai.asp
+* [3] Kang, Sang Hoon, Sang-Mok Kang, and Seong-Min Yoon. "Forecasting volatility of crude oil markets." Energy Economics 31.1 (2009): 119-125.
+* [4] Moshiri, Saeed, and Faezeh Foroutan. "Forecasting nonlinear crude oil futures prices." The Energy Journal (2006): 81-95.

@@ -1,0 +1,284 @@
+---
+title: "STATS 531 Midterm Project: Association between PM2.5 and temperature difference"
+date: "March 6, 2016"
+output:
+  html_document:
+    fig_caption: true
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=10"
+    ]
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+\newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\matH{\mathbb{H}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+
+
+-------
+
+--------
+
+**<big><big><big>1. Experience of air quality and temperature difference</big></big></big>**
+
+* In the past 7 years, I was living in Beijing. There has been terrible air pollution since I went to university there. It was most serious from 2010 to 2012. We had to wear facial masks and reduce outdoor activities. Even with those protection, it is still a threat to health.Beijing began monitoring PM 2.5 levels in 2013 amid rising public concerns over pollution in the city.
+
+* From my own experience, those days with a high pm2.5 seemed to have a smaller temperature difference within the day. In summer it brought stuffiness and in winter there seemed less wind.
+
+* May there be relationship between pm2.5 and the temperature difference?
+We can analyse using time series methods.
+
+-------
+
+--------
+
+**<big><big><big>2. Data and fitted models</big></big></big>**
+
+**<big><big>2.1 ARMA model with no transformation on data</big></big>**
+
+* We are going to look at historical data for Beijing, China.
+The PM2.5 data is collected from
+U.S. Department of State Air Quality Monitoring Program http://www.stateair.net/web/historical/1/1.html
+and the temperature data is collected from National Climite Data Center.
+The PM2.5 data is hourly collected, and the temperature data is daily collected, for convenience, I calculated the daily PM2.5 to compare to the temperature data.
+
+```{r read_data}
+x <- read.csv(file="temp_pm25_2010_2012.csv",header=T)
+head(x)
+```
+
+* There are five variables in this processed dataset, Time, pm2.5, TMAX, TMIN and TD(for temperature difference)
+The we can code the pm2.5 and TD seperately.
+
+* Write $\data{p_n}$ for PM2.5 in day  $t_n=2010-01-01+n$.
+
+* Write $\data{d_n}$ for temperature difference in day $t_n$. 
+
+```{r code}
+t <- x$Time
+p <- x$pm2.5
+d <- x$TD
+```
+
+* Let's plot them first to get an intuitive feeling.
+
+```{r plot_ts}
+plot(ts(cbind(p,d)),main = "PM2.5(pm25) and temperature difference(td) for Beijing",xlab="Day")
+```
+
+* Then let's have a look at their spectrums. Here we choose the 'ar' method for smoothing.
+
+
+```{r spectrm}
+spectrum(p,method='ar',main="Spectrum of p")
+spectrum(d,method='ar',main="Spectrum of d")
+```
+
+* From the spectrum plots we can see that there are some difference between those two time series. The temperature difference always respond to an AR process with one more parameter than the PM2.5.
+
+* The temperature difference data can be fitted by an ARMA(2,1)(best small model) model, and the PM2.5 data can be fitted by an ARMA(1,1)(best small model) model. 
+
+* Then we want to investigate the relationship between temperature difference and PM2.5.
+
+* For example, we can try to analyse $d_{1:N}$ using a regression with ARMA errors model,
+$$ d_n = \alpha + \beta p_n + \epsilon_n,$$
+where $\{\epsilon_n\}$ is a Gaussian ARMA process. 
+
+* An ARMA(4,3) model is suggested according to the AIC table, however, it is not stable with many parameters and there appear some inconsistencies around high orders in the AIC table.
+
+* We noticed that a smaller model ARMA(2,1) is suggested by a relatively small AIC. We can try to fit the data with this ARMA(2,1) model.
+
+```{r arima}
+
+arima(d,order=c(2,0,1), xreg=p)
+
+```
+
+
+* The standard errors, computed from the observed Fisher information approximation, suggest a statistically significant association between cyclical variation in PM2.5 and temperature difference.
+
+* We can also compute a p-value from a likelihood ratio test
+
+```{r log_lik}
+log_lik_ratio <- as.numeric(
+   logLik(arima(d,xreg=p,order=c(2,0,1))) -
+   logLik(arima(d,order=c(2,0,1)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+```
+
+* This gives a p-value of 0.01198262
+
+* There have been report that the PM2.5 related air pollution is more serious year by year. Let's see what happend in 2012.
+
+```{r x2012}
+p2012 <- p[706:1060]
+d2012 <- d[706:1060]
+t2012 <- as.Date(t[706:1060])
+arima(d2012,c(2,0,1),xreg=p2012)
+```
+
+* There is some suggestion that the association is stronger in year 2012, since the coefficients are larger, but the difference is not large compared to the standard error on the coefficient.
+
+* Let's have a look at the fluctuations of both time series in 2012, we can see clearly they are negatively correlated.
+
+```{r cor2012}
+plot(t2012,p2012,type="l",xlab="Year",ylab="")
+par(new=TRUE)
+plot(t2012,d2012,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4, col="red")
+```
+
+-------
+
+--------
+
+**<big><big>2.2 Analysis of temporal differences</big></big>**
+
+* Let's take another approach using the daily changes in PM2.5, rather than PM2.5 itself. In this case, we consider the variable $$ \Delta \data{p_n} = \data{p_n} - \data{p_{n-1}}.$$
+
+```{r delta}
+delta_p <- p[2:1060] - x$pm2.5[as.numeric(x$Time) %in% (as.numeric(t)-1)]
+t2 <- as.Date(t[2:1060])
+d2 <- d[2:1060]
+plot(t2,d2,type="l",xlab="Day",ylab="")
+par(new=TRUE)
+plot(t2,delta_p,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4,col="red")
+```
+
+* In the plot, temperature difference is in black and with left axis,  and differenced PM2.5 is in red and with right axis.
+
+* The relationship seems more clear. We fit with an ARMA(2,1) model again (suggested by AIC).
+
+* We can also compute a p-value from a likelihood ratio test
+
+```{r log_lik2}
+log_lik_ratio <- as.numeric(
+   logLik(arima(d2,xreg=delta_p,order=c(2,0,1))) -
+   logLik(arima(d2,order=c(2,0,1)))
+)
+LRT_pval2 <- 1-pchisq(2*log_lik_ratio,df=1)
+```
+
+* This gives 0.001300795, more significant than the previous model.
+
+```{r arima delta}
+arima(d2,xreg=delta_p,order=c(2,0,1))
+```
+
+* This time the coefficient is positive.
+
+-------
+
+--------
+
+**<big><big><big>3. Conclusions</big></big></big>**
+
+* There is clear evidence of some association between the temperature difference and the PM2.5 in Beijing from 2010 to 2013.
+
+* High PM2.5 might contribute to a decrease in temperature difference. They are negatively correlated. 
+
+* A large change in PM2.5 indicates a larger temperature difference.
+
+* There is some evidence that in year 2012, the PM2.5 made more effects on the temperature difference, which resulted in some climate change. 
+
+* More data, especially data from more cities with similar climates, might be able to improve the signal to noise ratio and lead to clearer results. This will give us more statistical precision than only with data from one particular city, Beijing.
+
+* Here, it is not considered plausible that temperature difference fluctuations drive PM2.5 fluctuations.
+
+* In this analysis we already found the association with no time lag. There should be some other problem to be concerned. The PM2.5 is averaged for each day. However the temperature difference is simply calculated using TMAX-TMIN. There might be a lagged effects of PM2.5 on temperature difference. It has been revealed by the Analysis of temporal differences.
+But if we can have access to and compare hourly temperature change and hourly PM2.5, that will be a great help in revealing the relationship between the two time series.
+
+* In conclusion, we have found substantial evidence to support a claim that high PM2.5 CAUSES a decrease in temperature difference.
+
+-------
+
+--------
+
+**<big><big><big>4. Some supplementary analysis</big></big></big>**
+
+**<big><big>4.1 Model selection by AIC</big></big>**
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+```
+```{r, message = FALSE, warning = FALSE, AIC_tables}
+low_aic_table <- aic_table(d,5,6,xreg=p)
+require(knitr)
+kable(low_aic_table,digits=2)
+
+low_aic_table <- aic_table(d,5,6,xreg=delta_p)
+require(knitr)
+kable(low_aic_table,digits=2)
+```
+
+* This suggests that the model with ARMA(2,1) is the best small model.
+
+* There are some larger models with impressive AIC values. For example, let's look at the fitted model with ARMA(4,3) errors.
+
+```{r ARMA(4,3)}
+arima(d,xreg=p,order=c(4,0,3))
+```
+
+* However, this model seems not very stable, meaning that we might not expect to find a similar fit for similar data. In addition, there are some  inconsistencies around it in the AIC table. It is not wise to take this model and it is non statistically significant.
+
+-------
+
+--------
+
+**<big><big>4.2 Residual analysis</big></big>**
+
+* We should check the residuals for the fitted model, and look at their sample autocorrelation.
+
+```{r residual}
+r <- resid(arima(d,xreg=p,order=c(2,0,1)))
+plot(r)
+acf(r)
+```
+
+* We can see that the residuals of the fitted model is well modeled by Gaussian white noise, which means a good fit. All the residuals are within the dashed lines showing pointwise acceptance regions at the 5% level under a null hypothesis of Gaussian white noise.
+
+* The presence of some small amount of sample autocorrelation is consistent with the AIC table, which finds the possibility of small gains by fitting some larger models to the regression errors.
+
+
+**<big><big><big>5. References</big></big></big>**
+
+The PM2.5 data is collected from
+U.S. Department of State Air Quality Monitoring Program http://www.stateair.net/web/historical/1/1.html
+The temperature data is collected from National Climite Data Center.

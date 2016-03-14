@@ -1,0 +1,374 @@
+---
+title: "Project Report: Association between Gross Domestic Product and US Interest Rate"
+date: "3/10/2016"
+output:
+  html_document:
+    fig_caption: true
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=0"
+    ]
+---
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+\newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\matH{\mathbb{H}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+----------------------
+
+---------------
+
+# Introduction
+
+* This report will try to find an association between gross domestic product(GDP) and interest rate and explain how they are related to each other using time series analysis.
+
+* Intuitively, the GDP represents the economic growth in the country and the Federal Reserve System usually raises interest rate when economic booms. 
+
+* Albu and Ghizdeanu(2008) pointed out that there is a positive relationship between interest rate, investment and gross domestic product(GDP) [1]. It suggests that GDP and interest rate usually rise together, as demands for runds increase. 
+
+<br>
+
+-------
+
+--------
+
+# Data Sources
+
+* I am going to use the Interest Rate data set from the United States Federal Reserve System [2].
+
+* It is a collection of daily interest rate for United States from 1954-07-01 to 2016-03-03. 
+
+```{r read_data_1, echo=FALSE}
+interest = read.csv("FRB_H15.csv")
+colnames(interest) = c("date","inte")
+interest= interest[6:22532,]
+head(interest)
+```
+
+* The variable `inte` is the interest rates that we are interested in. The unit is percent per year. 
+
+```{r read_data_2, echo=FALSE}
+exchange= read.csv("gdp.csv")
+colnames(exchange) = c("date","ex")
+exchange = exchange[11:286,]
+head(exchange)
+```
+
+* The above time series data set is a collection of quarterly GDP data for the United States.
+
+* The `ex` column records quarterly GDP in US. GDP is the market value of the goods and services produced by labor and property [3].
+
+* Write $\data{i_n}$ for interest rate in the $t_n=n$ th quarter. 
+
+* Write $\data{g_n}$ for GDP in quarter $t_n$.
+
+* I use R to get the mean quarterly data for interst rate and combine these two data sets.
+
+* In the combined data set, we have time series data from Year 1954 3rd quarter to Year 2015 4th Quarter. 
+
+-------
+
+-------
+
+# Exploratory Data Anlaysis
+
+-------
+
+-------
+
+## Time Series Plot
+
+* I start from making a time series plot to see how the data sets look like. 
+
+```{r clean_data, echo=FALSE}
+
+exchange[,1] = as.Date(as.character(exchange[,1]))
+exchange[,2] = as.numeric(as.character(exchange[,2]))
+interest[,1] = as.Date(as.character(interest[,1]))
+interest[,2] = as.numeric(as.character(interest[,2]))
+interest$Month = format(interest$date,"%m")
+interest$Year = format(interest$date,format="%Y")
+for (i in 1:22527){
+  if (interest$Month[i] == '08')
+    interest$Month[i] = '07'
+  else if (interest$Month[i] == '09')
+    interest$Month[i] = '07'
+  else if (interest$Month[i] == '11')
+    interest$Month[i] = '10'
+  else if (interest$Month[i] == '12')
+    interest$Month[i] = '10'
+  else if (interest$Month[i] == '02')
+    interest$Month[i] = '01'
+  else if (interest$Month[i] == '03')
+    interest$Month[i] = '01'
+  else if (interest$Month[i] == '05')
+    interest$Month[i] = '04'
+  else if (interest$Month[i] == '06')
+    interest$Month[i] = '04'
+}
+interest = aggregate( inte ~ Month + Year , interest , mean )
+exchange$Month = format(exchange$date,"%m")
+exchange$Year = format(exchange$date,format="%Y")
+exchange = aggregate( ex ~ Month + Year , exchange , mean )
+combined = merge(exchange, interest, by = c("Year","Month"), sort = TRUE)
+```
+
+```{r data_plots,fig.height=5, fig.cap="Figure 1. Time Series Plot for GDP (top) and interest rate (bottom).", echo = FALSE}
+plot(ts(cbind(combined$ex,combined$inte),start=1955,end=2015,deltat=1/4),main="Time Series Plot for Interst Rate and GDP ",xlab="Year")
+```
+
+* From the time series plot, we can see that GDP (top plot) is overrall growing for the past 50 years.
+
+* However, before the year 2010, the GDP decelerated. It reminds us of the 2008 Financial Crisis that stroke the financial market and stopped the economic growth. 
+
+* The interest rate (bottom plot) seems to fluctuate for past years. It was first raised for the first few years and peaked around year 1982. Then it was lowered rapidly around 1993, 2002 and 2008. Now it is approimately on the same level as 1950s. 
+
+
+-------
+
+-------
+
+## Detrended Time Series Plot
+
+* To see if GDP and interest rate cycle together, we first remove trends from these two time series. We use the Hodrick-Prescott method for filtering. 
+
+* As suggested by Hodrick and Prescott, I use 1600 as a smoothing parameter for $\lambda$ for the quarterly data [4].
+
+* Define the HP-detrended GDP to be $g^{HP*}_{1:N}$, and detrended interest rate to be $i^{HP*}_{1:N}$.
+ 
+```{r hp, echo = FALSE}
+library(mFilter)
+ex_hp = hpfilter(combined$ex, freq=1600,type="lambda",drift=F)$cycle
+in_hp = hpfilter(combined$inte, freq=1600,type="lambda",drift=F)$cycle
+```
+
+```{r hpplots, fig.cap="Figure 2. Detrended GDP (black; left axis) and detrended interest rate (red; right axis).", echo = FALSE}
+plot(ex_hp,type="l",xlab="Quarter",ylab="")
+par(new=TRUE)
+plot(in_hp,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4, col="red")
+abline(v = 103,col = "blue")
+```
+
+* From this detrended plot, we can see that the detrended GDP and detrended interest rate cycle together, especially after the 100th quarter. It is around the year 1980. 
+
+* Before the year 1980, we can see that they also cycle mostly together with ups and downs, but it is not strong enough to see that from the plot. The black lines (GDP) is more stable compared with the red lines (interest rates). 
+
+* Due to extreme situations such as American Civil War and War in Vietnam, the data before 1980s are acting abnormal, especially for the detrended interest rate. It fluctuates heavily with rapid rise and decline. Since we are interested in association betweeen GDP and interest under stable economy market, we only use the data after the vertical line (quarters from 1980 to 2015, which is under economy market) for further exploratory data analysis and regression modeling.
+
+```{r cut, echo = FALSE}
+ex_hp = ex_hp[103:246]
+in_hp = in_hp[103:246]
+```
+
+-------
+
+-------
+
+## Spectral Analysis
+
+* Then I take a look at the spectrum of these two detrended data sets to study the frequency and cycles. 
+
+```{r spectrum, echo = FALSE, fig.cap="Figure 3. Spectrum Plot for Detrended GDP (black; left axis) and detrended interest rate (red; right axis)."}
+spectrum(ex_hp,spans=c(3,5,3), main="Spectral Analysis")
+par(new=TRUE)
+spectrum(in_hp,spans=c(3,5,3), main="", col="red", axes=FALSE)
+axis(side=4, col="red")
+```
+
+* The spectrum of a time series is the distribution of variance of the series as a function of frequency.
+
+* The unit of the x axis is cycles per quarter. The dominant frequencies for both detrended data are around 0.04 cycles per quarter. It is consistent with our time series plot, which shows a dominnant 25-quarter cycle after 1980. 
+
+* The spectrum plot looks approximately alike when the frequency is low. It also supports our hypothesis that GDP and interest rate are associated with each other. 
+
+-------
+
+-------
+
+# Time Series Model
+
+* From our exploratory data analysis, we see that there is a association between detrended GDP and detrended intereste rate. Then, I want to check this association by fitting a linear regression model with arma errors. 
+
+$$ g^{HP}_n = \alpha + \beta i^{HP}_n + \epsilon_n,$$ 
+where $\{\epsilon_n\}$ is a Gaussian ARMA process. 
+
+--------
+
+-------
+
+## Model selection by AIC
+
+```{r aic, echo = FALSE, warning=FALSE}
+aic_table = function(data,P,Q,xreg=NULL){
+  table = matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) = list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+e_aic_table = aic_table(ex_hp,4,5,xreg=in_hp)
+library(knitr)
+kable(e_aic_table,digits=2)
+```
+
+* The AIC table suggests using the model with ARMA(2,1) errors. 
+
+* There are models with smaller AIC values such as ARMA(4,4). However, we need to treat it with caution and pick the best small model. 
+
+```{r arma21, echo = FALSE}
+arima(ex_hp,xreg=in_hp,order=c(2,0,1))
+```
+
+* The standard error for $\beta$ computed by the observed Fisher inforamtion suggest a significant positive association between cyclical variation in detrended GDP and detrended interest rate. 
+
+-------
+
+-------
+
+## p-value
+
+* I can also use the likelihood ratio test to check the p value for nested hypotheses
+
+* The model I have fitted is 
+$$ (1-\ar_1 B)(1-\ar_2 B^2)(g^{HP}_n - \alpha - \beta i^{HP}_n) = \epsilon_n(1+\ma_1 B),$$
+where ${\epsilon_n}$ is Gaussian white noise with variance $\sigma^2$.
+<br><br>
+The null hypothesis is $$\begin{eqnarray} H^{\langle 0\rangle} &:& \beta =0 \end{eqnarray}$$
+The alternative hypothesis is 
+$$\begin{eqnarray} H^{\langle 1\rangle} &:& \beta\ne 0, \end{eqnarray}$$
+
+```{r p-value, echo = FALSE}
+log_lik_ratio = as.numeric(
+  logLik(arima(ex_hp,xreg=in_hp,order=c(2,0,1))) -
+    logLik(arima(ex_hp,order=c(2,0,1)))
+)
+pval = 1-pchisq(2*log_lik_ratio,df=1)
+```
+* The likelihood ratio test gives a p value of 0.0035. So we reject the null hypothesis, which indicates an association between detrended GDP and detrended interest rate.
+
+--------
+
+-------
+
+## Residual analysis
+
+--------
+
+-------
+
+### Residual Plot
+
+* First, we check the residual of our regression model to see if there exists heteroskedasticity. 
+
+```{r resid, echo = FALSE, fig.cap="Figure 4. Residual Plot."}
+r = resid(arima(ex_hp,xreg=in_hp,order=c(2,0,1)))
+plot(r)
+```
+
+* There is an extremely low residual around 116. However, overall, the residuals are around 0 and do not increase or decrease over time. I would say it does not have heteroskedasticity. But I need to track the 116th residual in the dataset and investigate the reasons for this potential outlier. 
+
+* The abnormal residual represents the 116th quarter starting from year 1980, which is the fourth quarter in year 2008. Again, it reminds us of the financial crisis in that year. It could probably be the reason that the GDP dropped so rapidly due to the sudden corruption. The Federal Reserve lowered the interest rate but could not do it that rapidly. Further economy reasons could be used to explain this phenomenon under extreme situation. 
+
+--------
+
+-------
+
+### ACF Plot
+```{r acf, echo = FALSE, fig.cap="Figure 5. ACF Plot."}
+acf(r)
+```
+
+* The dashed lines show the acceptance regions at the 5% confidence level under the null hypothesis of Gaussian white noise. Thus, under the null hypothesis, one expects a fraction of 1/20 of the lags of the sample ACF to fall outside this band.
+
+* There are two out of 22 lags narrowly lying outside the dashed line, which is not very bad. So we do not reject the null hypothesis, which means the hypothesis of Gaussian white noise holds. 
+
+* From the ACF plot, we noticed that there seems to be a weak seasonal oscilation. The peaks occur at lags of around 7.
+
+------
+
+------
+
+## Analysis of Seasonality
+
+* The mathematical equation for the SARIMA error model is 
+$$ g^{HP}_n = \alpha + \beta i^{HP}_n + \epsilon_n,$$ 
+where $\{\epsilon_n\}$ is a SARIMA$(2,0,1)\times(1,0,0)_{7}$ process. 
+
+```{r seasonal, echo = FALSE}
+seasonal = arima(ex_hp,xreg=in_hp,order=c(2,0,1),seasonal=list(order=c(1,0,0),period=7))
+seasonal
+r = resid(seasonal)
+```
+
+* The standard deviation for seasonal coefficient `sar1` is not statistically significant. So I choose to stick to our original simple model (linear regression with ARMA(2,1) errors).
+
+--------
+
+-------
+
+## Model Statement
+
+* The model I use is $$ (1-1.86 B)(1+0.91 B^2)(g^{HP*}_n +0.1 - 14.91 i^{HP*}_n) = \epsilon_n(1- B),$$ where ${\epsilon_n}$ is Gaussian white noise with variance 2772.
+
+--------
+
+-------
+
+
+# Conclusions
+
+* The detrended time series plot and spectral analysis suggests that GDP and interest rate has similar business cycles.
+
+* Due to Wars, the financial market was not stable before the year 1980. This makes it harder to see a relationship between GDP and interest rate since they are effected by extreme situations, so we only use data after the year 1980 to fit our model. 
+
+* The time series analysis shows an evidence for the positive association between GDP and interest rate with an ARMA(2,1) error in United States. It is selected by AIC criterion and checked by likelihood ratio test. 
+
+* The residual plots show no violation of equal variance or Gaussian white noise. 
+
+* There seems to be a seasonal oscilation but the standard deviation calculated by observed Fisher information shows that the seasonal trend is not statistically significant.
+
+* Usually there is a positive relationship between GDP and interest rate. However, we cannot say that they have a causal relationship. There are other confounding factors such as foreign exchange rate, disasters such as wars and earthquakes that will somehow affect GDP and interest rate. We can think of interest rate as a proxy variable for fluctuation of GDP. 
+
+<br>
+
+-------------------
+
+# References
+
+[1] Albu L., Ghizdeanu I., Stanica C. 2008. Interest rate - Investment - GDP growth relationship: theoretical and empirical investigation. "THE FUTURE OF EUROPE IN A WORLD OF UNCERTAINTIES" Romania, September 25-27th, 2008.
+
+[2] Board of Governors of the Federal Reserve System. "Selected Interest Rates". http://www.federalreserve.gov/releases/h15/data.htm
+
+[3] Economic Research. "Gross Domestic Product". 
+https://research.stlouisfed.org/fred2/series/GDP#
+
+[4] Hodrick-Prescott filter. (2015, August 8). In Wikipedia, The Free Encyclopedia. Retrieved 08:02, March 10, 2016.
+https://en.wikipedia.org/w/index.php?title=Hodrick%E2%80%93Prescott_filter&oldid=675114572

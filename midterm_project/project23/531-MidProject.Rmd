@@ -1,0 +1,249 @@
+---
+title: "An Analysis of Association between Yield Curve and S&P 500"
+output: 
+  html_document:
+      toc: true
+      theme: flatly
+---
+
+-------
+
+-------
+
+# 1.Introduction
+
+* Yield curve is the spread, i.e. the difference between yields on longer dated Treasury
+securities with shorter-term Treasury securities. In this analysis, we will focus on the difference between US treasury 30-year zero-coupon yield and 1-year zero-coupon yield. This spread tells us about the slope of the Treasury yield curve.
+
+* When the 30 Year is yielding more than the 1 Year, the yield curve is described as positively sloped, or steep. However, when they are equal, the yield curve is flat, and when the 30 Year is yielding less than the 1 Year, the yield curve will be inverted. 
+
+* The shape of the yield curve is a widely accepted leading indicator of the economy. A steep yield curve is viewed as a positive for the economy; financial institutions are encouraged to lend, as they can borrow at a low short-term cost and then lend that money at a higher level, capturing the spread. This increased lending, and hence investment, help to facilitate economic growth. Thus yield is an indicator of interest rate and inflation expectations. When the difference in yields is negative, it may imply a possibility of recession in the near future.
+
+* The Standard & Poor's 500, often abbreviated as the S&P 500, is an American stock market index based on the market capitalizations of 500 large companies having common stock listed on the NYSE or NASDAQ. It reflects economic expectations and is useful as a leading indicator on general economic conditions and business and investors' confidence.
+
+* Therefore, yield curve reflects the profit for fixed income securities, while S&P 500 corresponds to the stock market. We are going to show the association between S&P 500 and yield curve.
+
+--------
+
+--------
+
+# 2.Data and Model Selection
+
+* Firstly, we read in the data of yield curve and S&P 500. The yield curve is the difference of yield between 30-year and 1-year zero-coupon bond. All data are collected in daily unit starting at 02/26/2011.
+
+```{r,message=FALSE,warning=FALSE}
+##install.packages("devtools")
+library(devtools)
+##install_github('quandl/R-package')
+library(Quandl)
+##install.packages("mFilter")
+library(mFilter)
+##install.packages("forecast")
+library(forecast)
+##read data "yield" and "sp500"
+mydata=Quandl("FED/SVENY",start_date="2011-02-26")
+yield=mydata$SVENY30-mydata$SVENY01
+sp500=Quandl("SPDJ/SPX",start_date="2011-02-26")
+```
+
+* Before starting statistical analysis, we plot the data and get some sense. We see that S&P 500 index has an increasing trend while Yield curve with a decreasing trend and both of them seem to have cyclical components. 
+But the seasonality is not obvious from the plot. We then check the seasonality using the smoothed periodogram, and it does not show significant sign of seasonality. 
+
+```{r}
+t <- intersect(mydata$Date,sp500$`Effective date`)
+yield <- yield[mydata$Date %in% t]
+sp <- sp500$`S&P 500`[sp500$`Effective date` %in% t]
+t=as.Date(t)
+
+plot(as.Date(t),yield,type="l",col="blue",xlab="Year",ylab="",ylim=c(1.0,9),
+     main="Yield curve and S&P 500 Index")
+par(new=TRUE)
+plot(as.Date(t),sp,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4, col="red")
+legend("topleft",legend=c("Yield","S&P 500"),col=c("blue","red"),
+       cex=0.8,lty=1,bty="n")
+```
+
+```{r,fig.height=4,fig.width=6}
+spectrum(yield,spans=c(3,5,3), main="Smoothed periodogram of Yield")
+spectrum(sp,spans=c(3,5,3), main="Smoothed periodogram of S&P 500")
+```
+
+* We are interested in changes over business cycle timescales, after trend being removed. To extract the cyclical component, we use Hodrick-Prescott filter, which is exactly a smoothing spline with a particular choice of smoothing parameter. Specifically, for a time series $y_{1:N}^*$, the HP filter is the time series $s_{1:N}^*$ constructed as 
+$${s_{1:N}^*} =  \arg\min_{s_{1:N}} 
+  \left\{ 
+    \sum^{N}_{n=1}\big({y_n^*}-s_{n}\big)^2 + \lambda\sum^{N-1}_{n=2}\big(s_{n+1}-2s_{n}+s_{n-1}\big)^2 
+  \right\}.$$
+For daily data in our analysis, we choose the parameter as $\lambda=12960000.$ And detrended yield and S&P 500 are plotted below.
+
+```{r,fig.height=4,fig.width=8}
+yield_hp <- hpfilter(yield, freq=12960000,type="lambda",drift=F)$cycle
+sp500_hp <- hpfilter(sp, freq=12960000,type="lambda",drift=F)$cycle
+
+plot(t,yield_hp,type="l",xlab="Year",ylab="",col="blue",
+     main="Detrended yield (blue; left axis) and detrended S&P 500 (red; right axis)")
+par(new=TRUE)
+plot(t,sp500_hp,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4, col="red")
+legend("bottom",legend=c("Yield","S&P 500"),col=c("blue","red"),
+       cex=0.8,lty=1,bty="n")
+```
+
+* From the plot, we see that yield and S&P 500 index cycle together, which is very clear between 2011 and 2013. And during 2013 and 2016, the change of yield has a larger amplitude than S&P 500.
+
+* We intend to make a test to check that. We can analyze $yield^{HP*}_{1:N}$ using a regression with ARMA errors model,
+$$Yield^{HP*}_n = \alpha + \beta sp500^{HP*}_n + \epsilon_n,$$
+where $\epsilon_n$ is a Gaussian ARMA process. We use an ARMA(1,0) model, as discussed in supplementary analysis. 
+
+```{r}
+arima(yield_hp,xreg=sp500_hp,order=c(1,0,0))
+```
+
+* This model is causal and invertible. The standard errors, computed from the observed Fisher information approximation, suggest a statistically significant positive association between cyclical variation in yield and S&P 500. We can also compute a p-value from a likelihood ratio test.
+
+```{r}
+log_lik_ratio <- as.numeric(
+  logLik(arima(yield_hp,xreg=sp500_hp,order=c(1,0,0))) -
+    logLik(arima(yield_hp,order=c(1,0,0)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+```
+
+* This gives a p-value almost equal to 0, which confirms the association between cyclical variation in yield and S&P 500. And we plot the yield and model fitted yield value, which shows the model fits well.
+
+```{r,fig.height=4,fig.width=8}
+plot(as.Date(t),yield_hp,type="l",xlab="Year",ylab="",col="blue",
+     main="Yield and fitted value")
+par(new=TRUE)
+plot(as.Date(t),fitted(arima(yield_hp,xreg=sp500_hp,order=c(1,0,0))),col="red",type="l",lty=2,axes=FALSE,xlab="",ylab="")
+
+```
+
+------
+
+------
+
+
+# 3.Supplementary analysis
+
+## 3.1 Model Selection by AIC
+
+```{r,message=FALSE,warning=FALSE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+e_aic_table <- aic_table(yield_hp,4,5,xreg=sp500_hp)
+require(knitr)
+kable(e_aic_table,digits=2)
+```
+
+* This suggests that the model with ARMA(1,0) error is the best small model. We have also try some larger models with impressive AIC values. But the coefficients of higher-order show that the impact is rather weak, so we decide to use this smaller model to avoid overfitting.
+
+##3.2 Residual analysis
+
+* We should check the residuals for the fitted model, and look at their sample autocorrelation. From the results, we see that fluctuations changing in amplitude over time, which might be evidence for non-constant variance. It is not severe here but can be studied in further research since most financial time series are modeled by GARCH model. The ACF looks close to that of white noise. Although the Q-Q plot shows a sign of long-tailed, the model is still acceptable. 
+
+```{r}
+r <- resid(arima(yield_hp,xreg=sp500_hp,order=c(1,0,0)))
+plot(r)
+acf(r,lag=100)
+qqnorm(r)
+qqline(r)
+```
+
+## 3.3 Extracting cycles using a band pass filter
+
+* We are going to analyze the association by another filter, which uses local regression smoother. For the yield and S&P 500 data, high frequency variation might be considered "noise" and low frequency variation might be considered trend. A band of mid-range frequencies might be considered to correspond to the cycle component. Thus we decompose both yield and S&P 500, and extract cycle components for further study.
+
+```{r}
+t=as.numeric(t)
+u_low <- ts(loess(yield~t,span=0.05)$fitted,start = 2011,frequency=312)
+u_hi <- ts(yield - loess(yield~t,span=0.1)$fitted,start = 2011,frequency=312)
+u_cycles <- yield - u_hi - u_low
+plot(ts.union(yield, u_low,u_hi,u_cycles),
+     main="Decomposition of yield as trend + noise + cycles")
+sp_low <- ts(loess(sp~t,span=0.05)$fitted,start = 2011,frequency=312)
+sp_hi <- ts(sp - loess(sp~t,span=0.1)$fitted,start = 2011,frequency=312)
+sp_cycles <- sp - sp_hi - sp_low
+plot(ts.union(sp, sp_low,sp_hi,sp_cycles),
+     main="Decomposition of sp500 as trend + noise + cycles")
+```
+
+* After decomposing, we fit a regression with ARMA(2,1) errors model of the cycle components of yield and S&P 500. Comparing with the results of HP-filter, band pass filter looks smoother and extracts the cycle components clearer. We see clearly these two variables cycle together.
+
+```{r}
+plot(as.Date(t),u_cycles,type="l",xlab="Year",ylab="",col="blue",ylim=c(-0.2,0.5),
+     main="Detrended yield (blue; left axis) and detrended S&P 500 (red; right axis)")
+par(new=TRUE)
+plot(as.Date(t),sp_cycles,col="red",type="l",axes=FALSE,xlab="",ylab="",ylim=c(-81,90))
+axis(side=4, col="red")
+legend("topleft",legend=c("Yield","S&P 500"),col=c("blue","red"),
+       cex=0.8,lty=1,bty="n")
+
+arima(u_cycles,xreg=sp_cycles,order=c(2,0,1))
+```
+
+* This model is causal and invertible. The standard errors also suggest a statistically significant positive association between cyclical variation in yield and S&P 500.And from the true value vs. fitted value plot, we see this model fits very well.
+
+```{r,fig.height=4,fig.width=8}
+plot(as.Date(t),u_cycles,type="l",xlab="Year",ylab="",col="blue",
+     main="Yield and fitted value")
+par(new=TRUE)
+plot(as.Date(t),fitted(arima(u_cycles,xreg=sp_cycles,order=c(2,0,1))),col="red",type="l",lty=2,axes=FALSE,xlab="",ylab="")
+
+```
+
+* From the residual analysis, heteroskedasticity seems to be very serious. Log-transformation has also been applied later, but it does not improve the situation any more. And the ACF shows there are significant correlations among the first 30 lags. The Q-Q plot suggests long-tailed distribution of residuals. But since the residuals are all within (-0.2,0.2), which are relatively small, residuals might not be a serious problem and this model is also acceptable.
+
+```{r}
+r <- resid(arima(u_cycles,xreg=sp_cycles,order=c(2,0,1)))
+plot(r)
+acf(r,lag=100)
+qqnorm(r)
+qqline(r)
+```
+
+-------
+
+-------
+
+# 4.Conclusion
+
+* In this project, we do find evidence for the association between yield curve and S&P 500 index. 
+
+* But we should be careful with association, since statistical association between X and Y evidenced by observational data cannot readily distinguish between three possibilities:
+    + X causes Y
+    + Y causes X
+    + Both X and Y are caused by a third variable Z that is unmeasured from the analysis.
+
+* Generally, previous analysis believe that yield curve tends to lead the S&P 500 by some time. Thus the situation that yield curve "causes" S&P 500 is possible. And they mostly focused on the "trend", which reflects a long term change of these two indexes, and came to the conclusion that yield and S&P 500 have a negative correlation. This conclusion is also confirmed by the trend components in our analysis.
+
+* However, in our project, we mainly analyzed the association between the detrended indexes. In this way, we ignored the long term change and had a deeper understanding of the short term changes, which is more important for making investment decisions.
+
+* From the results of our analysis, yield and S&P 500 has a significant positive correlation and their cyclical components are cycling synchronizely. Possible interpretation of this conclusion is below.
+
+* When yield is increasing, the spread between long-term and short-term bond yields is becoming larger, which suggests interest rate is likely to increase in the future. Improving the profit of fixed income securities might be a measure of Federal Reserve to prevent the potential economy inflation, which is often accompanied by active stock market and high S&P 500 at present. On the contrary, when yield curve is decreasing, interest rate tends to be lower, which can be seen as a stimulus of the economy. And thus the economy at present is likely to be weak and S&P 500 is low. 
+
+-------
+
+-------
+
+# 5.Reference
+
+[1] Constable, Simon and Wright, Robert E. 2011. The Wall Street Journal guide to the 50 economic Indicators that Really Matter: From Big Macs to "Zombie Banks," the Indicators Smart Investor Watch to Beat the Market
+
+[2] Edward Ionides. 2016. Case study: An association between unemployment and mortality? http://ionides.github.io/531w16/notes10/notes10.html#some-supplementary-analysis
+
+[3] Jeff DeMaso. 2012. The Yield Curve and Equity Markets. http://adviserinvestments.com/pdf/contentmgmt/Analyst-Spotlight-Yield-Curve-and-Equity-Markets.pdf
+
+
+
+
+
