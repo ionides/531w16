@@ -1,0 +1,330 @@
+---
+title: "Non-Metallic Mineral Products Research Project"
+date: "March 9, 2016"
+output: 
+  html_document: 
+    toc: true
+---
+
+
+## 1. Introduction
+
+In this project, we focus on finding a good model fitting for Non-Metallic Mineral Products data from U.S. Census website. We expect this time series with highly singnificant seasonality; therefore, trying to fit SARIMA model, Linear regression with SARIMA error model, and Model with a band pass filter will be some reasonable methods. we will also analyze the sptrum density of those time series to further understand the frequencies of seasonalities. The data we use for linear regression is Total Manufacturing Products data which is a general market situation of the Non-Metallic Mineral Products data. 
+
+
+## 2. Reading in the data
+
+This historical data we are using in this report here is downloaded from U.S. census Bureau Website, which is about the value of U.S. Total Manufacturers' Shipments, Inventories, and Orders  (Definitions are here: http://www.census.gov/manufacturing/m3/definitions/index.html). This data we use contains two time series, one is Not Seasonally Adjusted Value of Shipments of Nonmetallic Mineral Products, the other is Not Seasonally Adjusted Value of Shipments of Total Manufacturing products. Both of values for two time series are recorded in Millions of Dollars. The time interval of this data is 1992 to 2016 monthly data. 
+
+```{r}
+Mine_data <- read.csv("Project_data.csv")
+head(Mine_data,5)
+Mine_data <- na.omit(Mine_data)
+Mine_data$Period <- seq(from = 1992, length = length(Mine_data$Period), by = 1/12)
+```
+
+The variable NMUnAdj is Not Seasonally Adjusted Value of Shipments of Nonmetallic Mineral Products, and TotalMUnAdj is Not Seasonally Adjusted Value of Shipments of Total Manufacturing products. There are also many other categories in U.S. Total Manufacturers' Shipments, Inventories, and Orders. Nonmetallic Mineral Products is just one of them, and the sum of values of those categories will become the total value we used here. 
+
+For notation convenience, we set the Nonmetallic Mineral data as ${u_n^*}$ and the Total Manufacturing data as ${v_n^*}$ which both time series in month ${t_n} = 1992 + n/12$
+
+## 3. Fitting Models
+
+Here we only take data from Jan-2005 to Jan-2016 to fit the model. 
+
+```{r}
+t <- intersect(Mine_data$Period, Mine_data$Period)
+t <- t[which(t >= 2005)]
+u <- Mine_data$NMUnAdj[Mine_data$Period %in% t]
+v <- Mine_data$TotalMUnAdj[Mine_data$Period %in% t]
+plot(ts(cbind(u,v),start=2005, frequency = 12), main="Nonmetrallic Mineral (u) and Total Manufacuring for USA (v)",xlab="Year")
+```
+
+We first can get some feeling about the data we fit. The plot above shows that two time series have a similar trend shape. It is reasonable, because the total manufacturing represents the overall changing in this field. As a part of the field, Nonmetallic Mineral data is affected by the total data.  And it is one of the reason that we are going to use the Total manufacturing data in linear regression to fit the Nonmetallic Mineral data. 
+
+### 3.1 Model by Hodrick-Prescott (HP) filter  
+#### 3.1.1 Filtering by Hodrick-Prescott (HP) filter
+
+We are interested in business cycles after we remove the trend inside this time series. Thus we can use HP-filter to extract cycles from data. HP-filter is a smoothing method has a particular smoothing parameter picked manually. As the class notes indicates, a time series ${y_{1:N}^*}$, the HP filter is the time series ${s_{1:N}^*}$ constructed as
+$${s_{1:N}^*} =  \arg\min_{s_{1:N}} 
+  \left\{ 
+    \sum^{N}_{n=1}\big({y_n^*}-s_{n}\big)^2 + \lambda\sum^{N-1}_{n=2}\big(s_{n+1}-2s_{n}+s_{n-1}\big)^2 
+  \right\}.$$
+Because Appropriate values of the smoothing parameter depend upon the periodicity of the data, and this typically choice of $\lambda$ for monthly data is 14400.
+We call detrended Nonmetallic Mineral $u^{HP*}_{1:N}$ and detrended Total Manufacturing $v^{HP*}_{1:N}$.
+
+```{r,message=FALSE}
+require(mFilter)
+u_hp <- hpfilter(u, freq=14400,type="lambda",drift=F)$cycle
+v_hp <- hpfilter(v, freq=14400,type="lambda",drift=F)$cycle
+plot(t,u_hp,type="l",xlab="Year",ylab="", col="gold3",
+     main = "detrended Nonmetallic Mineral (gold; left axis) and
+     detrended Total Manufacturing (red; right axis)")
+par(new=TRUE)
+plot(t,v_hp,col="red3",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4, col="red3")
+```
+
+It is kind of obvious that detrended Nonmetallic Mineral product and Total Manufacturing product are cycle together. We also can discover that from the undetrend plot previously, but this is clearer after we detrend two time series. 
+
+we want to make a simple test to check that. As class note suggests, one possible way to do this is analyzing $u^{HP*}_{1:N}$ by a regression with ARMA errors model.
+That means we want to fit: $$u^{HP}_n = \alpha + \beta v^{HP*}_n + \epsilon_n,$$
+where $\epsilon_n$ is a Gaussian ARMA process. 
+
+#### 3.1.2 Model Selection by AIC
+
+We want to fit a SARIMA$(p,d,q)\times(P,D,Q)_{12}$ model because we see data has periods and a trend. Because of using Regression with ARMA errors model, it is fine if we are setting $d=0$ and $D=0$. 
+First, we fit a ARIMA model for $p$ and $q$ decide by AIC table, then we fit a SARIMA model by using the $q$ and $p$ from ARIMA to find the $P$ and $Q$ for SARIMA model. 
+
+Here is the AIC table for ARIMA(p,q) showing below:
+```{r, message=FALSE, warning=FALSE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg, method = "ML")$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+u_aic_table <- aic_table(u_hp,5,4,xreg=v_hp)
+require(knitr)
+kable(u_aic_table,digits=2)
+```
+
+There is no clearly a pair of small $p$ and $q$ with relatively low AIC value. Therefore, we choice $p=4$ and $q=0$ suggested by this Table.    
+Then we use this pair of $p$ and $q$ for fitting SARIMA model. 
+
+```{r, message=FALSE, warning=FALSE}
+aic_table_2 <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(4,0,0),xreg=xreg, seasonal = list(order = c(p,0,q), Period = 12), method = "ML")$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> SAR",0:P, "</b>", sep=""),paste("SMA",0:Q,sep=""))
+  table
+}
+u_aic_table_2 <- aic_table_2(u_hp,5,4,xreg=v_hp)
+require(knitr)
+kable(u_aic_table_2,digits=2)
+```
+
+This table suggest that $P=1$ and $Q=4$ is the best small model.     
+
+There are some large model with lower AIC values. However, those model may not really stable. We may find a similar model for a similar data. In addition, some of those coefficients are really close to 1. Also AIC table has some inconsistencies.
+
+For example: SARIMA$(3,0,2)\times(4,0,4)_{12}$
+```{r, message=FALSE, warning=FALSE}
+arima(u_hp,xreg=v_hp,order=c(3,0,2),seasonal = list(order = c(4,0,4), Period = 12), method = "ML")
+```
+This model does have the problems we just talked about, for example $MA_{2}=1$ is not so good.      
+
+Generally speaking, we can conclude that SARIMA$(4,0,0)\times(1,0,4)_{12}$ is a relatively good model we can fit.
+
+#### 3.1.3 Supplementary analysis of SARIMA$(4,0,0)\times(1,0,4)_{12}$
+
+```{r}
+arima(u_hp,xreg=v_hp,order=c(4,0,0),seasonal = list(order = c(1,0,4), Period = 12), method = "ML")
+```
+
+Fisher information gives us the standard error of each coefficients, this clearly show that all coefficients are statistical significant. This also implies that there is a statistical significant association between cyclical variation in Nonmetallic Mineral Products and Total Manufacturing Products.
+
+Furthermore, we could also compute the p-value of likelihood ratio test. 
+
+```{r}
+log_lik_ratio <- as.numeric(
+  logLik(arima(u_hp,xreg=v_hp,order=c(4,0,0),seasonal = list(order = c(1,0,4), Period = 12), method = "ML")) -
+    logLik(arima(u_hp,order=c(4,0,0),seasonal = list(order = c(1,0,4), Period = 12), method = "ML")))
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+```
+
+We observe that the p-value is a really small number near 0, this will conclude the same result above.
+
+Then we could do Residual Analysis to this model.
+
+```{r}
+r <- resid(arima(u_hp,xreg=v_hp,order=c(4,0,0),seasonal = list(order = c(1,0,4), Period = 12), method = "ML"))
+plot(r)
+```
+
+We observe that the amplitude residual is kind of decreasing over time. AS the class notes suggest, it is heteroskedasticity.
+
+```{r}
+acf(r)
+```
+
+It is showing a not very bad results on Acf plot. There are some significant correlations on lag 12, 13 which are all out of the dashed lines showing we cannot accept that our null hypothesis that residual is compeletely a Gaussian white noise. The reason this happen probably will be the lack of fitting seasonal data. Because the observation is recorded monthly, lag 12, 13 are represented around yearly correlations, which means we left some seasonal information in the residuals. 
+
+```{r}
+qqnorm(r)
+qqline(r)
+```
+
+The Normal Q-Q plot indicates that the residuals have mild skewed to the left compared with theoretical quantiles. This shows that the residuals are generally normally distributed. 
+
+#### 3.1.4 Fitting Model SARIMA$(4,0,0)\times(1,0,4)_{12}$ V.S. Original data
+
+Let's plot the value produce by fitting model comparing with the original data. 
+
+```{r, message=FALSE}
+library(forecast)
+plot(ts(fitted(arima(u_hp,xreg=v_hp,order=c(4,0,0),seasonal = list(order = c(1,0,4), Period = 12), method = "ML")), start=2005, frequency = 12), ylab= "Value", col = "red3", main = "the fitting value(red) v.s. the original data (blue)")
+par(new = T)
+plot(u_hp,col="darkblue",type="l",axes=FALSE,xlab="",ylab="")
+ 
+```
+
+Roughly analyzing this plot, we can accept that this fitting value has consideriablely well result. 
+
+### 3.2 Analysis of temporal differences
+
+We can try to fit monthly change of Nonmetallic Mineral Products, this is another possible way. We calculate the change of monthly Nonmetallic Mineral Products and monthly Total Manufacturing Products, then plot them on to one graph.
+$$\Delta {u_n^*} = {u_n^*} - {u_{n-1}^*},$$
+$$\Delta {v_n^*} = {v_n^*} - {v_{n-1}^*}.$$
+
+```{r}
+delta_u <- u - Mine_data$NMUnAdj[Mine_data$Period %in% (t-1)]
+delta_v <- v - Mine_data$TotalMUnAdj[Mine_data$Period %in% (t-1)]
+plot(t,delta_u,type="l",xlab="Year",ylab="", col = "gold3",
+     main = "Delta Nonmetallic Mineral (gold; left axis) and 
+     Delta Total Manufacturing (red; right axis)")
+par(new=TRUE)
+plot(t,delta_v,col="red3",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4,col="red3")
+```
+
+We can see that the relationship between these two lines are weaker than the two lines detrended by HP-filter. The major difference are just before and after the great recession at 2008 to 2010. We could carefully conclude that those the change of Nonmetallic Mineral Products and Total Manufacturing Products are behavior relatively different under major fluctuation on U.S. general economic situation. Therefore, from this plot, we could anticipate that this method could not give us a better model than the model used HP-filter.
+
+### 3.3 Model by A band pass filter        
+#### 3.3.1 Spectrum Analysis
+
+Before we do the band pass filter, looking at spectrum density to search for significant periods.
+```{r}
+par(mfrow = c(2,1))
+spectrum(ts(u,frequency = 12), main="UnSmoothed periodogram of Nonmetallic Mineral (cycles/year)")
+spectrum(ts(u,frequency = 12), span = c(3,5,3), main="Smoothed periodogram of Nonmetallic Mineral (cycles/year)")
+par(mfrow = c(2,1))
+spectrum(ts(v,frequency = 12), main="UnSmoothed periodogram of Total Manufacturing (cycles/year)")
+spectrum(ts(v,frequency = 12), span = c(3,5,3), main="Smoothed periodogram of Total Manufacturing (cycles/year)")
+```
+
+We see both Time series are having many statistical significant periods. Because the unit for those graphs are cycles per year. We observe that there are 1, 2, 4, 5, and 6 cycles per year clearly. 3 cycles per year is uneasy to decide, therefore we don't count it. These indicates that our data have yearly, half-yearly, quarterly and many cycles. Since we know that already, we could do the band pass filter.
+
+#### 3.3.2 A band pass filter
+
+For both time series, low frequency variation could be considered as trend and high frequency variation is considered as "noise". Then we get the medium frequency variation is considered as business cycles with monthly data. 
+
+```{r}
+u_low <- ts(loess(u~t,span=0.5)$fitted,start=2005,frequency=12)
+u_hi <- ts(u - loess(u~t,span=0.08)$fitted,start=2005,frequency=12)
+u_cycles <- u - u_hi - u_low
+plot(ts.union(u, u_low,u_hi,u_cycles),
+     main="Decomposition of Nonmetallic Mineral Product as trend + noise + cycles")
+v_low <- ts(loess(v~t,span=0.5)$fitted,start=2005,frequency=12)
+v_hi <- ts(v - loess(v~t,span=0.08)$fitted,start=2005,frequency=12)
+v_cycles <- v - v_hi - v_low
+plot(ts.union(v, v_low,v_hi,v_cycles),
+     main="Decomposition of Total Manufacturing Product as trend + noise + cycles")
+```
+
+Generally speaking those two series are having expected similar decomposition. The "trend" lines are similar, the cycles part shows strong 2 cycles per year. However, there is a problem also happens in two decompositions. If we take look at the high frequency part, we could clearly see some periodic patterns which indicates that is not good enough to be considered as a noise. Some periodic information is left in the high frequency part which those should be in the medium frequency part. 
+
+Comparing two cycles part:
+```{r}
+plot(t,u_cycles,type="l",xlab="Year",ylab="", col = "gold3",
+     main = "Cycles Nonmetallic Mineral (gold; left axis) and Cycles Total Manufacturing (red; right axis)")
+par(new=TRUE)
+plot(t,v_cycles,col="red3",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4,col="red3")
+```
+
+This shows the consistency of periods in both business cycles part. After we use Manufacturing cycles data to fit  Cycles data of Nonmetallic Mineral data, we expect there still be some seasonality. Hence, we still need to fit a SARIMA model for this cycle. 
+The Modle we try to fit is still SARIMA$(p,d,q)\times(P,D,Q)_{12}$ with 
+
+```{r, message=FALSE, warning=FALSE}
+u_aic_table_3 <- aic_table(u_cycles,4,4,v_cycles)
+require(knitr)
+kable(u_aic_table_3,digits=2)
+```
+
+The table suggest we should take $p=3$ and $q=1$. Then we can fit SAR and SMA.
+
+```{r, message=FALSE, warning=FALSE}
+aic_table_4 <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(3,0,1),xreg=xreg, seasonal = list(order = c(p,0,q), Period = 12), method = "ML")$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> SAR",0:P, "</b>", sep=""),paste("SMA",0:Q,sep=""))
+  table
+}
+u_aic_table_4 <- aic_table_4(u_cycles,3,3,xreg=v_cycles)
+require(knitr)
+kable(u_aic_table_4,digits=2)
+```
+
+This table shows we finally should fit a SARIMA$(3,0,1)\times(1,0,2)_{12}$ model.
+
+#### 3.3.3 Supplementary analysis of SARIMA$(3,0,1)\times(1,0,2)_{12}$
+
+Note that this model is fitting business cycles which is different from the first SARIMA model we fitted previously.
+
+```{r}
+arima(u_hp,xreg=v_hp,order=c(3,0,1),seasonal = list(order = c(1,0,2), Period = 12), method = "ML")
+```
+
+This shows that almost all the coefficient are statistically significant by standard error calculated from Fisher information.
+
+```{r}
+r1 <- resid(arima(u_hp,xreg=v_hp,order=c(3,0,1),seasonal = list(order = c(1,0,2), Period = 12), method = "ML"))
+plot(r1)
+```
+
+The residual plot still shows some mild periods, to confirm that, we do the acf plot next.
+
+```{r}
+acf(r1)
+```
+
+This Acf plot shows the residual are hardly Gaussian white noise. It is even have more lags out of dashed line then the previously model using HP-Filter. This means many seasonal information are left in the noise. We should not accpet this will be a result from a good model.
+
+```{r}
+qqnorm(r1)
+qqline(r1)
+```
+
+Also the Q-Q plot shows that the residual are clearly skewed from normal distribution.
+
+#### 3.3.4 Fitting Model SARIMA$(3,0,1)\times(1,0,2)_{12}$ V.S. Original data #### 
+
+Let's plot the fitted value v.s. cycles of Nonmetallic Mineral Product. 
+
+```{r, message=FALSE}
+library(forecast)
+plot(ts(fitted(arima(u_cycles,xreg=v_cycles,order=c(3,0,1),seasonal = list(order = c(1,0,2), Period = 12), method = "ML")), start=2005, frequency = 12), ylab= "Value", col = "red3", main = "the fitting value(red) v.s. the original data (blue)")
+par(new = T)
+plot(u_cycles,col="darkblue",type="l",axes=FALSE,xlab="",ylab="")
+ 
+```
+
+We could see that the fitted value produced by model almost fit actual data perfectly. However, combining the result that this model has non-Gaussian white noise, we might accept this model by assuming residuals are not white noise from the beginning. If we think the true model residuals are white noise and our model left information in the residual. We should think that this fitted model might be bad on prediction. 
+
+## 4. Conclusion
+
+In section 2, we applied three different methods for fitting the Nonmetallic Mineral data. From the model we fit, we can conclude that it gives a good evidence that the Nonmetallic Mineral data has strong seasonality and an association with Total Manufacturing products in 2005 to 2016. Because of lack of economic knowledge, we could not specify which association (1. X causes Y, 2. Y causes X, or 3. both X and Y are caused by Z) those to time series have, we could only confirm there is an association between them. 
+If more detail data could be provided such as Oil Product data (one of Nonmetallic Mineral Product), we could analysis further to improve our current model, especially explain more on residuals. 
+
+Comparing the results from three methods, we find that The SARIMA model with HP-filter is better than the other two methods. The coefficients are all statistically significant. However, even this method still can't fit a model with Gaussian White noise, the acf of residuals are better than the model with band pass filter. It is acceptable since we might suggest that the true model doesn't have a Gaussian white normal distribution as residuals, because residuals' heteroskedasticity observed.
+
+## 5. Reference
+
+Ogburn, W. F., and D. S. Thomas. 1922. The influence of the business cycle on certain social conditions. Journal of the American Statistical Association 18:324-340. 
+http://www.census.gov/manufacturing/m3/definitions/index.html      
+http://ionides.github.io/531w16/notes6/notes6.html      
+http://ionides.github.io/531w16/notes8/notes8.html       
+http://ionides.github.io/531w16/notes10/notes10.html         
+

@@ -1,0 +1,203 @@
+---
+title: "Midterm Project"
+date: "3/5/2016"
+output: html_document
+---
+##  1 Question Description
++ S&P 500 Index is an average index viewing a range of 500 listed companies in the US, and is recorded by the US stock market since 1957. It differs from other U.S. stock market indices, such as the Dow Jones Industrial Average or the Nasdaq Composite index, because of its diverse constituency and weighting methodology. It is one of the most commonly followed equity indices, and many consider it one of the best representations of the U.S. stock market, and a bellwether for the U.S. economy.
++ I am interested in its short-term trend in the future, hoping to predict its future prices according to the past year data by a proper time series model.
+
+##  2 Data Analysis
+### 2.1 Explore the data
++ First we read in the data, which can be downloaded from [yahoo finance](http://finance.yahoo.com/q/hp?s=^GSPC+Historical+Prices). It is SPX 500 historical time series data in recent 5 years. The data set consists of 1553 observations and 7 variables. It records SPX 500 index changes from 2011 to 2016. I am interested in SPX 500 index's closed price every day, so I mainly focus on closed price.
+```{r}
+dat <- read.csv(file="SPX500.csv",header=TRUE)
+```
+
++ And we could summary six important statistics index of the closed price as follows.
+```{r chunk_without_code, echo=FALSE}
+date <- as.POSIXlt(rev(dat$Date))
+CLOSED <- as.numeric(rev(dat$Close))
+summary(CLOSED)
+```
+
++ Then we can plot the closed price over time to study its pattern. The blue line represents the mean for this time series.
+```{r chunk_without_code2, echo=FALSE}
+plot(date,CLOSED,type="l",ylab="SPX 500 index",main = "SPX 500 index figure")
+abline(h=mean(CLOSED),col = "blue")
+```
+
++ There seems a significant increasing trend in SPX 500 index, so we need to differentiate the original to determine d in ARIMA model.
+```{r}
+t <- seq(from=1,length=length(date),by=1)
+N <- length(CLOSED)
+detrend_closed <- CLOSED[2:N] - CLOSED[1:N-1]
+plot(t[1:N-1],detrend_closed,type="l",xlab="t",ylab="remove tendency",main = "Detrending SPX 500")
+abline(h=mean(detrend_closed),col = "blue")
+```
+
++ The variation of the data seems unchanged during the 5 years and there is no visible trend. Thus, we can conclude that $d=1$. Now we can analyze this time series.
+
+### 2.2 Fitting an ARIMA(p,1,q) Model
++ First, consider if there exists a seasonal effect in this question. Assume that there's a seasonal effect, then we could buy in the index at the trough and sell it at the crest. If so, everyone could arbitrage from the market which deviate from the principle of finance. Thus, it could not have a seasonal effect in this problem theoratically. 
++ Meanwhile, we could plot the frequency domain of original data as follow
+```{r chunk_without_code3, echo=FALSE}
+spec_closed <-ts(CLOSED,frequency=250)
+spectrum(spec_closed,spans=c(3,5,3))
+```
++ In the above figure, we could see that there's no significant cycle in a year, which means there's no seasonal effect in this problem.
++ After excluding the seasonal effect, let's start by fitting a stationary ARIMA(p,1,q) model under the null hypothesis that there is no trend after differentiating once. 
++ We seek to fit a stationary Gaussian ARIMA(p,1,q) model with parameter vector $\theta = (\phi_{1:p},\psi_{1:q},\mu,\sigma^2)$ given by:
+$$\phi(B)(1-B)(X_n-\mu) = \psi(B)\varepsilon_n$$
+where
+$$\mu = E[X_n]$$
+$$\phi(x) = 1-\sum_{i=1}^p \phi_i x^i$$
+$$\psi(x) = 1+\sum_{i=1}^q \psi_i x^i$$
+$$\varepsilon \sim iid N[0,\sigma^2]$$
+
++ We need to decide where to start in terms of values of p and q. 
++ In this question, I choose Akaike's information criterion, AIC is given by 
+$$AIC = -2 \times l(\theta^*) + 2D$$
++ The following table is an AIC table for a range of different choices of p and q.
+```{r chunk_without_code4, echo=FALSE}
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,1,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+closed_aic_table <- aic_table(CLOSED,4,4)
+require(knitr)
+kable(closed_aic_table,digits=2)
+```
+
++ In the AIC table, we can find the 3 smallest (p,q), namely (4,4),(3,1), and (0,0).
++ Firstly, ARIMA(4,1,4) is a very big model, which is hard to explain. Moreover, it is at the corner of the table, which is an unproper choice.
++ Secondly, consider ARIMA(0,1,0) model. If it is a true model, then $X_n$ should follow:
+$$1*(1-B)X_n=1*\varepsilon_n$$
++ Take expectation of each side of the equation, we have:
+$$E[X_n - X_{n-1}]=E[\varepsilon_n]=0$$
+$$E[X_n] = E[X_{n-1}]$$
++ Thus, if the data follows ARIMA(0,1,0) model, it would not have a trend theoratically, which deviates from our original data.
++ To sum up, ARIMA(3,1,1) may be the only choice. Thus I choose ARIMA(3,1,1) model to analyze this dataset.
+
+### 2.3 Analysing ARIMA(3,1,1) Model
+#### 2.3.1 Regression on ARIMA(3,1,1) Model
++ Now we fit ARIMA(3,1,1) model to the dataset.
+```{r}
+closed_arma31 <- arima(CLOSED,order=c(3,1,1))
+closed_arma31
+```
+
++ The result shows that $\phi_1 = 0.7659$,$\phi_2 = 0.0237$,$\phi_3 = -0.0462$,$\psi_1 = -0.7930$, that is:
+$$(1-0.7659B-0.0237B^2+0.0462B^3)(1-B)X_n = (1-0.7930B)\varepsilon_n$$
++ However, noticing that standard error of ar3 coefficient is quite large, and this may leads to an unsignificant result.
+
+#### 2.3.2 Testing ARIMA(3,1,1) Model's Root
++ To check if all parameters have a small fitted value, we can see whether its roots are in a unit circle.
+```{r}
+AR_roots <- polyroot(c(1,-coef(closed_arma31)[c("ar1","ar2","ar3")]))
+AR_roots
+MA_roots <- polyroot(c(1,coef(closed_arma31)[c("ma1")]))
+MA_roots
+```
++ From the analysis given above, we can find that all the roots are outside the unit circle. This suggests that ARIMA(3,1,1) may be a good fit for the data.
+
+#### 2.3.3 Predictions
++ Based on the analysis given above, we can predict the future's SPX 500 index based on historical data with following equation.
+$$(1-0.7659B-0.0237B^2+0.0462B^3)(1-B)X_n = (1-0.7930B)\varepsilon_n$$
++ Given $X_{n-1}=1999.99, X_{n-2} = 1993.40, X_{n-3} = 1986.45, X_{n-4} = 1978.35$, we could say
+$$X_n = (1.7659B-0.7422B^2-0.0699B^3+0.0462B^4)X_n + (1-0.7930B)\varepsilon_n$$
+$$X_n = 2004.83 + (1-0.7930B)\varepsilon_n$$
++ Thus, 95% confidence interval for $X_n$ should be $(1966.29,2043.37)$, since $var(\epsilon_i) = sigma^2 = 228$
+
+### 2.4 Diagnostics
+#### 2.4.1 Residuals Brief View
++ For the diagnostic analysis, I look at the residuals first.
+```{r}
+plot(closed_arma31$resid,ylab = "residuals",main = "Residuals for ARIMA(3,1,1) Model")
+acf(closed_arma31$resid,main = "ACF of residuals")
+```
+
++ From the acf plot, we can find a slight deviation from gaussian white noise at $lag=22$, $lag=24$ and $lag=25$.
+
+#### 2.4.2 Testing for Normality
++ In our assumption, we assumes that residuals at each period are independent, and follow same normal distribution. Thus, the model's residual is $resid = (1-0.7930B)\varepsilon_n$ should follow normal distribution either. Then we could draw a Q-Q plot for our model.
+```{r}
+qqnorm(closed_arma31$resid)
+qqline(closed_arma31$resid,probs = c(0.25,0.75))
+```
+
++ From the Q-Q plot, we can see that residuals have long tail on both sides, indicating that it is not a normal distribution. This would be a big problem.
+
+### 2.4.3 Modify the Model
++ The long-tail residual indicates that current SPX 500 index could not be explained by its historical data only. We may ignore some important factors during our analysis. Thus, I am going to add a factor to my model.
++ As we all know, volume is an important factor in stock market, and it may affect the close price. Thus, I try to add this factor into our model and do all what I did in section 2.2 and section 2.3. 
++ Since volume is a large number, I take a log form.
+```{r}
+volume <- log(rev(as.numeric(dat$Volume)))
+```
+
+```{r chunk_without_code5, echo = FALSE}
+aic_table <- function(data,data2,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,1,q),xreg=data2)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+closed_aic_table <- aic_table(CLOSED,volume,4,4)
+require(knitr)
+kable(closed_aic_table,digits=2)
+```
+
++ It is good to see that adding an additonal parameter does not change our ARIMA model's parameter. And this time, we would run ARIMA(3,1,1) either, but adding one more parameter log(volume).
+
+```{r}
+arma31_v <- arima(CLOSED,order = c(3,1,1),xreg = volume)
+arma31_v
+```
++ The result shows that coefficient of ar3 becomes more significant, and there's a significant effect on log(volume) as we expected. Then we need to examine if all the roots are outside the unit circle
+
+```{r}
+AR_roots <- polyroot(c(1,-coef(arma31_v)[c("ar1","ar2","ar3")]))
+AR_roots
+MA_roots <- polyroot(c(1,coef(arma31_v)[c("ma1")]))
+MA_roots
+```
+
++ The roots are outside the unit circle as we expected.
++ Then we need to examine if the residual follows stationary condition and normal distribution this time.
+```{r}
+plot(arma31_v$resid,ylab = "residuals",main = "Residuals for ARIMA(3,1,1) Model with volume parameter")
+acf(arma31_v$resid,main = "ACF of residuals with volume parameter")
+```
+
++ From the acf plot, we can find that the problem is not solved, there's still a slight deviation from gaussian white noise at $lag=22$, $lag=24$ and $lag=25$.
+
++ Looking at the Q-Q plot, we can find the same problem as before.
+```{r}
+qqnorm(arma31_v$resid)
+qqline(arma31_v$resid,probs = c(0.25,0.75))
+```
+
++ Though adding log(volume) improves the model in many ways, it is still hard to explain why the residual of the model is long-tail, suggesting further analysis with more complex model than ARIMA.
+
+##  3 Conclusion
++ I find ARIMA(3,1,1) model fits SPX 500 index close price time series. By adding a new parameter, log(volume), I improved the model. However, though the autocovariance of the data seems fit ARIMA(3,1,1) well, the Q-Q plot shows that the model deviates from the independent normal distribution residual assumption, which indicates a more complex model is needed.
++ Though ARIMA(3,1,1) model is not a good model fitting real data, it does show some main characteristics of the data.
++ First, SPX 500 index has a significant increasing trend, and the trend disappears by differentiating this time series index once.
++ Second, SPX 500 index does not have a seasonal effect, and no significant period as well.
++ Third, ARIMA(3,1,1) model could be a reference in predicting the future.
+$$X_n -7.2501 \log{volume_n}= (1.7270B-0.6929B^2-0.0194B^3+0.0535B^4)(X_n-7.2501 \log{volume_n}) + (1-0.7615B)\varepsilon_n $$
++ Last, ARIMA(3,1,1) shows that SPX 500 series is not an independent data. Today's index is related to historical index. However, ARIMA(3,1,1) model may not be the most exact model, and further analysis with more complex model is needed.
+
+
+

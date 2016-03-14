@@ -1,0 +1,462 @@
+---
+title: "STATS 531. Midterm Project"
+date: "March 5, 2016"
+output: html_document
+fontsize: 11pt
+---
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\data[1]{#1^}
+---
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(pomp)
+library(knitr)
+library(ggplot2)
+library(mFilter)
+library(astsa)
+library(forecast)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+-------------------
+
+# 1. Summary
+This project aims at analyzing the time series analysis of exchange rate between Euro and USD and comparing several models, including ARMA, SARMA, ARMA errors and ARIMA.
+
+* We use the daily data from January 2005 to December 2015. The spectrum does not show obvious business cycle. Then we fit a stationary Gaussian ARMA(1,0) model selected by AIC. However, the residuals have heavy tails and are not normally distributed. 
+
+* In order to study the trend better, we calculate the monthly average rate based on the daily data. The spectrum also shows little evidence for cycle. Then we attempt SARMA model and ARMA errors model, but some of the coefficients are not significant. After trying ARIMA(0,1,1) model with white noise, we find that it fits best for this dataset. This means that the differenced data can be estimated be a random walk model.
+
+* Based on the ARIMA(0,1,1) model, we forecast the exchange rates in 2016, suggesting the US Dollar may become more valuable in relation to Euro.
+
+# 2. Introduction
+
+* The exchange rate in finance is the value of one currency in terms of another currency. For example, the exchange rate of Euro-USD is 1.12, meaning that 1 Euro can be exchanged for 1.12 US Dollar. The exchange rates are determined by continuous currency trading in foreign exchange market, which happens in 24 hours a day except weeekends and public holidays. 
+
+* Exchange rate will change once the values of either of the two currencies fluctuates. The value of currency reflects its demand and supply. When the demand is greater than the avaiable supply, the currency would become more valuable. The demand for a currency is highly correlated to a country's level of business activity, gross domestic product (GDP), and employment levels. 
+
+* As the U.S. economy strengthens and the eurozone economy weakens, economists are concerned about whether the USD will surpass the Euro. The fluctuation of exchange rates has triggered currency-related problems for many international companies, which are based on U.S. and have large operations in Europe. Therefore, researching into the time series of Euro-USD exchange rates has practical value for economics.
+
+# 3. Daily Data
+
+## 3.1 Exploratory data analysis
+
+We use the time series dataset containing daily exchange rates of Euro-USD from January 2005 to December 2015. The dataset is provided by the European Central Bank. The rates are updated only on working day. During the weekends, the rates are typically stable as the major markets are closed and there is very little trading to be reported. Thus we can regard them as continuous data. There are 2816 observations in total. 
+
+First we take a look at the historical data. 
+
+```{r,eval=TRUE,echo=FALSE}
+rates <- read.csv(file="rates05-15.csv",header=TRUE)
+# length(rates$USD)
+head(rates)
+```
+
+The variable USD is the daily exchange rates of Euro-USD. It means the amount of US Dollar which 1 Euro equals to. The larger it is, the less valuable US Dollar will become. They are based on a regular daily concertation procedure between central banks across Europe and worldwide, which normally takes place at 14:15 CET. Now we plot the data on the original scale.
+
+```{r,eval=FALSE,echo=FALSE}
+df1 <- as.data.frame(rates)
+mean_rates <- mean(rates$USD)
+# print(mean_rates)
+ggplot(df1,aes(Date,USD))+geom_line(color="blue")+theme_bw()+ xlab("Year")+ylab("USD($)")+ggtitle("Euro-USD Exchange Rates")+theme(plot.title = element_text(lineheight=5, face="bold"))+geom_hline(yintercept = mean_rates,color="red")
+```
+
+The blue line reflects the fluctuation of exchange rates and the red horizontal line is the mean 1.318574 over 11 years. The maximum value happens around 2008. The global financial crisis depreciated US Dollar and increased the exchange rates. The curve decreases sharply in 2010, since the European debt crisis depreciated Euro. We guess there might exist business cycles over time, so we study into the periodogram.
+
+## 3.2 Spectral analysis
+
+We use the default non-parametric smoother in R to smooth the periodogram.
+```{r,eval=TRUE,echo=FALSE}
+# spectrum(rates$USD,main="Unsmoothed periodogram")
+smooth_span <- spectrum(rates$USD,spans=c(31,31),main="Smoothed periodogram")
+freq_span <- smooth_span$freq[which.max(smooth_span$spec)]
+# print(c(freq_span, 1/freq_span))
+```
+
+The dominant frequency is 0.0003472222 cycles per day, corresponding to a period of about 2880 days. This approximates to the number of total observations, indicating that the data may form a whole cycle. 
+
+Now we apply a parametric estimation method via AR model picked by AIC.
+
+```{r,eval=TRUE,echo=FALSE}
+smooth_ar <- spectrum(rates$USD, method = "ar", main = "Spectrum estimated via AR model picked by AIC")
+freq_ar <- smooth_ar$freq[which.max(smooth_ar$spec)]
+# print(freq_ar)
+```
+
+The frequency is 0 and means no cycle at all.
+
+```{r,eval=TRUE,echo=FALSE}
+rates_ts <- ts(rates$USD, start=2005,frequency=256)
+rates_date <- seq(from=2005,length=2816,by=1/256)
+smooth_loess <- loess(rates_ts~rates_date,span=0.5)
+```
+
+## 3.3 Fit a stationary Gaussian ARMA model
+
+### 3.3.1 Choose model by AIC
+
+We analyze the data with a stationary Gaussian ARMA(p,q) model under the null hypothesis that there is no trend. The hypothesis states that the rates did not substantially changed over the last 11 years. It seems to be somewhat reasonable from the plot in 3.1. 
+We'll tabulate some AIC values for a range of different choices of p and q. Our goal is to select the smallest model with the lowest AIC score, which can minimizes the prediction error.
+
+```{r,eval=TRUE,echo=FALSE}
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P){
+    for(q in 0:Q){
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),optim.control=list(maxit = 1000))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>",sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+rates_aic_table <- aic_table(rates$USD,4,5)
+kable(rates_aic_table,digits=2)
+```
+
+The result shows that ARMA(4,3) has smallest AIC value -18996.63 while ARMA(1,0) has second smallest AIC value -18994.22. We prefer the simpler model ARMA(1,0), because the difference in AIC is small and the complex model may lead to poor prediction from overfitting. AR(1) is the best smallest model.
+
+```{r,eval=TRUE,echo=FALSE}
+rates_ar1 <- arima(rates$USD,order=c(1,0,0))
+print(rates_ar1)
+```
+
+The model is
+$$
+X_n=\phi_1 X_{n-1}+\epsilon_n,
+$$
+where
+$$
+\epsilon_n \overset{iid}\sim N[0,\sigma^2].
+$$
+The parameter vector is 
+$$
+\theta=(\phi_1,\sigma^2)=(0.9974,6.862\times 10^{-5}).
+$$
+
+### 3.3.2 Parameter estimation
+
+```{r,eval=TRUE,echo=FALSE}
+ar1_roots <- polyroot(c(1,-coef(rates_ar1)["ar1"]))
+# print(ar1_roots)
+```
+We check the causality of this model. The root of $1-\phi_1 x$ is 1.002603, which is outside the unit circle. So the AR(1) model is causal. 
+
+The MLE of $\phi_1$ is 0.9974 and the standard error is 0.0014. Then we construct the approximate 95% confidence interval of $\phi_1$ derived from Fisher information:
+$$
+[0.9974-1.96*0.0014,0.9974+1.96*0.0014]=[0.994656,1.000144].
+$$
+
+Now we apply Bootstrap method using fisher information to confirm the result. Below is the histogram and density plot of $\phi_1$.
+
+```{r,eval=TRUE,echo=FALSE}
+set.seed(123)
+J <- 1000
+ar1_params <- coef(rates_ar1)
+ar_ar1 <- ar1_params["ar1"]
+intercept_ar1 <- ar1_params["intercept"]
+sigma_ar1 <- sqrt(rates_ar1$sigma2)
+theta_ar1 <- matrix(NA,nrow=J,ncol=length(ar1_params),dimnames=list(NULL,names(ar1_params)))
+for(j in 1:J){
+  X_j <- arima.sim(list(ar=ar_ar1),n=length(rates$USD),sd=sigma_ar1)+intercept_ar1;
+  theta_ar1[j,] <- coef(arima(X_j,order=c(1,0,0)));
+}
+hist(theta_ar1[,"ar1"],freq=FALSE,xlab="AR(1) coefficient",main="Histogram")
+plot(density(theta_ar1[,"ar1"],bw=0.05),xlab="AR(1) coefficient",main="Density plot")
+```
+
+The two plots are consistent with the confidence interval via the observed Fisher information.
+
+### 3.3.3 Diagnostics analysis
+
+Now we plot the residuals over time.
+```{r,eval=TRUE,echo=FALSE}
+res_ar1 <- resid(rates_ar1)
+plot(res_ar1~rates_date,type="l",ylab="residuals")
+```
+
+Residual plot shows that there might exist trend that occurs monthly. Then we check the assumption of Gaussian white noise.
+
+* Constant variance
+```{r,eval=TRUE,echo=FALSE}
+plot(rates$USD-res_ar1,res_ar1,xlab="fitted",ylab="residuals")
+```
+By plotting the residuals v.s. fitted values, we can see the nonlinearity and confirm the constant variance.
+
+* Normality
+```{r,eval=TRUE,echo=FALSE}
+qqnorm(res_ar1)
+qqline(res_ar1)
+```
+The Q-Q plot suggests there might exist heavy tails, so we perform Shapiro-Wilk's normality on the residuals.
+
+```{r,eval=TRUE,echo=FALSE}
+shapiro.test(res_ar1)
+```
+The p-value is extremely small, so we reject the hypothesis that the residuals are Gaussian.
+
+* Uncorrelated
+```{r,eval=TRUE,echo=FALSE}
+acf(res_ar1,lag=1000,main="Sample autocorrelation of residuals")
+```
+The Autocorrelation plot reveals that the residuals are not autocorrelated, corresponding to the white noise assumption. The values of ACF mainly fall inside the dashed lines, showing pointwise acceptance regions at the 5% level under a null hypothesis of white noise. 
+
+### 3.3.4 Conclusion
+
+The AR(1) model is stationary and causal for this dataset. The coefficient is also significant by fisher information. The residuals have constant variance and are uncorrelated, however, they contrast the assumption of Gaussian distribution. There might exist trend that occurs monthly, suggesting more complex model than ARMA.
+
+# 4. Monthly average data
+
+## 4.1 Exploratory data analysis
+
+To study the trend of the exchange rates, we need equally spaced time series data. So we calculate the monthly average rates based on the daily rates. Here is the monthly average data. There are 132 observations in total.
+
+```{r,eval=TRUE,echo=FALSE}
+Year <-rep(2005:2015,each=12)
+Month <- rep(1:12,11)
+USD <- rep(0,132)
+Time <- Year+Month/12
+rates2 <- data.frame(Year,Month,USD,Time)
+for(i in 1:11){
+  for(j in 1:12){
+    year_id <- (rates$Year==2004+i);
+    month_id <- (rates$Month==j);
+    id <- (year_id*month_id==1);
+    rates2$USD[(i-1)*12+j] <- mean(rates[id,]$USD);
+    }
+}
+head(rates2[,1:3])
+```
+
+We plot the monthly rates over time.
+
+```{r,eval=TRUE,echo=FALSE}
+mean_rates2 <- mean(rates2$USD)
+# print(mean_rates2)
+ggplot(rates2,aes(Time,USD))+geom_line(color="blue")+theme_bw()+ xlab("Year")+ylab("USD($)")+ggtitle("EUR v.s. USD Currency Exchange Rates")+theme(plot.title = element_text(lineheight=5, face="bold"))+geom_hline(yintercept = mean_rates2,color="red")
+```
+
+The blue line reflects the fluctuation of exchange rates and the red horizontal line is the mean 1.318697 over 11 years. The mean is slightly different from the one of daily data, because the number of days in each month may differ. The trend is revealed more clearly.
+
+## 4.2 Spectral analysis
+
+```{r,eval=TRUE,echo=FALSE}
+unsmooth <- spectrum(rates2$USD,main="Unsmoothed periodogram")
+freq_un <- unsmooth$freq[which.max(unsmooth$spec)]
+# print(freq_un)
+```
+
+The original spectrum density is quite smooth here, so there is no need to smooth it. The frequency is 0.007407407 cycles per month, so the period is 135 months, which is roughly all the observations of 11 years.
+
+```{r,eval=FALSE,echo=FALSE}
+# Spline Smoothing
+# require(mFilter)
+rates2_hp <- hpfilter(rates2$USD, freq=100*12^2,type="lambda",drift=F)$cycle
+plot(rates2$Time,rates2_hp,type="l",xlab="Year",ylab="")
+```
+
+## 4.3 Fit a stationary SARMA model
+
+Based on the analysis in 3.3.1, we go with AR(1) for the annual polynomial. And we try ARMA(1,1) for the monthly part. The model can with white noise be expressed as follows:
+$$
+(1-\Phi_1 B^{12})(1-\phi_1 B)(X_n-\mu)=(1+\psi_1 B)\epsilon_n,
+$$
+where $\epsilon_n$ is a white noise process and $\mu=\E[X_n]$.
+
+```{r,eval=TRUE,echo=FALSE}
+rates2_sarma11x10 <- arima(rates2$USD,order=c(1,0,1),seasonal=list(order=c(1,0,0),period=12))
+print(rates2_sarma11x10)
+```
+
+The MLE of $\Phi_1$ is -0.0683 and the standard error is 0.0937. The 95% confidence interval by Fisher information is
+$$
+[-0.0683-1.96*0.0937,-0.0683+1.96*0.0937]=[-0.251952, 0.115352].
+$$
+Therefore, the coefficient is not significant. After attempting several simple SARMA models, this problem still exist. This suggests that SARMA model is not appropriate for this dataset, because the annual variation is not significant here.
+
+##  4.4 ARMA errors model
+
+In 4.1, there seems to have evidence for a decreasing trend of monthly exchange rates. So we test for a trend, using a regression model with Gaussian ARMA errors. We consider a table of AIC values for different ARMA(p,q) error specifications.
+
+```{r,eval=TRUE,echo=FALSE}
+
+aic_table3 <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P){
+    for(q in 0:Q){
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),optim.control=list(maxit = 1000),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>",sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+error_aic_table <- aic_table3(rates2$USD,4,5,xreg=rates2$Time)
+kable(error_aic_table,digits=2)
+```
+
+The best smallest model is ARMA(2,0) as follows.
+```{r,eval=TRUE,echo=FALSE}
+arma_err20 <- arima(rates2$USD,order=c(2,0,0),xreg=rates2$Time)
+print(arma_err20)
+```
+
+Let $x_{1:N}^*$ denotes the N values of monthly exchange rates, $t_{1:N}$ denotes the time points by month, where N=132. We have
+$$
+X_n=\alpha+\beta t_n+\epsilon_n,
+$$
+for which $\epsilon_{1:N}$ is a stationary, causal Gaussian(2,0) model statisfying a stochastic difference equation,
+$$
+\epsilon_n=\phi_1\epsilon_{n-1}+\phi_2\epsilon_{n-2}+\omega_n,
+$$
+where $\omega_n$ is a Gaussian white noise with
+$$
+\omega_\sim N[0,\sigma^2].
+$$
+
+```{r,eval=TRUE,echo=FALSE}
+log_lik_ratio <- as.numeric(
+   logLik(arima(rates2$USD,order=c(2,0,0),xreg=rates2$Time)) -
+   logLik(arima(rates2$USD,order=c(2,0,0)))
+)
+p_value <- 1-pchisq(2*log_lik_ratio,df=1)
+# print(p_value)
+```
+
+It is worth noticing that the MLE and standard error of $\beta$ is -0.0124 and 0.0110. Therefore, the 95% confidence interval of $\beta$ is
+$$
+[-0.0124-1.96*0.0110,-0.0124+1.96*0.0110]=[-0.03396,0.00916].
+$$
+
+It is not significant. This is confirmed by the likelihood ratio test giving p-value of 0.2685249, so we does not reject the null hypothesis that the coefficient of time is zero. Therefore, linear regression over time with ARMA error is not appropriate for the currency exchange rate.
+
+## 4.5 ARMA model for differenced data
+
+First we take a look at the temporal difference. Let $Y_n=(1-B)X_n$ and $y_n^*=x_n^*-x_{n-1}^*$, where $x_n^*$ is the data of monthly average rates.
+```{r,eval=TRUE,echo=FALSE}
+t <- length(rates2$USD)
+delta_rates2 <- rep(0,t)
+delta_rates2[2:t] <- rates2$USD[2:t] - rates2$USD[1:t-1]
+plot(Time,delta_rates2,type="l",xlab="Year",ylab="Differenced rates")
+```
+
+It appears to be not stationary, suggesting that ARIMA model may be a reasonable choice.
+
+### 4.5.1 Select ARIMA model based on AIC
+
+Similar to 3.3.1, we seek to select a simple model with least AIC. We start with the difference term d=1.
+
+```{r,eval=TRUE,echo=FALSE}
+aic_table2 <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P){
+    for(q in 0:Q){
+      table[p+1,q+1] <- arima(data,order=c(p,1,q),optim.control=list(maxit = 1000))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>",sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+rates_aic_table2 <- aic_table2(rates2$USD,4,5)
+kable(rates_aic_table2,digits=2)
+```
+
+The best simplest model is ARIMA(0,1,1) as follows. This model is connected with the exponentially weighted
+moving average (EWMA) method of forecasting.
+
+```{r,eval=TRUE,echo=FALSE}
+rates2_arima <- arima(rates2$USD,order=c(0,1,1))
+print(rates2_arima)
+```
+
+The model can be expressed as 
+$$
+X_n-X_{n-1}=Y_n=\epsilon_n+\psi_1\epsilon_{n-1}
+$$
+where
+$$
+\epsilon_n \overset{iid}\sim N[0,\sigma^2].
+$$
+The parameter vector is 
+$$
+\theta=(\psi_1,\sigma^2)=(0.2931,0.0009268).
+$$
+
+We can see that the differenced data are fitted by a random walk model, which is stationary and invertible. The MA polynomial has the root outside the unit circle. The 95% confidence interval of MA(1) coefficient is
+$$
+[0.2931-1.96*0.0828,0.2931+1.96*0.0828]=[0.130812,0.455388].
+$$
+The coefficient is significant by Fisher information.
+
+### 4.5.2 Diagnostic analysis
+
+Here is the plot of residuals.
+```{r,eval=TRUE,echo=FALSE}
+res_arima <- as.vector(resid(rates2_arima))
+plot(rates2$Time,res_arima,type="l",xlab="Time",ylab="residuals")
+```
+
+We also plot the ACF of residuals.
+```{r,eval=TRUE,echo=FALSE}
+acf(res_arima,lag=100,main="Sample autocorrelation of residuals")
+```
+The ACF plot shows most of the correlations fall within the threshold limits, indicating that the residuals are behaving like white noise. 
+
+### 4.5.3 Forecast exchange rates in 2016
+
+After diagnostic analysis, we use the ARIMA(0,1,1) model to forecast the exchange rates in 2016. The x-axis means the number of months since 2005.
+
+```{r,eval=TRUE,echo=FALSE}
+fit2 <- Arima(rates2$USD,order=c(0,1,1),include.drift=TRUE) 
+plot(forecast(fit2),rates2$Time,xlab="Time points",ylab="US Rates($)",main="Forecast plot by ARIMA(0,1,1)")
+```
+
+We can estimate that the exchange rates of Euro-USD is showing a decreasing trend in 2016. The US Dollar continues to become more valuable in relation to Euro. It may be driven by continued faster economic growth in the U.S. as compared with Europe.
+
+# 5. Conclusions
+
+From the above analysis, we can see that the best way to fit the exchange rate is the ARIMA(0,1,1) model on monthly average data. Many literature work [6]-[7] have outlined that ARIMA model is comparatively accurate model to fit the exchange rate. For further study, we can apply exponential smoothing model to forecast.
+
+# 6. References
+[1] http://ionides.github.io/531w16/ 
+\
+[2] http://www.ecb.europa.eu/stats/exchange/eurofxref/html/index.en.html 
+\
+[3] https://en.wikipedia.org/wiki/Exchange_rate 
+\
+[4] http://www.investopedia.com/articles/forex/041415/will-usd-surpass-eur.asp 
+\
+[5] https://www.otexts.org/fpp/8/7 
+\
+[6] http://arxiv.org/pdf/1508.07534.pdf 
+\
+[7] http://www.cluteinstitute.com/ojs/index.php/JABR/article/viewFile/6840/6915 

@@ -1,0 +1,349 @@
+---
+title: "STAT513 Midterm Project"
+subtitle: "The Association between Recent Cholera Epidemics and Rainfall in Haiti"
+#author: "Yu-Han Kao, kaoyh@umich.edu"
+date: "03/10/2016"
+output:
+  html_document:
+    fig_caption: yes
+    force_captions: yes
+    highlight: pygments
+    number_sections: yes
+    theme: spacelab
+  pdf_document:
+    fig_caption: yes
+    keep_tex: yes
+    number_sections: yes
+csl: mee.csl
+bibliography: references.bib
+---
+<style type="text/css">
+
+body, td {
+   font-size: 16px;
+}
+code.r{
+  font-size: 12px;
+}
+pre {
+  font-size: 12px
+}
+</style>
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+---
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+  # devtools::install_github("cboettig/knitcitations@v1")
+  library(knitcitations); cleanbib()
+  cite_options(citation_format = "pandoc", check.entries=FALSE)
+  library(bibtex)
+  library(ggmap)
+  library(RCurl)
+  library(xts)
+  library(TSA)
+  library(fields)
+  library(akima)
+```
+
+# Introduction
+
+Cholera was introduced to Haiti in 2010 the first time of its history likely by UN peacekeepers from Nepal. Started in central Haiti, the cholera outbreak in 2010 rapidly triggered the world’s largest epidemic of the seventh cholera pandemic  `r citep(c("10.1056/NEJMoa1012928","0.1128/mBio.01721-14"))`. Five years later, people now in Haiti are still suffering from cholera, and more than 9000 people have therefore died since the outbreak in 2010 `r citep("10.1371/journal.pntd.0004153")`. Even though many studies gave profound insights into the mechanism initiating the epidemic in 2010 `r citep(c("10.1073/pnas.1203333109","10.1371/journal.pntd.0002145","10.1016/j.epidem.2013.09.004"))`, little attention has been paid to the recent epidemics. However, since the cholera in Haiti may have become endemic, the transmission dynamics can be very different from the initial outbreak. Moreover, followed by withdrawal of fund and aid, the situation in Haiti is getting even more difficult. Therefore, in order to develop a timely and sustainable countermeasures agains cholera in Haiti, better understanding for the underlying mechanisms of recent cholera outbreaks is crucial.
+
+There are plenty of potential factors will affect cholera transmission dynamics, such as rainfall, temperature, waning of population immunity, etc `r citep("10.1111/j.1469-0691.2008.02686.x")`. I start with the most widely studied one--the relationship between rainfall and cholera incidence. Lots of related studies have been done, and people found out both negative and positive effect of rainfall on cholera incidence through different mechanisms. For example,  flooding can lead to contamination of drinking water supplies; whereas, lack of water will increase the chance for people to use contaminated water source. Either way can increase the risk of cholera transmission. In this project, I tried some preliminary time series analysis for cholera incidence and rainfall data from January 2012 to December 2015 in Artibonite, the biggest department in Haiti (**Fig 1**). I hope to get some basic ideas about the association between rainfall and cholera incidence as well as whether rainfall would be a potential driver for recent cholera epidemic in Haiti.
+
+<br>
+```{r Artibonite map, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 1: Map of Artibonite Department, Haiti", fig.width=5, fig.height=5}
+  haiti_map<-get_map(location=c(lon=-72.6, lat=19.25),color="color",source="google",maptype="terrain",zoom=10)
+  ggmap(haiti_map)
+```
+<br>
+
+# Data
+
+```{r import data,echo=FALSE}
+  file1 <- getURL('https://dl.dropboxusercontent.com/u/14839447/mid_project/daily_incidence_use_new.txt',ssl.verifyhost=FALSE, ssl.verifypeer=FALSE)
+  file2 <- getURL('https://dl.dropboxusercontent.com/u/14839447/mid_project/dep1.txt', ssl.verifyhost=FALSE, ssl.verifypeer=FALSE)
+  case_data <- read.table(file=textConnection(file1), sep="\t", header=TRUE)
+  rain_dep1 <- read.table(file=textConnection(file2), sep="", skip=6, header=TRUE)
+  case_data$date <- strptime(case_data$date, "%d_%m_%Y")
+  rain_dep1$time <- strptime(rain_dep1$time, "%d%b%Y")
+  case_data <- case_data[order(case_data$date),]
+  time  <- intersect(case_data$date, rain_dep1$time)
+  dep1_case <- case_data$Artibonite[case_data$date %in% time[412:NROW(time)]]
+  #dep1_case <- case_data$Centre[case_data$date %in% time[412:NROW(time)]]
+  dep1_rain <- rain_dep1$precipitation[rain_dep1$time %in% time[412:NROW(time)]]
+  
+  ###data without NA
+  x <- as.numeric(format(time[412:NROW(time)], '%j'))
+  y <- as.numeric(format(time[412:NROW(time)], '%Y'))
+  temp=data.frame(x,y,dep1_case,dep1_rain)
+  temp<-temp[!(is.na(temp$dep1_case)),]
+
+  ####sum up weekly data###
+  case_wdata <- as.xts(case_data$Artibonite, order.by=as.Date(case_data$date))
+  rain_wdep1 <- as.xts(rain_dep1$precipitation, order.by=as.Date(rain_dep1$time))
+  weekly_case <- apply.weekly(case_wdata, sum)
+  weekly_rain <- apply.weekly(rain_wdep1, sum)
+  case_week <- row.names(as.data.frame(weekly_case))[59:268]
+  rain_week <- row.names(as.data.frame(weekly_rain))[731:940]
+```
+
+**Case Data**
+Cholera daily incidence by departments is available on Ministere de la Sante Publique et de la Population ([MSPP](http://mspp.gouv.ht/newsite/documentation.php)) website. Report is published everyday in pdf formate online. From 2012 to 2015, 120 dates are missing in the database, and there are data points that appear to be missing at random, with some of the data missing throughout large segments in time, particularly in October 2013 and June 2014. These missing data may bias the outcomes given the non-systematic distribution of the size of the missing data in time. Data crawling and parsing are managed using `python 2.7.10`.
+
+**Rainfall Data**
+Area averaged rainfall estimates from the National Aeronautics and Space Administration (NASA) Tropical Rainfall Measuring Mission ([TRMM](http://gdata1.sci.gsfc.nasa.gov/daac-bin/G3/gui.cgi?instance_id=daily_p_comp)) are used in the project. Geographical coverage is selected using longitude [-73.120633, -72.226589] and latitude [18.838958, 19.805066] with resolutions of 0.25&deg; x 0.25&deg;.
+
+<br>
+
+# Analysis
+
+* Daily data (**Fig 2**) and aggregated weekly data over time (**Fig 3**) are plotted below. Both cholera incidence and rainfall time serieses show strong annual seasonality. It seems that the major peaks of cholera incidence often appear after the main peaks of rainfall (the pattern is easier to see in aggregated weekly data), Moreover, the magnitude of cholera incidence is coincident with rainfall (or at least the occurrence of extreme rainfall.) Generally, cholera incidence seems to correlated with rainfall but with some lag.
+
+<br>
+```{r daily ts plot, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 2: daily cholera incidence and rainfall time series"}
+  #plot daily data
+  par(mar = c(5, 4, 4, 4)+0.3 )
+  plot(dep1_case, type='l', ylab='case number', xlab='day (since 2012/01/01)', col="black")
+  par(new=TRUE)
+  plot(dep1_rain, axes=FALSE, type='l', col="red",ylab="", xlab="")
+  axis(side=4)
+  mtext("rainfall", side=4, line=3, col="red")
+  title(main="daily incidence and daily rainfall")
+```
+```{r weekly ts plot, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 3: weekly cholera incidence and rainfall time series"}
+  #plot weekly data
+  par(mar = c(5, 4, 4, 4)+0.3 )
+  plot(as.numeric(weekly_case[59:268]), type='l', ylab='case number', xlab='day (since 2012/01/01)', col="black")
+  par(new=TRUE)
+  plot(as.numeric(weekly_rain[731:940]), axes=FALSE, type='l', col="red",ylab="", xlab="")
+  axis(side=4)
+  mtext("rainfall", side=4, line=3, col='red')
+  title(main="weekly incidence and weekly rainfall")
+
+```
+
+<br>
+(Usually, weekly aggregated data is better for visualization and sesonality analysis, but clustered missing data makes it hard to do sensible aggregation. Therefore, the following analysis is done with daily data, unless specified.)
+<br>
+
+*  Smoothed periodogram of cholera incidence (**Fig 4**) also suggests that the cycle of cholera epidemic is around one year (the highest spectrum value is actually at cycle = 270 days). Although the smoothed periodogram for rainfall also shows yearly cycle, the peak of spectrum is less obvious.
+<br>
+```{r spec, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 4: smoothed periodogram for cholera incidence (solid line) and rainfall (dotted line)" }
+  sp_bind <- ts(cbind(temp$dep1_case,temp$dep1_rain))
+  spectrum(sp_bind,main="",spans=c(5,3),col="black",xlab="Frequency(cycle/day)")
+  title(main="Smoothed Periodogram")
+
+```
+<br>
+
+
+* To better define correlation between rainfall and cholera incidence, both raw cross-correlation function (CCF) and pre-whitening CCF are plotted.
+
+* `ccf` function is used to examine the raw cross-correlation between rainfall and cholera incidence. Sinusoidal pattern is observed in **Fig 5**, which suggests complex (likely non-linear) correlation between rainfall and cholera incidence. It seems that rainfall and cholera incidence has most strong (positive) correlation when rainfall leads cholera incidence ( $h < = 0$.) However, it is hard to say if the pattern of lags is meaningful from Fig4. Since both rainfall and cholera cases show annual seasonality, it could be just that there is a common (seasonal) trend in rainfall data and cholera incidence data.
+
+* Pre-whitening approach is thus used to better identify the pattern of CCF. By taking out the common trend between two time serieses and making one of the serieses into white noise , pre-whitening makes it easier to determine specific lags. I used `prewhiten` function in `TSA` package `r citep(citation("TSA"))`, which first fit an AR model to rainfall data, and then use the model to filter cholera incidence data, removing potential common trend from the two time serieses. We then compare the residuals from fitted rainfall model and the filtered cholera incidence using CCF (**Fig 6**).
+
+<br>
+```{r ccf, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 5: cross-correlation between rainfall and cholera incidence" }
+  #acf(dep1_case,na.action=na.pass, lag.max = 50)
+  #acf(dep1_rain, lag.max=50)
+  ccf(dep1_rain, dep1_case,na.action=na.pass,lag.max = 400, main="pre-whitening cross-correlation", xlab="Lag (day)")
+
+```
+<br>
+```{r pw_ccf, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 6: pre-whitening cross-correlation between rainfall and cholera incidence" }
+  pw<-prewhiten(temp$dep1_rain, temp$dep1_case, lag.max=400, main="Pre-whitening CCF", xlab="Lag (day)")
+  
+
+```
+<br>
+
+
+* After taking out possible common trend from both time serieses, the sinusoidal pattern remains in **Fig 6** (yet less obvious), meaning the sinusoidal correlation pattern between rainfall and cholera cases is more convincing. The ACF of residual after fitting and AR model to rainfall data is also shown below (**Fig 7**). The ACF plot is not so bad since less than 5% of ACFs are outside the horizontal lines. However, we can still see slight sinusoidal pattern in the figure, indicating more appropriate model should be considered for pre-whitening process.
+
+* Generally, I do not think ARIMA (or even sARIMA) model is a good way to describe daily data with annual seasonality given the fact that high order seasonality is often very noisy. To better illustrate time series with high order seasonality, other models such as Fourier series approach or B-spline might be better choices.
+
+<br>
+```{r acf__pw_rsd, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 7: residual acf"}
+acf(pw$model$resid, na.action=na.pass, main="Residual ACF", lag.max=400)
+```
+<br>
+
+* Bseline model is fitted using ARMA (4,2) selescted by AIC
+
+```{r model_fit_b, echo=FALSE}
+fit_b<-arima(dep1_case[1:1406],order=c(4,0,2),optim.control = list(maxit=200))
+fit_b
+```
+
+* Another model is fitted using regression with ARMA error model. I ignored the potential lag effect of rainfall here.
+    + Write $r^*_{1:N}$ for the $N$ values of rainfall at times $t_{1:N}$
+    + Write $c^*_{1:N}$ for the $N$ values of cholera incidence at times $t_{1:N}$
+$$R_n = \alpha + \beta c_n + \epsilon_n,$$
+
+where $\{\epsilon_n\}$ is a Gaussian ARMA process. 
+I used an ARMA(4,2) model selected by AIC.
+<br>
+
+```{r model_select,echo=FALSE, warning=FALSE, message=FALSE, include=FALSE, eval=FALSE }
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q), xreg=xreg, optim.control = list(maxit=200))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+rain_aic_table <- aic_table(dep1_case,5,4,xreg=dep1_rain)
+require(knitr)
+kable(rain_aic_table,digits=2)
+```
+```{r model_fit1, echo=FALSE}
+fit1<-arima(dep1_case[1:1406],xreg=dep1_rain[1:1406],order=c(4,0,2),optim.control = list(maxit=200))
+fit1
+```
+<br>
+
+
+*  I compared the mode with the baseline model, and the p-value from likelihood ratio test sugguets that adding rainfall (lag=0) into the model might not help.
+<br>
+p-value:
+<br>
+```{r log_ratio_test, echo=FALSE}
+log_lik_ratio <- as.numeric(
+  logLik(arima(dep1_case[1:1406],xreg=dep1_rain[1:1406],order=c(4,0,2),optim.control = list(maxit=200))) -
+    logLik(arima(dep1_case[1:1406],order=c(4,0,2),optim.control = list(maxit=200)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+
+print(LRT_pval)
+```
+<br>
+
+* Also, the residual distribution and act plots (**Fig 8**) suggest the model is not appropriate for comparing the two time serieses:
+    + The distribution of residuals shows a fan-shaped scatter with higher variation in the first two years.
+    + The acf shows several peaks at day 12, 13 and 23, and potential sinusoidal pattern.
+
+<br>
+```{r diagnostic,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 8: model diagnostic", fig.width=8, fig.height=4 }
+par(mfrow=c(1,2), mar = c(2,2,2,2))
+plot(fit1$residuals,main="Residuals", type="p")
+acf(fit1$residuals, na.action=na.pass, main="ACF of residuals")
+```
+
+<br>
+
+
+* I then put the lagged rainfall time series (lag=-47, which showed the strongest correlation in pre-whitening CCF plot) instead rainfall with lag=0 in the regression with ARIMA error model:
+$$C_n = \alpha + \beta r_{n-k} + \epsilon_n,$$
+$$ k: lags $$
+where $\{\epsilon_n\}$ is a Gaussian ARMA process.
+I used an ARMA(4,2) model selected by AIC.
+
+<br>
+```{r model_select2,echo=FALSE, warning=FALSE, message=FALSE, include=FALSE, eval=FALSE }
+rain_aic_table <- aic_table(dep1_case,5,4,xreg=dep1_rain[48:1500])
+require(knitr)
+kable(rain_aic_table,digits=2)
+```
+```{r model_fit2, echo=FALSE}
+fit2<-arima(dep1_case[1:1406],xreg=dep1_rain[48:1500][1:1406],order=c(4,0,2),optim.control = list(maxit=200))
+fit2
+```
+<br>
+
+* Adding lagged rainfall series (lag=-47) into the baseline mode seem to help based on the p-value, suggesting lagged rainfall might be a potential predictor for cholera incidence.
+<br>
+p-value:
+
+<br>
+```{r log_ratio_test2, echo=FALSE}
+log_lik_ratio <- as.numeric(
+  logLik(arima(dep1_case[1:1406],xreg=dep1_rain[48:1500][1:1406],order=c(4,0,2),optim.control = list(maxit=200))) -
+    logLik(arima(dep1_case[1:1406],order=c(4,0,2),optim.control = list(maxit=200)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+
+print(LRT_pval)
+```
+<br>
+Nevertheless, the diagnostic plots still show violation of model assumption (ie. residual should be randomly distributed).
+Acf plot suggests that the model is not sufficient to capture the association between rainfall and cholera incidence.
+
+<br>
+```{r diagnostic_2,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 9: model diagnostic", fig.width=8, fig.height=4 }
+par(mfrow=c(1,2), mar = c(2,2,2,2))
+plot(fit1$residuals,main="Residuals", type="p")
+acf(fit1$residuals, na.action=na.pass, main="ACF of residuals")
+```
+<br>
+
+# Conclusions
+
+* The evidences from CCF analysis and the models suggest that lagged effect of rainfall is associated with cholera incidence and could be a potential driver for cholera epidemics. It seems that increasing rainfall might be associated with increasing cholera incidence 47 days after. Therefore, lagged effect of rainfall should be considered when analyzing the relationship between rainfall and cholera incidence.
+* Even though previous studies support that rainfall is a preceding driver for cholera epidemics, the lag people found is usually ranged from 20 days to 30 days `r citep(c("10.1016/j.epidem.2013.09.004" ,"10.1371/journal.pntd.0004153"))`, which is shorter than what I found here.
+* My founding, however,  could be very misleading given several limitations in this study:
+          + As mentioned earlier, there is non-systematically clustering missing data in cholera incidence. Since I simply omitted all the missing values for the time being, it could seriously bias the correlation found in the study.  Careful computation of missing data is needed in the future.
+          + Regardless that adding lagged rainfall seems to significantly improve our model demonstrated above, the  regression with ARIMA error model is not sufficient for analyzing the relationship between rainfall and cholera incidence given the complex correlation structure we saw in CCFs. More comprehensive models such as distributed lag linear and non-linear models should be considered for future analysis `r citep(citation("dlnm"))`.
+* Also, the seasonality map below (**Fig 9**) seems to show shits of timing in cholera epidemic peaks across years. Nonetheless, I can not see similar patterns in rainfall seasonality (**Fig 10**) even though there is pretty strong correlation between rainfall and cholera incidence. It might be worth noting that disease transmission dynamics is complex, and that there might be other environmental and social factors involved in the relationship between cholera and rainfall. Identifying the univariate association is the first step; however, there are still lots of works to do in order to untangle the complicated interactions between rainfall and cholera epidemics.
+
+<br>
+```{r heatmap_case,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 9: cholera incidence seasonality", fig.width=6, fig.height=4 }
+
+x <- as.numeric(format(time[412:NROW(time)], '%j'))
+y <- as.numeric(format(time[412:NROW(time)], '%Y'))
+temp=data.frame(x,y,dep1_case,dep1_rain)
+temp<-temp[!(is.na(temp$dep1_case)),]
+s_case <- interp(temp$x,temp$y, temp$dep1_case, yo=seq(min(temp$y), max(temp$y),length=4), xo=seq(min(temp$x), max(temp$x),length=40))
+image.plot(s_case,xlim=c(1,360))
+title(main="cholera incidence seasonality",ylab="year",xlab="days in a year")
+```
+```{r heatmap_rain,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 10: rainfal seasonality", fig.width=6, fig.height=4 }
+
+s_rain <- interp(temp$x,temp$y, temp$dep1_rain, yo=seq(min(temp$y), max(temp$y),length=4),xo=seq(min(temp$x), max(temp$x),length=40))
+image.plot(s_rain,xlim=c(1,360))
+title(main="rainfall seasonality",ylab="year",xlab="days in a year")
+
+```
+
+
+
+# Packages
+
+* All the analyses are done using `R version 3.1.2 (2014-10-31)` `r citep(citation())`
+
+1. `ggmap` `r citep(citation("knitcitations"))`
+2. `RCurl` `r citep(citation("knitcitations"))`
+3. `xts` `r citep(citation("knitcitations"))`
+4. `TSA` `r citep(citation("knitcitations"))`
+5. `fields` `r citep(citation("knitcitations"))`
+6. `akima` `r citep(citation("knitcitations"))`
+
+
+# References
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE} 
+  write.bibtex(file="references.bib")
+```
+
+
+
+

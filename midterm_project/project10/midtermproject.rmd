@@ -1,0 +1,442 @@
+---
+title: "Stat 531 Midterm Project"
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+    pandoc_args: --number-offset=1
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+---
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+--------------------
+
+--------------------
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+--------------------
+
+--------------------
+
+A cup of coffee is ubiquitous in everyday American life. A Gallup poll in 2015 reports that just under two thirds of US adults drink a cup of coffee a day and that one-sixth of Americans say that they are addicted to coffee. The US is the top coffee importing country in the world and it imports most of its beans from Brazil. Brazil is the world's largest exporter of coffee by far, exporting 64% more metric tons than the next largest exporter, Vietnam, in 2014. It is fair to say that the mechanics of coffee demand and supply in the US and Brazil largely determine how much you pay for your morning coffee. 
+
+<big><big><big>Objectives</big></big></big>
+
+In this report, we seek to answer the following questions:
+
+* How do the amount of precipitation in Brazil, Brazilian Real/US Dollar (BRD/USD) exchange rate, and US coffee bean import volume affect futures prices at the New York "C" contract market? Which of these has the largest impact on how futures contracts are priced?
+
+* *Coffea Arabica*, the main type of coffee tree grown in Brazil, is sensitive to changes in climate, particularly to droughts and frosts which decrease its yield. Is Brazil receiving more extreme amounts of precipitation over time? 
+
+* Does the price of coffee futures contracts exhibit a trend, or can we attribute fluctuations in price merely to random noise?
+
+----------------------
+
+----------------------
+
+## Description of Data Sets Used and Exploratory Data Analysis
+
+### US Coffee Bean Annual Import Volume 
+*Sources:*
+
+*http://www.ers.usda.gov/data-products/us-food-imports.aspx*
+
+*http://www.macroadvisers.com/monthly-gdp/ma-monthly-gdp-index-41/*
+
+One common issue we have to deal with when analyzing time series data is when the data sets being analyzed have different frequencies. We want all our time series data sets to have monthly frequencies when we perform succeeding analyses. This data has an annual frequency, and we disaggregate the data into a monthly frequency as follows:
+
+```{r chunk01, echo=TRUE}
+library(tempdisagg)
+#Total USA Import Volume in thousand 60kg bags
+volume <- c(24378.01304,	26093.39476,	26056.16257,	27016,	27559)
+year <- seq(from=2010,to=2014,by=1)
+importvol <- data.frame(cbind(year,volume),row.names = 1)
+importvolts <- ts(importvol , frequency=1 , start=2010)
+gdp <- read.csv("usamonthlyrealgdp.csv",header=TRUE,row.names = 1)
+gdpts <- ts(gdp, frequency = 12, start = 2010)
+ 
+summary(model <- td(importvolts ~ gdpts))
+monthlyimportvol <- data.frame(matrix(model$values,60,1))
+monthlyimportvolts <- ts(monthlyimportvol,frequency=12,start=2010)
+ts.plot(monthlyimportvolts,xlab = "Year", ylab = "Thousand 60kg Bags", main = "Monthly US Import Volume")
+```
+
+We see from the above plot that the US imports of coffee has been increasing over the past five years.
+
+### Monthly Average Total Precipitation in Brazil 
+*Source: https://data.hdx.rwlabs.org/dataset/daily-summaries-of-precipitation-indicators-for-brazil*
+
+In the original data set, precipitation was recorded at several weather stations in Brazil per month from 2010 to 2014. To obtain the data set below, we averaged the precipitation over all weather stations with available data for each month. Note that the units of precipitation are in 0.1mm.
+
+```{r chunk02, echo=TRUE}
+precip <- read.csv(file="brazilprecipitation.csv",header = TRUE, row.names = 1)
+precipts <- ts(precip, frequency = 12, start = 2010) 
+ts.plot(precipts, xlab="Year",ylab="Precipitation in 0.1mm", main = "Average Monthly Precipitation in Brazil")
+head(precip)
+```
+The above plot shows that the amount of precipitation Brazil receives is cyclical, and seems to have decreased in magnitude in recent years. In the second half of 2014, Brazil experienced drought and as a result arabica production dropped, which led to increased coffee prices during that time. With the phenominon of global warming being an important topic of discussion in the scientific, business, and political communities we ask whether the decreasing magnitude of precipitation we observe visually from the graph is indeed present.
+
+### BRD/USD Daily Exchange Rate 
+*Source: https://research.stlouisfed.org/fred2/series/DEXBZUS#*
+
+The original data set contains daily prices from 2010 to 2014. To obtain the data set below, we get the average daily BRD/USD exchange rate per month.
+
+```{r chunk03, echo=TRUE}
+erate <- read.csv("BRLUSDrates.csv",header=TRUE,row.names = 1)
+eratets <- ts(erate, frequency = 12, start = 2010) 
+ts.plot(eratets, xlab="Year",ylab="USD/BRL Exchange Rate", main = "Average Monthly USD/BRL Exchange Rate")
+head(erate)
+```
+
+We see from the plot above that the USD/BRL exchange rate shows a distinct upward trend.
+
+### Coffee Futures Prices at the New York "C" Contract Market 
+*Source: https://www.quandl.com/data/CHRIS/ICE_KC2-Coffee-C-Futures-Continuous-Contract-2-KC2*
+
+The original data set contains daily prices from 2010 to 2014. To obtain the data set below, we get the monthly average daily coffee futures prices in US cents per lb. The USD/BRL Exchange rate is a proxy for broader macroeconomic factors affecting both the US and Brazil.
+
+```{r chunk04, echo=TRUE}
+futures <- read.csv("coffeeC.csv",header=TRUE,row.names = 1)
+futurests <- ts(futures, frequency = 12, start = 2010) 
+ts.plot(futurests, xlab="Year",ylab="US cents per lb", main = "Average Monthly New York Coffee C Futures Contract Prices")
+head(futures)
+```
+
+We are interested in changes over business cycle time scales once trends have been removed.To extract the cyclical component, we use an econometric method called the Hodrick-Prescott (HP) filter .
+
+```{r chunk05, echo=TRUE}
+library(mFilter)
+monthlyimportvolts_hp <- hpfilter(monthlyimportvolts, freq=100,type="lambda",drift=F)$cycle
+precipts_hp <- hpfilter(precipts, freq=100,type="lambda",drift=F)$cycle
+eratets_hp <- hpfilter(eratets, freq=100,type="lambda",drift=F)$cycle
+futurests_hp <- hpfilter(futurests, freq=100,type="lambda",drift=F)$cycle
+```
+
+```{r chunk06, echo=TRUE}
+plot(futurests_hp,type="l",xlab="Year",ylab="Average Monthly Futures Contract Prices (USD cents per lb)")
+par(new=TRUE)
+plot(monthlyimportvolts_hp,col="red",type="l",axes=FALSE,xlab="",ylab="",main="Average Monthly US Coffee Import Volume (in Thousands of 60kg Bags per Month) against Average Monthly Futures Contract Prices")
+axis(side=4, col="red")
+```
+
+```{r chunk07, echo=TRUE}
+plot(futurests_hp,type="l",xlab="Year",ylab="Average Monthly Futures Contract Prices (USD cents per lb)")
+par(new=TRUE)
+plot(precipts_hp,col="red",type="l",axes=FALSE,xlab="",ylab="",main="Average Monthly Precipitation in Brazil (in 0.1mm per month) against Average Monthly Futures Contract Prices")
+axis(side=4, col="red")
+```
+
+```{r chunk08, echo=TRUE}
+plot(futurests_hp,type="l",xlab="Year",ylab="Average Monthly Futures Contract Prices (USD cents per lb)")
+par(new=TRUE)
+plot(eratets_hp,col="red",type="l",axes=FALSE,xlab="",ylab="",main="Average Monthly BRD/USD Exchange Rate against Average Monthly Futures Contract Prices")
+axis(side=4, col="red")
+```
+From the above three graphs, we observe that detrended futures prices (FP), monthly import volumes (IV), monthly precipitation values (PV), and exchange rates (ER) seem to cycle together. We will perform some tests to see if this is so. Let us first analyze each of these time series using a regression with ARMA errors models. We discuss model selection in more detail in the supplementary analysis.
+
+\begin{equation}
+FP_n^{HP} = \alpha + \beta IV_n^{HP*}  + \epsilon_n
+\end{equation}
+
+\begin{equation}
+FP_n^{HP} = \alpha + \beta PV_n^{HP*}  + \epsilon_n
+\end{equation}
+
+\begin{equation}
+FP_n^{HP} = \alpha + \beta ER_n^{HP*}  + \epsilon_n
+\end{equation}
+
+```{r chunk09, echo=TRUE}
+arima(futurests_hp,xreg=monthlyimportvolts_hp,order=c(2,0,1))
+
+log_lik_ratio <- as.numeric(
+   logLik(arima(futurests_hp,xreg=monthlyimportvolts_hp,order=c(2,0,1))) -
+   logLik(arima(futurests_hp,order=c(2,0,1)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+The Likelihood Ratio Test yields a p-value of 0.716 so the association between futures prices and monthly import volume, which is a proxy metric for demand for coffee in the US, is not statistically significant.
+
+```{r chunk10, echo=TRUE}
+arima(futurests_hp,xreg=precipts_hp,order=c(2,0,1))
+
+log_lik_ratio <- as.numeric(
+   logLik(arima(futurests_hp,xreg=precipts_hp,order=c(2,0,1))) -
+   logLik(arima(futurests_hp,order=c(2,0,1)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+
+Performing a Likelihood Ratio Test on the above models yields a p-value of 0.286. While the above do not suggest a statistically significant association between futures prices and precipitation in Brazil, a proxy metric for supply of coffee to the US, the above does show that precipitation is much more predictive of futures prices than import volume.
+
+```{r chunk11, echo=TRUE}
+arima(futurests_hp,xreg=eratets_hp,order=c(2,0,1))
+
+log_lik_ratio <- as.numeric(
+   logLik(arima(futurests_hp,xreg=eratets_hp,order=c(2,0,1))) -
+   logLik(arima(futurests_hp,order=c(2,0,1)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+
+The Likelihood Ratio Test yields a p-value of 0.014 which indicates that USD/BRL exchange rates have a highly statistically significant association with futures prices.
+
+----------------------
+
+----------------------
+
+## Interplay of Climate, Macroeconomic Conditions, and the Demand for Coffee on Coffee Futures Prices at the New York "C" Contract Market
+
+Now we want to see whether combining our knowledge of detrended monthly US coffee import volume, precipitation in Brazil, and exchange rates will help us predict futures prices better than the models above.
+
+```{r chunk12, echo=TRUE}
+covariates <- cbind(monthlyimportvolts_hp,precipts_hp,eratets_hp)
+arima(futurests_hp,xreg=covariates,order=c(2,0,1))
+
+log_lik_ratio <- as.numeric(
+   logLik(arima(futurests_hp,xreg=covariates,order=c(2,0,1))) -
+   logLik(arima(futurests_hp,order=c(2,0,1)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+The Likelihood Ratio Test yields a p-value of 0.011 which indicates that using all three factors will yield a model with even better predictive ability of futures prices.
+
+------------
+
+------------
+
+## Trends in Precipitation in Brazil
+
+We now want to check if there is a systematic trend in precipitation.
+
+```{r chunk13, echo=TRUE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+```
+
+```{r chunk14, echo=TRUE}
+aic_table(precipts,4,5,xreg=NULL)
+```
+The above table of AIC values tells us that the ARMA(2,2).
+
+Below we fit the null and the alternative models and observe that autocorrelation function plots of the residuals of both models show that the redisuals are uncorrelated.
+```{r chunk15, echo=TRUE}
+fit0 <- arima(precipts,xreg=NULL,order=c(2,0,2))
+acf(resid(fit0))
+fit1 <- arima(precipts,xreg=seq(from=2010,to=(2014+11/12),by=1/12),order=c(2,0,2))
+acf(resid(fit1))
+```
+
+And then we perform a Likelihood Ratio Test
+```{r chunk16, echo=TRUE}
+log_lik_ratio <- as.numeric(
+   logLik(fit1) - logLik(fit0)
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+The test yields a p-value of 0.44 and so we do not accept out null hypothesis that there is a systematic increasing or decreasing trend in precipitation values. The period of droughts and frosts Brazil is experiencing in the recent years appears to be just part of the cyclical nature of climate.
+
+------------
+
+------------
+
+
+## Trends in Coffee Futures Prices at the New York "C" Contract Market
+
+We now want to check if there is a systematic trend in futures prices.
+
+```{r chunk17, echo=TRUE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+```
+
+```{r chunk18, echo=TRUE}
+aic_table(futurests,4,5,xreg=NULL)
+```
+The above table of AIC values tells us that the ARMA(3,4) would be the best small model.
+
+```{r chunk19, echo=TRUE}
+aic_table(futurests,4,5,xreg=seq(from=2010,to=(2014+11/12),by=1/12))
+```
+The above table of AIC values tells us that the ARMA(2,1) would be the best small model. 
+
+Below we fit the null and the alternative models. 
+
+```{r chunk20, echo=TRUE}
+fit0 <- arima(futurests,xreg=NULL,order=c(3,0,4))
+acf(resid(fit0))
+fit1 <- arima(futurests,xreg=seq(from=2010,to=(2014+11/12),by=1/12),order=c(2,0,1))
+acf(resid(fit1))
+```
+
+The first autocorrelation function plot shows that all vertical lines lie within the two horizontal dashed lines. The residuals of this model are uncorrelated, indicating a good fit. On the other hand, in the second autocorrelation function plot one out of the 14 vertical lines fall narrowly outside the horizontal dashed lines (ie. 7% of the lags) which is fine.
+
+And then we perform a Likelihood Ratio Test
+```{r chunk21, echo=TRUE}
+log_lik_ratio <- as.numeric(
+   logLik(fit1) - logLik(fit0)
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+
+The likelihood ratio test shows a p-value of 0.008 giving us strong evidence to reject the null hypothesis that there is no systematic trend in coffee futures prices.
+
+----------------------
+
+----------------------
+
+## Conclusion
+Indeed we see a strong systematic upward trend in coffee futures prices at the New York "C" Contract Market. While demand for coffee in the US, supply side constraints (ie. precipitation in Brazil), and USD/BRL exchange rates all contribute to this upward trend, it is the USD/BRL eachange rate that is the primary driver for the increase in coffee futures prices. 
+
+As the USD/BRL exchange rate increases, this makes importing coffee from Brazil more expensive. This is reflected in the increasing coffee futures prices.
+
+As USD/BRL rates continue to increase, we can expect to see coffee futures prices rise along with it.
+
+------------
+
+------------
+
+## Supplementary Analysis
+We will use the following function to obtain the AIC values for the various models under consideration below:
+
+```{r supplementaryanalysis01, echo=TRUE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+```
+
+### Model Selection for the $FP_n^{HP} = \alpha + \beta IV_n^{HP*}  + \epsilon_n$ ARMA Regression Model
+
+```{r supplementaryanalysis02, echo=TRUE}
+futures_aic_table <- aic_table(futurests_hp,4,5,xreg=monthlyimportvolts_hp)
+require(knitr)
+kable(futures_aic_table,digits=2)
+```
+
+The table above suggests that the model with ARMA(2,1) errors is the best small model.
+
+We should check the residuals for the fitted model, and look at their sample autocorrelation.
+
+```{r supplementaryanalysis03, echo=TRUE}
+r <- resid(arima(futures,xreg=monthlyimportvolts_hp,order=c(2,0,1)))
+plot(r)
+acf(r)
+```
+
+There is some evidence that the residuals are increasing in magnitude. However, it does not appear to be too extreme.  We also see in the ACF plot that none of the nonzero lags fall outside the two horizontal dashed lines and thus the residuals appear to follow white noise.
+
+### Model Selection for the $FP_n^{HP} = \alpha + \beta PV_n^{HP*}  + \epsilon_n$ ARMA Regression Model
+
+```{r supplementaryanalysis04, echo=TRUE}
+futures_aic_table <- aic_table(futurests_hp,4,5,xreg=precipts_hp)
+require(knitr)
+kable(futures_aic_table,digits=2)
+```
+The table above suggests that the model with ARMA(2,1) errors is the best small model.
+
+We should check the residuals for the fitted model, and look at their sample autocorrelation.
+
+```{r supplementaryanalysis05, echo=TRUE}
+r <- resid(arima(futures,xreg=precipts_hp,order=c(2,0,1)))
+plot(r)
+acf(r)
+```
+The residuals appear to be realizations of a random noise process. We also see in the ACF plot that none of the nonzero lags fall outside the two horizontal dashed lines and thus the residuals appear to follow white noise.
+
+### Model Selection for the $FP_n^{HP} = \alpha + \beta ER_n^{HP*}  + \epsilon_n$ Regression Model
+
+```{r supplementaryanalysis06, echo=TRUE}
+futures_aic_table <- aic_table(futurests_hp,4,5,xreg=eratets_hp)
+require(knitr)
+kable(futures_aic_table,digits=2)
+```
+The table above suggests that the model with ARMA(2,1) errors is the best small model.
+
+We should check the residuals for the fitted model, and look at their sample autocorrelation.
+
+```{r supplementaryanalysis07, echo=TRUE}
+r <- resid(arima(futures,xreg=eratets_hp,order=c(2,0,1)))
+plot(r)
+acf(r)
+```
+Again we see that the residuals appear to be realizations of a random noise process. We also see in the ACF plot that none of the nonzero lags fall outside the two horizontal dashed lines and thus the residuals appear to follow white noise.
+
+----------------------
+
+----------------------
+
+## References
+* http://www.gallup.com/poll/184388/americans-coffee-consumption-steady-few-cut-back.aspx
+
+
+
+
+

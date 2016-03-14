@@ -1,0 +1,602 @@
+---
+title: "The Popularity of Miniskirt Over Time in China"
+subtitle: "and its Association with SSE Composite Index"
+date: ""
+output: html_document
+---
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+
+## Introduction
+
+It has long been a myth in economics area that the shorter the skirts women wear, the better the macroeconomics condition. This Hemline Index Theory is first presented by economist George Taylor in 1926, who suggested that  hemlines on women's dresses rise along with stock prices. He argued that in good economic times women shortened their skirts to show off their silk stockings but when times were bad they lengthened them to hide that they couldn’t afford stockings. So when the economy boomed skirts were short and when it lagged skirts were longer. There has been a lot of discussion about the hemline index in United States. However, the prevailing view distrusts the hemline index as a good indicator of macroeconomics.
+
+Inpired by this interesting theory but limited by the available data, I turn to focus on the popularity of miniskirt and stock market situation from 2011 to 2015 in China. I want to know whether better stock market corresponds to miniskirt being more popular.
+
+## Data Preprocessing
+
+1. **Taobao Miniskirt Trend Index**
+
+To represent the popularity of miniskirts, I use the search index of the key word "Miniskirt" on Taobao online shopping website. Since Taobao is the biggest online shopping website in China, which has over 80% market share, and online shopping is quite pervasive in China, the Taobao search trend is suitable to show the popularity of a certain commodity. The time period is from 2011-07-01 to 2016-01-01 and the data is daily recorded.
+
+```{r, echo=FALSE,message=FALSE}
+require("XLConnect")
+skirt<-readWorksheetFromFile( "Miniskirt_Search_Index.xlsx",sheet = "Sheet1", header = TRUE)
+colnames(skirt)<-c("Date","Miniskirt")
+
+skirt$Date=as.Date(skirt$Date)
+
+startrow=grep("2011-07-01",skirt$Date)
+endrow=grep("2016-01-01",skirt$Date)
+```
+
+```{r, echo=FALSE}
+plot(Miniskirt~Date,data=skirt[startrow:endrow,],type="l")
+##find the points of spring festival
+spring2012=which(skirt$Date==as.Date("01/23/12","%m/%d/%y"))
+points(skirt[spring2012,1],skirt[spring2012,2],col="blue")
+spring2013=which(skirt$Date==as.Date("02/10/13","%m/%d/%y"))
+points(skirt[spring2013,1],skirt[spring2013,2],col="blue")
+spring2014=which(skirt$Date==as.Date("01/28/14","%m/%d/%y"))
+points(skirt[spring2014,1],skirt[spring2014,2],col="blue")
+spring2015=which(skirt$Date==as.Date("02/19/15","%m/%d/%y"))
+points(skirt[spring2015,1],skirt[spring2015,2],col="blue")
+
+##find the points of "11.10"
+double2012=which(skirt$Date==as.Date("11/10/12","%m/%d/%y"))
+points(skirt[double2012,1],skirt[double2012,2],col="red")
+double2013=which(skirt$Date==as.Date("11/10/13","%m/%d/%y"))
+points(skirt[double2013,1],skirt[double2013,2],col="red")
+double2014=which(skirt$Date==as.Date("11/10/14","%m/%d/%y"))
+points(skirt[double2014,1],skirt[double2014,2],col="red")
+double2015=which(skirt$Date==as.Date("11/10/15","%m/%d/%y"))
+points(skirt[double2015,1],skirt[double2015,2],col="red")
+
+double122012=which(skirt$Date==as.Date("12/11/12","%m/%d/%y"))
+points(skirt[double122012,1],skirt[double122012,2],col="red")
+double122013=which(skirt$Date==as.Date("12/11/13","%m/%d/%y"))
+points(skirt[double122013,1],skirt[double122013,2],col="red")
+double122014=which(skirt$Date==as.Date("12/11/14","%m/%d/%y"))
+points(skirt[double122014,1],skirt[double122014,2],col="red")
+double122015=which(skirt$Date==as.Date("12/11/15","%m/%d/%y"))
+points(skirt[double122015,1],skirt[double122015,2],col="red")
+```
+
+Note the Taobao miniskirt index is sharply low at the beginning of each year 2012-01-23, 2013-02-10, 2014-01-28,2015-02-19. This decrease is because of Chinese Spring Festival. According to custom, we Chinese go shopping before Spring Festival, and at the Eve of Lunar New Year,  people only get together with families, enjoy food, and do nothing else. So the search for all kinds of commodity rises before spring festival and hugely decreases at the Eve of Lunar New Year.
+
+Also, the miniskirt index plot increase sharply around Nov.11 and Dec.12 every year. Since the "11.11" and "12.12" Taobao shopping festivals (especially "11.11") in China are similar with Thanks Giving shopping festival in United States, people tend to buy commodity on sale on "11.11" and "12.12". So the search volume for all kinds of items goes to peak before "11.11","12.12" and fall down after "11.11", "12.12".
+
+These phenomena of sharp increase or decrease is because of customs or promotion sales, but not represent the real popularity of miniskirt. These peaks or pits may prevent the further analysis and model fitting, so I convert the daily data to weekly data and get a time series with over 200 time points. The average on every seven days will smooth the abrupt effect on some special days. 
+```{r, message=FALSE}
+require("zoo")
+week <- function(x)format(x, '%Y.%W')
+dayminiskirt=zoo(skirt$Miniskirt[startrow:endrow],skirt$Date[startrow:endrow])
+weekminiskirt=aggregate(dayminiskirt, by=week, FUN=mean)
+plot(weekminiskirt)
+```
+
+2. **Average Temperature in Main Cities**
+
+From https://www.ncdc.noaa.gov/data-access/land-based-station-data, I get the daily average temperture of several cities - Guiyang, Ganzhou, Fuzhou, Quanzhou, etc. Among all cities in China, miniskirt is mostly searched by Taobao users from these several cities. And similarly, convert the daily temperature data into weekly temperature data.
+```{r echo=FALSE}
+mycols <- rep("NULL", 22); mycols[3:4] <- NA;  
+temp<- read.table("Average_Temperature_in_Several_Main_Cities.txt", quote="\"",colClasses=mycols)
+colnames(temp)<-c("Date","Temperature")
+temp<-aggregate(temp,by=list(temp$Date),mean)
+
+temp$Date=as.Date(as.character(temp$Date),"%Y%m%d")
+
+startrow=grep("2011-07-01",temp$Date)
+endrow=grep("2016-01-01",temp$Date)
+
+daytemp=zoo(temp$Temperature[startrow:endrow],temp$Date[startrow:endrow])
+weektemp=aggregate(daytemp, by=week, FUN=mean)
+plot(weektemp)
+```
+
+3.  **SSE Composite Index**
+
+Here we use the close price of Shanghai Stock Exchange Composite Index to show the stock market situation in China. Again the daily data is converted into weekly data to help further analyze its relation with popularity of miniskirt.
+```{r echo=FALSE}
+stock<-readWorksheetFromFile("Shanghai_Stock_Exchange_Composite_Index.xlsx",sheet="Sheet1")[,c(1,4)]
+
+stock=stock[nrow(stock):1,]
+colnames(stock)<-c("Date","Close")
+
+stock$Date=as.Date(stock$Date)
+
+startrow=grep("2011-07-04",stock$Date)
+endrow=grep("2015-12-31",stock$Date)
+
+daystock=zoo(stock$Close[startrow:endrow],stock$Date[startrow:endrow])
+weekstock=aggregate(daystock, by=week, FUN=mean)
+plot(weekstock)
+```
+
+## Seasonality of the Popularity of Miniskirts
+```{r}
+periodogram<-spectrum(ts(weekminiskirt),spans=c(3,3),main="Smoothed periodogram of Weekly Taobao Miniskirt Trend ", xlab="Frequency (cycle/week)")
+```
+
+From the plot, moving the cross bar, we notice the first peak is significant, and the frequency is a bit smaller than 0.02 cycle/week, which corresponds to 52 or 53 week/cycle, about 1 year/cycle. This period is consistent with common sense of life. The popularity of miniskirt change with a cycle of one year, it's popular in summer, and it's nearly unsalable in winter.
+
+The significant peak shows a cycle of period 1 year. So the seasonality of Taobao Miniskirt Trend Index is convincing. 
+
+## Trend + Cycle + Noise Model
+
+To have a intuitive feeling, I firstly try the trend+cycle+noise decomposition for the Taobo Miniskirt search index. Notably, the trend of miniskirt search firstly increases then decreases. 
+
+```{r}
+date=time(weekminiskirt)
+s_loess <- loess(ts(weekminiskirt)~date,span=0.8)
+plot(weekminiskirt,type="l",col="red",main="Trend of Taobao Miniskirt Search Index")
+lines(s_loess$x,s_loess$fitted,type="l")
+
+s_low <- s_loess$fitted
+s_hi <- ts(weekminiskirt) - loess(ts(weekminiskirt)~date,span=0.1)$fitted
+s_cycles <- ts(weekminiskirt) - s_hi - s_low
+plot(ts.union(ts(weekminiskirt), s_low,s_hi,s_cycles),
+  main="Decomposition of Taobao Miniskirt Index as trend + noise + cycles",xlab="Week from 2011-07-01")
+```
+
+Note the Taobao search index only counts search from personal computer terminal. This Miniskirt search trend may be explained by the change of Taobao users on personal computer. For the past several years, as time goes on, Taobao website accumulate more and more users while more and more Chinese get access and get used to shopping on Taobao website. But recently, mobile application has been more and more convenient, so perhaps less users turn to personal computer to search and go shopping. The change of number of Taobao users on personal computer may cause the change of Taobao Miniskirt Search trend.
+
+Of course, another possible explaination for the Miniskirt search trend with time is change of fashion trend.
+
+```{r}
+spec_cycle <- spectrum(ts.union(ts(weekminiskirt),s_cycles),
+  spans=c(3,3),
+  plot=FALSE)
+freq_response_cycle <- spec_cycle$spec[,2]/spec_cycle$spec[,1]
+
+cut_fraction <- 0.96
+plot(spec_cycle$freq,freq_response_cycle,
+  type="l",log="y",
+  ylab="frequency ratio", xlab="frequency", 
+  main=paste("frequency response, showing region for ratio >", cut_fraction))
+abline(h=1,lty="dashed",col="blue")  
+freq_cycles <- range(spec_cycle$freq[freq_response_cycle>cut_fraction]) 
+abline(v=freq_cycles,lty="dashed",col="blue") 
+abline(h=cut_fraction,lty="dashed",col="blue")
+
+1/freq_cycles
+```
+The spectrum frequency ratio shows the Miniskirt search cycle is in the interval [30.375, 60.750] weeks, which does not contracts our claim of the cycle with one year period. 
+
+Except for the noise part, when we compare the main part of miniskirt search index with temp and log of stock index, we could easily notice that the shape of miniskirt cycle is relative with the the shape of temp and the shape of stock index.
+
+```{r}
+plot(ts.union(s_cycles+s_low,ts(weektemp),ts(log(weekstock))),main="Main part of miniskirt index,/n temperature and log of stock index",xlab="Week from 2011-07-01")
+```
+
+It's to be observed that since the end of 2014, the search of miniskirt shows overall decline, but at the same time the stock price gives substantial rise. Does this phenomena suggest the Hemline theory ("Hemline rises as the stock price rises") is wrong? It's natural to focus on the relationship among these variables.
+
+##Signal plus Noise Model for Taobao Miniskirt Search Index
+
+Here I fit a simple linear regression model of Miniskirt Search Index with time, time^2, temperature and log of SSE composite index as the predictors.
+
+$Miniskirt=\beta_{1}Time+\beta_{2}{Time}^2+\beta_{3}Temp+\beta_{4}Stock+\epsilon$
+
+where the noise $\epsilon$ is independently normal distributed.
+```{r,echo=FALSE}
+weekt=intersect(index(weektemp),index(weekstock))
+weekstock=weekstock[index(weekstock)%in%weekt,]
+weektemp=weektemp[index(weektemp)%in%weekt,]
+weekminiskirt=weekminiskirt[index(weekminiskirt)%in%weekt,]
+```
+
+```{r}
+time=seq(1,length(weektemp))
+lmtts=lm(ts(weekminiskirt)~time+I(time^2)+ts(weektemp)+ts(log(weekstock)))
+summary(lmtts)
+```
+
+Unsurprisingly we get the temperature as a significant predictor of Miniskirt Search Index, since the miniskirt is more popular when the weather is hotter, and people don't need the miniskirts when the temperature is low. 
+
+Also time is shown as a signigicant predictor, but the estimate coefficient of ${time}^2$ is negative, while the estimate coefficient of $time$ positive. These estimate coefficient means as time goes on, firstly the search increases, then the search decreases. 
+
+It's a bit surprising that the SSE Composite Index (on log scale) shows quite small p-value in this linear regression model. Also we notice that the coefficient of weekstock is negative, which means that the stock index is negatively associated with the popularity of miniskirt. It seemingly contracts with the claim of Hemline theory.
+
+```{r}
+lmtt=lm(ts(weekminiskirt)~time+I(time^2)+ts(weektemp))
+anova(lmtt,lmtts)
+```
+
+When we add the SSE index into the linear model,
+$Miniskirt=\beta_{0}+\beta_{1}Time+\beta_{2}{Time}^2+\beta_{3}Temperature+\beta_{4}Stock+\epsilon$
+where the noise $\epsilon$ is independently normal distributed,  all predictors "time", "weektemp" and "weekstock" are significant under confidence level of 5%. And the anova test shows that given the predictors time and weektemp, the log(weekstock) is a significant predictor, i.e. the null assumption that $\beta_{4} =0$ given $\beta_1$ is rejected. 
+
+It seems that we have got a good linear regression model by least square error. This model shows that the popularity of miniskirt is positively associated with the temperature, negatively associated with stock index, and the Toabao Miniskirt Search Index increases first then decreases as time goes on. But the linear regression diagnostic shows the violation of homoscedasticity and slight violation of normality.
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+plot(lmtts)
+```
+
+```{r,echo=FALSE}
+par(mfrow=c(1,2))
+plot(time,ts(weekminiskirt),main="Linear Regression Model Miniskirt~ \n Time+Time^2+Temp+Stock",type="l",lty="dashed")
+lines(time,lmtts$fitted,type="l",col="red")
+acf(ts(resid(lmtts)),lag.max=80,main="ACF of the Residual")
+```
+
+Also the plot of the residual autocorrelation mean voilation of independent error, showing oscillation of acf value and many of the lags of the sample ACF fall outside the band. So the linear regression model is not reliable enough.
+
+##Regression with SARIMA Error Model for predictor log(weekstock)
+
+Because the acf of the full linear regression model shows seemingly periodic oscillation., I'd like to try the SARIMA error model. Since the time points of my data use week time 20xx.00 ~ 20xx.52 (or 20xx.01 ~ 20xx.52) to denote one year (some years have 52 weeks while some years have 53 weeks), so I set the period as 53 to represent seasonality.
+
+1. $(p,0,q)*(1,1,0)_{53}$ with predictor time, time^2, weektemp,log(weekstock)
+
+Then the SARMA error model is:
+
+$Miniskirt=\alpha_{1}time+\alpha_{2}time^2+\alpha_{3}Temperature+\alpha_{4}Stock+\eta$
+
+$\phi(B)(1-\Phi_1 B^{53})((1-B^{53})\eta_{n}-\mu)=\psi(B)\epsilon_{n}$
+
+where $\epsilon_{n}$ is independently identically normally distributed $N(0,\sigma^2)$ 
+
+```{r, echo=FALSE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),
+                              xreg=xreg,
+                              seasonal=list(order=c(1,1,0),period=53),
+                              )$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+
+```
+
+Since when using weekminiskirt as response, the calculation of AIC table meets problems of optimization: "Error in optim(init[mask], armafn, method = optim.method, hessian = TRUE,  : non-finite finite-difference value [1]", I transform the weekminiskirt on log scale, then we can calculate the AIC_table and fit the proper SARIMA erroe model. 
+
+```{r}
+aic_table_log_tts <- aic_table(ts(log(weekminiskirt)),4,5,xreg=cbind(time,time^2,ts(weektemp),ts(log(weekstock))))
+```
+
+```{r,echo=FALSE,message=FALSE}
+require(knitr)
+kable(aic_table_log_tts,digits=2)
+```
+
+The AIC value recommends model p=1, q=2, with AIC=-140.27. But I also notice the model p=1, q=0 is more simple with AIC not bad.
+
+```{r}
+arimattslog100110=arima(ts(log(weekminiskirt)),order=c(1,0,0),xreg=cbind(time,time^2,ts(weektemp),ts(log(weekstock))),seasonal=list(order=c(1,1,0),period=53))
+arimattslog100110
+```
+
+The $(1,0,0)*(1,1,0)_{53}$ fitted model is
+
+$Miniskirt=\beta_{1}time+\beta_{2}time^2+\beta_{3}Temperature+\beta_{4}Stock+\eta$
+
+$(1-\phi_1 B)(1- \Phi_1 B^{53})(1-B^{53})\eta_{n}=\epsilon_{n}$
+
+where $\epsilon_{n}$ is independently identically normally distributed $N(0, \sigma^2)$
+
+$\beta_{1}=0.0057$, $\beta_{2}=0$, $\beta_{3}=0.0080$, $\beta_{4}=-0.6538$, $\phi_1=0.7210$, $\Phi_1=-0.6340$ and $\sigma^2=0.02164$. 
+
+We can notice that all estimated coefficient have small s.e. based on Fisher Information.
+
+```{r}
+arimattslog102110=arima(ts(log(weekminiskirt)),order=c(1,0,2),xreg=cbind(time,time^2,ts(weektemp),ts(log(weekstock))),seasonal=list(order=c(1,1,0),period=53))
+arimattslog102110
+```
+Then the $(1,0,2)*(1,1,0)_{53}$ fitted model is:
+
+$Miniskirt=\beta_{1}time+\beta_{2}time^2+\beta_{3}Temperature+\beta_{4}Stock+\eta$
+
+$(1-\phi_1 B)(1-\Phi_1 B^{53})(1-B^{53})\eta_{n}=\epsilon_{n}+\psi_1\epsilon_{n-1} + \psi_2 \epsilon_{n-2}$
+
+where $\epsilon_{n}$ is independently identically normally distributed $N(0,\sigma^2)$.
+
+$\beta_{1}=0.0066$, $\beta_{2}=-1e-04$, $\beta_{3}= 0.0084$, $\beta_{4}=-0.3520$, $\phi_1=0.9303$, $\Phi_1=-0.6437$, $\psi_1=-0.2661$ ,and  $\psi_2=-0.2340$  and $\sigma^2=0.02164$. 
+
+We can also notice that all estimated coefficient have small s.e. based on Fisher Information.
+
+2. Diagnostics of these two recommended models
+
+We could notice that the (1,0,2)x(1,1,0) model has advantage of lower AIC, while the (1,0,0)x(1,1,0) model has advantage of simpler parameters. Below we use diagnostics to compare these two models.
+```{r}
+params <- coef(arimattslog100110)
+arcoef <- params[grep("^ar",names(params))]
+sarcoef <- params[grep("^sar",names(params))]
+list(AR_roots=polyroot(c(1,-arcoef)),SAR_roots=polyroot(c(1,-sarcoef)))
+```
+
+Firstly we use the polynomial root test. For (1,0,0)x(1,1,0) model, the AR roots and SAR roots are just outside the unit circle, suggesting we have a stationary causal fitted ARMA. 
+
+```{r}
+params <- coef(arimattslog102110)
+arcoef <- params[grep("^ar",names(params))]
+macoef <- params[grep("^ma",names(params))]
+sarcoef <- params[grep("^sar",names(params))]
+list(AR_roots=polyroot(c(1,-arcoef)),MA_roots=polyroot(c(1,macoef)),SAR_roots=polyroot(c(1,-sarcoef)))
+```
+
+Similarly, the SAR roots, AR roots, MA roots are all outside the unit circle, so the $(1,0,2)*(1,1,0)_{53}$ SARIMA error model is stationary, causal, and invertible. 
+
+```{r}
+par(mfrow=c(1,2))
+acf(resid(arimattslog100110),lag.max=100,main="ACF of Resid (1,0,0)x(1,1,0)")
+acf(resid(arimattslog102110),lag.max=100,main="ACF of Resid (1,0,2)x(1,1,0)")
+```
+
+Under the null assumption of independent error, we expect a fraction of 1/20 of the lags of the sample ACF to fall outside this band. The plot consistent with the assumption, so we fail to reject the null assumption for both models, that the residual are independent with each other.
+
+```{r}
+par(mfrow=c(1,2))
+qqnorm(resid(arimattslog100110),main="qqplot of Resid (1,0,0)x(1,1,0)")
+qqnorm(resid(arimattslog102110),main="qqplot of Resid (1,0,2)x(1,1,0)")
+```
+
+Both these two models $(1,0,0)*(1,1,0)_{53}$ and $(1,0,2)*(1,1,0)_{53}$ have independent residuals, but not normally distributed. Then these two models share advantage and disadvantage, and I personally prefer the simpler one $(1,0,0)*(1,1,0)_{53}$.
+
+```{r}
+par(mfrow=c(1,2))
+plot(resid(arimattslog100110),main="Resid (1,0,0)x(1,1,0)")
+plot(resid(arimattslog102110),main="Resid (1,0,2)x(1,1,0)")
+```
+
+However, we should also notice the residual of both these two models suffer from non-constant variation. 
+
+3.Significant predictor log(weekstock)
+
+```{r}
+log_lik_ratio <- as.numeric(
+   logLik(arimattslog100110) -
+   logLik(arima(ts(log(weekminiskirt)),order=c(1,0,0),xreg=cbind(time,time^2,ts(weektemp)),seasonal=list(order=c(1,1,0),period=53)))
+)
+
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+The p-value suggests the predictor log(weekstock) is significant in this $(1,0,0)*(1,1,0)$ SARIMA error model. By now, we get a accepatable model to describe the change of Taobao Miniskirt Search Trend, which is simple and basically consistent with our SARIMA error model assumption.
+
+But the model 
+$log(weekminiskirt) = (5.661493e-03) time -(4.763852e-05) {time}^2 + (8.026694e-03) weektemp -(6.537819e-01) log(weekstock) + \eta$, 
+
+seems reject the Hemline model. The negative coefficient of log(weekstock) means when stock index increases, the search of weekminiskirt decreases, the miniskirt is less popular.
+
+4. Argument for the $(1,0,0)*(1,1,0)_{53}$ error model with predictor log(weekstock)
+
+Has we successfully find the negative association between popularity of miniskirt and stock index? But when we fit the model using only part of the data, the first 160 weeks, we get the coefficient with positive sign. 
+
+```{r}
+shorttts100110=arima(ts(log(weekminiskirt)[1:160]),order=c(1,0,0),xreg=cbind(time[1:160],(time[1:160])^2,ts(weektemp[1:160]),ts(log(weekstock)[1:160])),seasonal=list(order=c(1,1,0),period=53))
+coef(shorttts100110)
+```
+
+This means during the first 160 weeks, the search of miniskirt increase as stock index increases. The model shows differently as time goes on. Since the end of 2014, the concurrent stock increase anf Miniskirt search increase, has tremendous influence on our model, so that even the coefficient sign of predictor log(weekstock) changes. 
+
+Because this model with predictor log(weekstock) is not always reliable during different time period within 2011-2016, we need to modify this model.
+
+## SARIMA error model for predictor log(weekstock)/weekvol
+
+1. Variable to represent the stock market situation
+
+My original guess is that the popularity of miniskirt is associated with the stock markrt situation. Apart from the stock index, volatility is an important variable in the stock market. Here I try to introduce a new variable to describe the volatility of SSE Composite index. The computation of volatility is implemented by the existing function in package "stochvol".
+
+```{r, message=FALSE}
+library(stochvol)
+set.seed(123)
+ret <- logret(stock$Close[startrow:endrow], demean = TRUE)
+res <- svsample(ret, priormu    = c(-10, 1),
+                priorphi   = c(20, 1.1),
+                priorsigma = .1)
+htmatrix=as.matrix(res$latent)
+volmatrix=exp(htmatrix/2)
+volatility=colMeans(volmatrix)
+
+plot(ts.union(ts(ret),ts(volatility)),main="Plot of return and volatility for the stock index",xlab="Day from 2011-07-01")
+```
+
+We could see from the plot that the computed volatility really represent the variation of stock return (temporal difference of log of SSE composite index) to some extent.
+
+```{r}
+dayvol=zoo(volatility,stock$Date[(startrow+1):endrow])
+weekvol=aggregate(dayvol,by=week,FUN=mean)
+weekvol=weekvol[index(weekvol)%in%weekt,]
+weekinter=log(weekstock)/(100*weekvol)
+```
+
+Generally speaking, the investors prefer higher stock index but smaller volatility. So I use interaction of weekstock and weekvol (i.e $weekinter=log(weekstock)/(100*weekvol)$ ), to represent the stock market situation. When weekinter is large, the stock index is relatively high while the volatility is relatively small.
+
+We could see from the linear regression that, this weekinter is also significant predictor for the Taobao Miniskirt search trend, notice here the response is log of weekminiskirt.
+
+$log(weekminiskirt)=\beta_{0}+\beta_{1}time+\beta_{2}{time}^2+\beta_{3}weektemp+\beta_{4}weekinter + \epsilon$ where the noise $\epsilon$ is independently normal distributed
+```{r}
+lmtti=lm(ts(log(weekminiskirt))~time+I(time^2)+ts(weektemp)+ts(weekinter))
+summary(lmtti)
+```
+
+The coefficient for weekinter is positive, so increase of weekinter corresponds to increase of search of miniskirt. Also, when we only use the first 160 week data, the coefficient is also postive, which suggests that weekinter may be a better predictor than log(weekstock).
+
+```{r}
+shorttti=lm(ts(log(weekminiskirt[1:160]))~time[1:160]+I((time[1:160])^2)+ts(weektemp[1:160])+ts(weekinter[1:160]))
+summary(shorttti)
+```
+
+However, the linear regression with predictor time, time^2, weektemp and weekinter is also not good enough, whose residual suffers from non-constant variation, non-normality and are not independent. 
+
+```{r}
+par(mfrow=c(2,2))
+plot(lmtti)
+
+par(mfrow=c(1,2))
+plot(time,ts(log(weekminiskirt)),main="Linear Regression Model Miniskirt~ \n Time+Time^2+Temp+Inter",type="l",lty="dashed")
+lines(time,lmtti$fitted,type="l",col="red")
+acf(ts(resid(lmtti)),lag.max=80,main="ACF of the Residual for Linear Regression")
+```
+
+
+2. $(p,0,q)*(1,1,0)_{53}$ SARIMA error model
+
+To improve the linear regression model with predictors time, time^2, weektemp and weekinter, we try SARIMA error model.
+
+```{r, echo=FALSE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),
+                              xreg=xreg,
+                              seasonal=list(order=c(1,1,0),period=53)
+                              )$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+
+```
+
+```{r}
+aic_table_log_tti <- aic_table(ts(log(weekminiskirt)),2,3,xreg=cbind(time,time^2,ts(weektemp),ts(weekinter)))
+require(knitr)
+kable(aic_table_log_tti,digits=2)
+```
+
+Similarly the $(1,0,2)*(1,1,0)_{53}$ model shows smallest AIC value, while the $(1,0,0)*(1,1,0)_{53}$ model is the simplest with not bad AIC value.
+```{r}
+arimattilog100110 = arima(ts(log(weekminiskirt)),order=c(1,0,0),xreg=cbind(time,time^2,ts(weektemp),ts(weekinter)),seasonal=list(order=c(1,1,0),period=53))
+arimattilog100110
+
+par(mfrow=c(1,2))
+acf(resid(arimattilog100110),lag.max=120,main="ACF of resid (1,0,0)*(1,1,0)_{53}")
+qqnorm(resid(arimattilog100110),main ="qqplot of resid (1,0,0)*(1,1,0)_{53}")
+```
+
+```{r, echo=FALSE}
+arimattilog102110=arima(ts(log(weekminiskirt)),order=c(1,0,2),xreg=cbind(time,time^2,ts(weektemp),ts(weekinter)),seasonal=list(order=c(1,1,0),period=53))
+arimattilog102110
+```
+
+The diagnostic also shows that the residual of simple model $(1,0,0)*(1,1,0)_{53}$ is independent but not normally distributed. Since these two models performs similarly, I personally prefer the simpler one. 
+
+
+```{r}
+params <- coef(arimattilog100110)
+arcoef <- params[grep("^ar",names(params))]
+sarcoef <- params[grep("^sar",names(params))]
+list(AR_roots=polyroot(c(1,-arcoef)),SAR_roots=polyroot(c(1,-sarcoef)))
+```
+
+The polynomial root test also shows that $(1,0,0)*(1,1,0)_{53}$ model with predictor time, time^2, temperture and interaction of stock index and volality, is a stationary,invertible, causal model.
+
+3.Significant predictor weekinter
+
+```{r}
+log_lik_ratio <- as.numeric(
+   logLik(arimattilog100110) -
+   logLik(arima(ts(log(weekminiskirt)),order=c(1,0,0),xreg=cbind(time,time^2,ts(weektemp)),seasonal=list(order=c(1,1,0),period=53)))
+)
+
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+
+The likelihood ratio test shows the predictor weekinter is significant.
+
+```{r}
+short100110=arima(ts(log(weekminiskirt)[1:160]),order=c(1,0,0),xreg=cbind(time[1:160],(time[1:160])^2,ts(weektemp[1:160]),ts(weekinter[1:160])),seasonal=list(order=c(1,1,0),period=53))
+short100110
+```
+
+For shorter time data, the first 160 weeks, the predictor weekinter is also positively associated with the search of miniskirt. This time we could see that, the association between Taobao Miniskirt Search Index and the stock market situation does not vary with time so easily.
+
+So my final model is 
+
+$log(weekminiskirt)=\beta_{1}time+\beta_{2}time^2+\beta_{3}weektemp+\beta_{4}weekinter+\eta$
+$(1-\phi_1 B)(1- \Phi_1 B^{53})(1-B^{53})\eta_{n}=\epsilon_{n}$
+
+where $\epsilon_{n}$ is independently identically normally distributed $N(0, \sigma^2)$
+
+$\beta_{1}=0.0078$, $\beta_{2}=-1e-04$, $\beta_{3}=0.0075$, $\beta_{4}=0.0491$, $\phi_1=0.7096$, $\Phi_1=-0.6395$ and $\sigma^2=0.02156$.
+
+
+##Discussion
+1. Difficulty of Data Accessibility
+
+About the Hemline theory (better economics or higer stock price, higher hemline of skirt), there has been a lot of discussion. But when it comes to empirical research, one central problem is that it's hard to measure the average length of skirt women wear at a specific period of time. Some researchers even collected the data from the famous fashion shows, because it's really hard to get the statistics of sales of skirt with differnt lengths over a long time. Also it's hard to find a exact indicator representing the economics.
+
+Also limited by the accessibility of proper dataset, I could only tried to find the association between miniskirt and stock market, and I boldly guess that better stock market, more popular miniskirt is. I use the search index of "miniskirt" on online shopping website Taobao to represent the popularity of miniskirt, but I can't get the records of sales promotion on Taobao, and the overall trend of search by personal computer terminal on this website is not available.
+
+Promotional event may be a big influential factor for the Taobao Miniskirt Search Index, as we have seen from the search index peak around "11.11" and "12.12" each year. Since the search increases before promotion, and decrease after promotion, I average the daily data into weekly data to weaken and smooth the influence of promotion.  However, I may be able to make some improvement to the models if the promotional data is available. 
+
+Also, the search index only counts the search by users on personal computer terminals, but recently people tend to search using mobile. I can't get the statistics of Taobao users on personal computer. Although the time predictor can slightly represent the change of Taobao user search on computer (firstly increase, then decrease), but it's still not enough.
+
+2.Choice of SARIMA Error Model
+
+Actually for the SARIMA error model with form $(p,d,q)*(P,D,Q)_{53}$, for the regression with predictors time, time^2, weektemp, weekinter. I have tried many choice of parameters d,P,D,Q. When I set d=1, the computaion of AIC_table often meets singular problem, and when I set Q>=1, there sometimes comes the problem of invertible model.
+
+For example (1,0,0)*(1,1,1) model:
+```{r}
+arimattilog100111 = arima(ts(log(weekminiskirt)),order=c(1,0,0),xreg=cbind(time,time^2,ts(weektemp),ts(weekinter)),seasonal=list(order=c(1,1,1),period=53))
+arimattilog100111
+```
+
+However, sometimes the more complicated model may also give out a good fitted model, for example (2,0,1)*(1,1,1) model:
+
+```{r}
+arimattilog201111 = arima(ts(log(weekminiskirt)),order=c(2,0,1),xreg=cbind(time,time^2,ts(weektemp),ts(weekinter)),seasonal=list(order=c(1,1,1),period=53))
+arimattilog201111
+```
+
+But in this model the predictor weekinter is not so significant. 
+
+```{r}
+log_lik_ratio <- as.numeric(
+   logLik(arimattilog201111) -
+   logLik(arima(ts(log(weekminiskirt)),order=c(2,0,1),xreg=cbind(time,time^2,ts(weektemp)),seasonal=list(order=c(1,1,1),period=53)))
+)
+
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+LRT_pval
+```
+
+Honestly, in all acceptable choice of $(p,d,q)*(P,D,Q)_{53}$ error model (acceptable means that the model is stationary, causal, invertible, with residual independent), I pick out the $(1,0,0)*(1,1,0)_{53}$ error model with weekinter as a significant predictor, and also this model is the simplest in all acceptable models I find. I'm not sure whether this single model is enough to say that the varible weekinter and weekminiskirt is associated.
+
+
+3. The Problem of Heteroskedasticity and non-normality
+
+In nearly all acceptable SARIMA error model I found, the residual shows non-constant variance and not normally distributed. For example:
+
+```{r}
+par(mfrow=c(1,3))
+plot(resid(arimattilog100110),main="Resid of (1,0,0)*(1,1,0)_{53}")
+plot(resid(arimattilog102110),main="Resid of (1,0,2)*(1,1,0)_{53}")
+plot(resid(arimattilog201111),main="Resid of (2,0,1)*(1,1,1)_{53}")
+par(mfrow=c(1,3))
+qqnorm(resid(arimattilog100110),main="qqplot of Resid (1,0,0)*(1,1,0)_{53}")
+qqnorm(resid(arimattilog102110),main="qqplot of Resid (1,0,2)*(1,1,0)_{53}")
+qqnorm(resid(arimattilog201111),main="qqplot of Resid (2,0,1)*(1,1,1)_{53}")
+```
+
+This kind of residual plot must represent some property of the data, and may be a good hint to improve the model. But by now I still can't find the improved model to meet the homoskedasticity and normal distribution assumption. I'm also not sure whether this kind of problem is disastrous for the model or not.
+
+4. Calculation of volatility
+
+Frankly I'm not a economics major, and am not so farmilar with the stock market finance knowledge. The calculation of stock volatility using package "stochvol" is nearly a black box for me. I could only see roughly that the estimated volatility really show the varanice of return. And intuitively, I guess when the return changes a lot (i.e. when the volatility is large), investors are worried about the stock, so large volatility is not preferred. 
+
+I'm not sure whether the $weekinter=log(weekstock)/(100*weekvol)$ is a good variable to represent the stock market. However, at least, we could view the variable weekinter as a function of stock index, and we have find the association between miniskirt search index and a function of stock index.
+
+If there's a more professional indicator in finance to denote the wholly stock market situation, it may be useful to modify the model.
+
+
+##Conclusion
+
+We could only say that from 2011-07-01 to 2016-01-01, the Taobao Miniskirt Search Index is positively associated with temperature. And the overall trend firstly increases then decreases as time goes on. What's more, the log of Taobao Miniskirt Search Index is positively associated with the variable (stock index divided by volatility of stock index). 
+
+This may suggest that, in China during the specific time period, the popularity of miniskirt is positively assciated with the stock market situation. Higher stock index and smaller volatility is associated with more search of miniskirt. 
+
+However, it's hard to say whether the association is just coincidence during the specific time period, or there lies a certain rule of customer psychology, or there's some unkown confounding factors.
+

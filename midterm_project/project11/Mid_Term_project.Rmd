@@ -1,0 +1,253 @@
+---
+title: "STATS 531 Mid term project"
+output: html_document
+---
+
+# Abstract
+
+SKU forecasting has been used extensively by retail chains even before the emergence of the field of analytics and is an important aspect of the retail business. 
+Forecasting and Inventory optimization is successful for especially products with high demand and high shelf life.
+Over the period of times, the type of products available to the customer has increased exponentially . Few products are fast moving and other are relatively slow moving .Forecasting sales for slow moving SKU's has been found to be quite difficult.
+The problem is furthur aggravted if the SKU's have lower shelf life (perishable goods like fruits and vegetables) and are slow moving ( goods that serve a niche segment of customer or are bought occasionally)
+
+The motivation of this project lies in building a scalable forecasting system which can forecast sales of all SKU's including low shelf life - slow moving goods with a reasonable accuracy . Value lies in creating a dashboard which could be used directly by the businesses even with little knowledge of the underlying methodology.
+
+#Dataset
+
+The dataset is a data of a popular Indian retailer . The cadence of the data is at a daily level and the time period used for analysis is 4 months.
+The data has total of 968 SKU's and almost all of them come under perishable goods. It has both slow moving as well as fast moving products.
+
+
+#Data Summary
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+require(knitr)
+require("reshape2")
+require("stringr")
+require("forecast")
+
+data<-read.csv("sales.csv",header=TRUE,stringsAsFactors=FALSE)
+
+data1 = data[,c(1,7,13,22,73,172,173,125)]
+
+head(data1)
+summary(data1)
+```
+
+Looks like there are just too many SKU's and we should select few SKU's with both 
+filled as well as sparse sales so that we can compare different methods on them
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+par(mfrow=c(1,1))
+plot(data1$APPLE.FUJI.LOOSE, xlab = "Date" , ylab = "Quantity",main = "APPLE.FUJI.LOOSE" )
+lines(data1$APPLE.FUJI.LOOSE, xlab = "Date" , ylab = "Quantity" ,main = "APPLE.FUJI.LOOSE")
+
+plot(data1$APPLE.RED.DEL..MEDIUM, xlab = "Date" , ylab = "Quantity",main = "APPLE.RED.DEL..MEDIUM" )
+lines(data1$APPLE.RED.DEL..MEDIUM, xlab = "Date" , ylab = "Quantity" ,main = "APPLE.RED.DEL..MEDIUM")
+
+plot(data1$BANANA.POOVAN, xlab = "Date" , ylab = "Quantity",main = "BANANA.POOVAN")
+lines(data1$BANANA.POOVAN, xlab = "Date" , ylab = "Quantity" ,main = "BANANA.POOVAN")
+
+plot(data1$ONION, xlab = "Date" , ylab = "Quantity",main = "ONION")
+lines(data1$ONION, xlab = "Date" , ylab = "Quantity" ,main = "ONION")
+
+plot(data1$CUCUMBER.HYBRID..MEDIUM...VWT, xlab = "Date" , ylab = "Quantity",main = "CUCUMBER")
+lines(data1$CUCUMBER.HYBRID..MEDIUM...VWT, xlab = "Date" , ylab = "Quantity" ,main = "CUCUMBER")
+
+plot(data1$TOMATO, xlab = "Date" , ylab = "Quantity",main = "TOMATO")
+lines(data1$TOMATO, xlab = "Date" , ylab = "Quantity" ,main = "TOMATO")
+
+```
+
+As we can see from the above plot that sales behavior for each SKU isvery different from each other, Popular fruits like tomato and vegetables like Onion have more continuous trends . However, we see that for few varieties of Apple which are not so commonly sold we see that there are multiple days when sale is zero . Such frequent occurances of zeroes indicate that the product is not a regular purchase SKU and hence the forecasting becomes quite challenging for such SKU's. Retailers face huge loss as sales cannot be forecasted accurately for these SKU's and it leads to loss either due to unavailability or waste of SKU's.
+
+#Exploratory Analysis
+
+Let's see how the current sales of each SKU is related to previous time periods
+
+Lag plot is one way of doing it . However, it doesn't give any actionable evidence It is just a visual way of looking at lagged correlation. We will just plot one for example.
+
+
+```{r, echo= TRUE, warning=FALSE, message=FALSE}
+
+lag.plot(data1$ONION, lags=9, do.lines=FALSE)
+
+```
+
+On the other hand we will see that ACF gives us more actionable evidence
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+acf(data1$ONION, main = "Onion")
+acf(data1$TOMATO, main = "TOMATO")
+acf(data1$APPLE.RED.DEL..MEDIUM, main = "Red Apple")
+acf(data1$CUCUMBER.HYBRID..MEDIUM...VWT, main = "Cucumber")
+acf(data1$BANANA.POOVAN, main = "Banana")
+
+
+
+```
+
+As we see from ACF plots , for few SKU's first lag is significant for others no lag is significant and for few lag other tha 1 is significant. Our goal here is to build a scalable forecasting system which can provide weekly/daily forecasts for all 1000 SKU's. Fitting individual models may not be scalable so we can use Auto Arima function in R . Before that we see more basic time series techniques and evaluate their performance
+
+
+Let's first decompose the series into its components to understand each of them. This is done using STL decomposition in R that uses loess smoothing to estimate seasonal component.
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+
+fit <- stl(ts(data1$BANANA.POOVAN , freq =7),  s.window="periodic")
+plot(fit , main = "BANANA")
+fit <- stl(ts(data1$TOMATO , freq =7),  s.window="periodic")
+plot(fit, main = "TOMATO")
+fit <- stl(ts(data1$ONION , freq =7),  s.window="periodic")
+plot(fit , main = "ONION")
+
+fit <- stl(ts(data1$CUCUMBER.HYBRID..MEDIUM...VWT , freq =7),  s.window="periodic")
+plot(fit, main = "CUCUMBER")
+```
+
+Let us first try smoothing techniques . The most popular one which has been used for forecasting purposes in the past is the Holt winter's smoothing . This adaptively smoothes the series .
+
+# Holt Winter's seasonal smoothing (commonly used in retail forecasting)
+
+The Holt-Winters seasonal method comprises the forecast equation and three smoothing equations - one for the level $l_t$, one for trend $b_t$  and one for the seasonal component denoted by $s_t$, with smoothing parameters $\alpha$, $\beta$ and $\gamma$ . We use $m$ to denote the period of the seasonality, i.e., the number of seasons in a year. 
+
+$$\begin{align*}
+\hat{y}{t+h} &= \ell_{t} + hb_{t} + s_{t-m+h_m^+} \\
+\ell_{t} &= \alpha(y_{t} - s_{t-m}) + (1 - \alpha)(\ell_{t-1} + b_{t-1})\\ b_{t} &= \beta^*(\ell_{t} - \ell_{t-1}) + (1 - \beta^*)b_{t-1}\\ 
+s_{t} &= \gamma (y_{t}-\ell_{t-1}-b_{t-1}) + (1-\gamma)s_{t-m}, 
+\end{align*}$$
+  
+```{r, echo= FALSE, warning=FALSE, message=FALSE}
+accu = numeric(0)
+for (i in 2:ncol(data1)) {
+
+fit1 <- hw(ts(data1[i] , freq =7),seasonal="additive")
+accu = rbind(accu ,c(accuracy(fit1)[6] ,colnames(data1[i])))
+
+plot(fit1,ylab= colnames(data1[i]),
+     plot.conf=FALSE, type="o", fcol="white", xlab="Date")
+lines(fitted(fit1), col="orange", lty=2)
+
+lines(fit1$mean, type="o", col="red")
+
+legend("topright",lty=0.5, pch=0.5, col=1:2, 
+  c("data","Holt Winters' Additive"))
+
+}
+
+```
+
+Now let us check the accuracy of forecasts by holt winters seasonal smoothing method
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+accu_tab = as.data.frame(accu)
+colnames(accu_tab) <- c("Accuracy","SKU")
+print(accu_tab)
+
+```
+
+
+We see that the accuracy is not great for some species and it can be easily seen from the forecasted and actual value plots. Holt winters smoothing is a adaptive smoothing method and hence does better than pre specified parametric ARMA models.
+However, there are abrupt peks inthe data which the smoother is not able to learn . This provides us hints for using more advanced time series odels that are adaptive in nature . Another reason for using adaptive methods is to create scalable forecasting systems for multiple SKU's without  fitting parametric models for each of them .
+
+#Basic Structural Model
+
+The basic stuctural model supposes that the observation process is the sum of a level L, a trend T describing the rate of change of the level, and a monthly seasonal component S. The model supposes that all these quantities are perturbed with Gaussian white noise at each time point. So, we have the following model equations 
+
+$$ \begin{array}{lrcl} \mbox{[BSM1]} {\quad\quad}& Y_n &=& L_n + S_n + \epsilon_n \\ \mbox{[BSM2]} {\quad\quad}& L_{n} &=& L_{n-1} + T_{n-1} + \xi_n \\ \mbox{[BSM3]} {\quad\quad}& T_{n} &=& T_{n-1} + \zeta_n \\ \mbox{[BSM4]} {\quad\quad}& S_{n} &=& -\sum_{k=1}^{11} S_{n-k} + \eta_n \end{array} $$  (Adapted from Ed Ionides's Github page)
+
+#Comparison of traditional holt winter's method with basic structural model
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+accu = numeric(0)
+accu2 = numeric(0)
+
+for (i in 2:ncol(data1)) {
+
+fit1 <- hw(ts(data1[i] , freq =7),seasonal="additive")
+fit2<-StructTS(ts(data1[i],freq =7), type = "BSM")
+d =forecast(fit2)
+accu = rbind(accu ,c(accuracy(fit1)[3] ,colnames(data1[i])))
+accu2 = rbind(accu2 ,c(accuracy(d$fitted,data1[,i])[3] ,colnames(data1[i])))
+
+plot(fit1,ylab= colnames(data1[i]),
+     plot.conf=FALSE, type="o", fcol="white", xlab="Date", main = "BSM and Holt winter's comparison" )
+lines(fitted(fit1), col="orange", lty=2)
+x =as.vector(fitted(fit2)[,1] + fitted(fit2)[,2]+ fitted(fit2)[,3])
+
+lines(d$fitted, col="blue", lty=2)
+
+lines(fit1$mean, type="o", col="orange")
+
+legend("topright",lty=0.5, pch=0.5, col=1:3, 
+  c("data","Holt Winters in Orange" , "BSM in Blue"))
+
+}
+
+```
+
+We see from the plots that the holt winter's method couldn't predict sudden peaks but Structural model does a great job in predicting the abrupt values .
+
+Let us compare the Mean Absolute error for both the techniques
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE}
+
+accu_tab2 = as.data.frame(accu2)
+accu_tab1 = as.data.frame(accu)
+colnames(accu_tab1) <- c("Holt winter's Error","SKU")
+colnames(accu_tab2) <- c("Structural model Error ","SKU")
+D = merge(accu_tab1,accu_tab2 )
+kable(D)
+
+```
+
+We see that basic structural time series model has far better average accuracy and low error as compared to the holt winter's seasonal smoothing method.
+
+#Conclusion and Future directions
+
+As we saw in the analysis above , Basic structural time series model fits the data quite well as compared to conventional method of Holt winters which is quite commonly used in predicting daily sales .
+Both are adaptive in nature but the adaptive power of Structural time series model surpasses that of holt winter's seasonal method.
+
+The prediction is almost accurate for SKU's which are fast moving , like Tomatoes , Onions and Banana . However as we can see few SKU's that are not bought everyday and have zero values for significant number of days have poor accuracy with both the models.
+
+The goal for the final Project would be to come up with methodology for predicting sales for sparse sales SKU's .Potential ethods could be advance structural time series models and zero inflated models.
+
+#References
+https://www.otexts.org/fpp
+http://www.supplychainbrain.com/content/latest-content/single-article/article/in-the-world-of-perishables-forecast-accuracy-is-key/
+
+
+#USER NTERFACE
+
+To build the User interface / Forecasting dashboard R Shiny is being used .
+This is still work in progress but the basic version of UI works fine .
+Here are few snapshots of the same.
+
+#HOME
+
+
+
+
+
+
+#DATA EXPLORATION
+
+
+
+
+
+
+#FORECAST
+
+
+
+
+
+
+

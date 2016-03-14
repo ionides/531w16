@@ -1,0 +1,659 @@
+---
+title: "Stats 531 Midterm Project"
+date: "March 10, 2016"
+output: html_document
+---
+
+## Introduction
+
+This will be an analysis of armed robberies in Boston from January 1966 - October 1975. This data is freely available [here](https://datamarket.com/data/set/22ob/monthly-boston-armed-robberies-jan1966-oct1975-deutsch-and-alt-1977#). We will start with an exploration of the data with the goal of fitting a decent model to it, while exploring any interesting properties of the data along the way.
+
+```{r, echo=F, warning=F, message=F}
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(astsa)
+crime <- read.csv(text='
+"Month","Monthly Boston armed robberies Jan.1966-Oct.1975 Deutsch and Alt (1977)"
+"1966-01",41
+"1966-02",39
+"1966-03",50
+"1966-04",40
+"1966-05",43
+"1966-06",38
+"1966-07",44
+"1966-08",35
+"1966-09",39
+"1966-10",35
+"1966-11",29
+"1966-12",49
+"1967-01",50
+"1967-02",59
+"1967-03",63
+"1967-04",32
+"1967-05",39
+"1967-06",47
+"1967-07",53
+"1967-08",60
+"1967-09",57
+"1967-10",52
+"1967-11",70
+"1967-12",90
+"1968-01",74
+"1968-02",62
+"1968-03",55
+"1968-04",84
+"1968-05",94
+"1968-06",70
+"1968-07",108
+"1968-08",139
+"1968-09",120
+"1968-10",97
+"1968-11",126
+"1968-12",149
+"1969-01",158
+"1969-02",124
+"1969-03",140
+"1969-04",109
+"1969-05",114
+"1969-06",77
+"1969-07",120
+"1969-08",133
+"1969-09",110
+"1969-10",92
+"1969-11",97
+"1969-12",78
+"1970-01",99
+"1970-02",107
+"1970-03",112
+"1970-04",90
+"1970-05",98
+"1970-06",125
+"1970-07",155
+"1970-08",190
+"1970-09",236
+"1970-10",189
+"1970-11",174
+"1970-12",178
+"1971-01",136
+"1971-02",161
+"1971-03",171
+"1971-04",149
+"1971-05",184
+"1971-06",155
+"1971-07",276
+"1971-08",224
+"1971-09",213
+"1971-10",279
+"1971-11",268
+"1971-12",287
+"1972-01",238
+"1972-02",213
+"1972-03",257
+"1972-04",293
+"1972-05",212
+"1972-06",246
+"1972-07",353
+"1972-08",339
+"1972-09",308
+"1972-10",247
+"1972-11",257
+"1972-12",322
+"1973-01",298
+"1973-02",273
+"1973-03",312
+"1973-04",249
+"1973-05",286
+"1973-06",279
+"1973-07",309
+"1973-08",401
+"1973-09",309
+"1973-10",328
+"1973-11",353
+"1973-12",354
+"1974-01",327
+"1974-02",324
+"1974-03",285
+"1974-04",243
+"1974-05",241
+"1974-06",287
+"1974-07",355
+"1974-08",460
+"1974-09",364
+"1974-10",487
+"1974-11",452
+"1974-12",391
+"1975-01",500
+"1975-02",451
+"1975-03",375
+"1975-04",372
+"1975-05",302
+"1975-06",316
+"1975-07",398
+"1975-08",394
+"1975-09",431
+"1975-10",431
+
+Monthly Boston armed robberies Jan.1966-Oct.1975 Deutsch and Alt (1977)
+
+')
+colnames(crime) <- c("date", "num_robberies")
+crime$date <- as.Date(paste(as.character(crime$date), "-01", sep=""), format="%Y-%m-%d")
+```
+
+<hr />
+
+## Data Exploration
+
+After some recoding to sort the variables in our data set, we'll briefly look at our data. Note that a year/month combo was attached to each observation; I've specified the first day of each month in order for R to read the dates.
+
+```{r, echo=F, warning=F, message=F}
+head(crime)
+summary(crime)
+crime <- crime[!is.na(crime$date),]
+crime$year <- as.numeric(format(crime$date, "%Y"))
+crime$month <- as.numeric(format(crime$date, "%m"))
+```
+
+The variable *num_robberies* is relatively self-explanatory; just the number of robberies for that month in Boston. We see one missing value. After viewing the data, we could see this was caused by some text at the end of the CSV file read in. We will remove it in the proceeding analysis.
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+# plot them side by side
+par(mfrow=c(1,2))
+
+crimets <- ts(crime$num_robberies, start=c(1966,1), end=c(1975,10), frequency=12, names=c("Crime Series"))
+plot(crimets, main="Armed Robberies in Boston", ylab="Number of Robberies")
+spectrum(crimets, spans=c(3,5,3), main="Smoothed Periodogram \n Crime Time Series", xlab="Frequency, Cycles per Year")
+```
+
+Looking at the plot of our data, we see a definite increasing trend. We also see an increase in variance. From the Periodogram, we see strong evidence for yearly cycles and trend. We'd like to stabilize our data by de-trending it and introducing homoskedacticity. 
+
+<hr />
+
+## Detrending and an Examination of Seasonality
+A potential remedy for the increasing variance would be taking the log of the number of robberies.
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+# plot them side by side
+par(mfrow=c(1,2))
+
+logcrimets <- ts(log(crime$num_robberies), start=c(1966,1), end=c(1975,10), frequency=12)
+plot(logcrimets, main="Log of Armed Robberies in Boston", ylab="log(Number of Robberies)")
+spectrum(logcrimets, spans=c(3,5,3), main="Smoothed Periodogram \n Log Crime Time Series", xlab="Frequency, Cycles per Year")
+```
+
+This plot looks much better with regard to variance. Judging from the periodogram, we have retained trend (not surprising) but may have loss our evidence for a yearly cycle, this seems odd. We will investigate this later, after de-trending data.
+<hr />
+#### Detrending: Linear Regression with ARMA Errors
+
+One strategy to tackle trend is linear regression with ARMA errors. We'll use the same technique to de-trend both the normal series and the logged series, as to set us up for a diagnosis of our lost seasonality later. 
+
+```{r, echo=F, warning=F, message=F}
+monthseq <- seq(1, length(crime$date))
+lmlogcrime <- lm(logcrimets ~ monthseq + I(monthseq^2))
+lmcrime <- lm(crimets ~ monthseq + I(monthseq^2))
+```
+
+The following are plots of both the transformed and non transformed data, with the following models plotted in red:
+$$X = \mathrm{Intercept} + \beta_1 * \mathrm{Month Index} + \beta_2 * \mathrm{Month Index}^2$$
+Note $X$ is the logged number of robberies and number of robberies for each plot, respectively.
+```{r, echo=F, warning=F, message=F, fig.width=10}
+par(mfrow=c(1,2))
+
+# Plot Logged data with model fit
+plot(crime$date, log(crime$num_robberies), main="Plot of Log(Robberies) \n regressed on Time", xlab="Time", ylab="log(Num Robberies)", type="l")
+lines(crime$date, predict(lmlogcrime), col="red")
+
+# Plot of normal data with fit model 
+plot(crime$date, crime$num_robberies, main="Plot of Robberies \n regressed on Time", xlab="Time", ylab="Num Robberies", type="l")
+lines(crime$date, predict(lmcrime), col="red")
+```
+
+And now we look at the summary of our models, note *logcrimets* is the time series of the logged data, while *crimets* is the time series of the non-logged data:
+```{r, echo=F, warning=F, message=F}
+summary(lmlogcrime)
+summary(lmcrime)
+```
+
+We see a the polynomial coefficient being evaluated as significant for both models. It may be worth noting that the polynomial coefficient is quite small in both models and for a time series of 118 observations - however it adds a nice curve to our fitted plot that seems to fit our data well, so we'll stick with these polynomial terms.
+
+Now we'll digress momentarily to look an explanation for the loss of a seasonal trend after the log transformation. 
+<hr />
+#### Seasonality Examination
+
+A good illustration of our loss of seasonality is by plotting the ACF of the residuals of each model fit.
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+# plot them side by side
+par(mfrow=c(1,2))
+
+logcrime_res <- resid(lmlogcrime)
+crime_res <- resid(lmcrime)
+acf(crime_res, lag.max=72, main="ACF of Crime Series")
+acf(logcrime_res, lag.max=72, main="ACF of Logged Crime Series")
+```
+
+Note that in the ACF of our original data on the left, there are clear cycles every 12 months. The ACF of the logged data does not show the same behavior.
+
+One hypothesis would that there are cycles with larger variance in the non-logged model that are dominant and yearly - thus giving us evidence for seasonality, while these same yearly cycles in the logged model had their power dampened by the nature of the trasnformation. It would be worth looking at the residuals of the 1st and 2nd half of our data plotted on top of each other. This would illustrate the dominant variance in the residuals in the 2nd half of our data when it is not log transformed.
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+# plot them side by side
+par(mfrow=c(1,2))
+
+# Get the first 5 (first 60 months) years of residuals for both log and non-log data
+crime_res1 <- crime_res[1:60]
+logcrime_res1 <- logcrime_res[1:60]
+
+# Get last 5 years (actually 58 months) of residuals for both log and non-log data
+crime_res2 <- crime_res[61:118]
+logcrime_res2 <- logcrime_res[61:118]
+
+# Plot Residuals of both halves of crime model over each other
+plot(crime_res1, type="l", ylab="Residuals", col="red", main="Plot of Residuals \n Crime Model", ylim=c(-115,115))
+lines(crime_res2, type="l", col="orange")
+legend("topleft", c("Months 1-60", "Months 61-118"), lty=c(1,1), col=c("red", "orange"), cex=.7)
+
+# Plot Residuals of both halves of logged crime model over each other
+plot(logcrime_res1, type="l", col="blue", ylab="Residuals", main="Plot of Residuals \n Logged Crime Model")
+legend("topleft", c("Months 1-60", "Months 61-118") , lty=c(1,1), col=c("blue", "green"), cex=.7)
+lines(logcrime_res2, type="l", col="green")
+```
+
+Why not look at some numerical comparisons as well:
+
+```{r, echo=F, warning=F, message=F}
+vc1 <- round(var(crime_res1),3)
+vc2 <- round(var(crime_res2), 3)
+vlc1 <- round(var(logcrime_res1), 3)
+vlc2 <- round(var(logcrime_res2), 3)
+```
+
+<center><h4><b>Variance of Residuals</b></h4></center>
+
+Month Index   | Crime Model | Logged Crime Model
+--------------|-------------|-----------------
+Months 1-60   | `r vc1`     | `r vlc1`
+Months 61-118 | `r vc2`     | `r vlc2`
+
+
+We see evidence both from the variance measures and from the plot that the non transformed data has higher variance in the second half of our data set, while the log transformed data actually saw a decrease in the variance. Looking at the periodogram of the two halves of the data would help confirm our stated hypothesis of a dominant yearly cycle in the 2nd half of the data.
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+# plot them side by side
+par(mfrow=c(1,2))
+
+spectrum(ts(crime_res1, frequency=12), spans=c(3,5,3), main="Smoothed Periodogram \n Crime Residuals, Months 1-60", xlab="Frequency, Cycles per Year")
+spectrum(ts(crime_res2, frequency=12), spans=c(3,5,3), main="Smoothed Periodogram \n Crime Residuals, Months 61-118", xlab="Frequency, Cycles per Year")
+
+spectrum(ts(logcrime_res1, frequency=12), spans=c(3,5,3), main="Smoothed Periodogram \n Logged Crime Residuals, Months 1-60", xlab="Frequency, Cycles per Year")
+spectrum(ts(logcrime_res2, frequency=12),spans=c(3,5,3), main="Smoothed Periodogram \n Logged Crime Residuals, Months 61-118", xlab="Frequency, Cycles per Year")
+```
+
+This provides more evidence supporting our hypothesis of a yearly cycle in the latter months of our crime data. Given that the log transform removed the dominant variance of these months - we can now see why our seasonality disappeared when we took the log of our data. The feeling of mystery regarding the disappearance of the yearly cycle in the log transformed data is ameliorated. With that said, it is certainly worth noting that we see evidence for seasonality in roughly half of our data, just because the the log series doesn't show it does not mean we should disregard this when thinking about armed robberies in Boston during the 1960s.
+
+<hr />
+
+## Fitting a Model
+
+Our next step is to fit an ARMA model to the residuals of our model with the log transformed data. Typically a first step would be to look at the ACF of our residuals, and a smoothed periodogram - although we already showed both of these, another look won't hurt.
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+# plot them side by side
+par(mfrow=c(1,2))
+
+# logcrime_res are the data we're fitting an ARMA model to
+logcrime_res_ts <- ts(logcrime_res, start=c(1966,1), end=c(1975,10), frequency=12)
+
+acf(logcrime_res, lag.max=75, main="ACF of Residuals \n log(Robberies)") #acf of non-log residuals
+spectrum(logcrime_res_ts, span=c(3,5,3), main="Periodogram of Residuals", xlab="Frequency, Cycles per Year")
+```
+
+Interestingly enough, it looks like we may have evidence of a periodic behavior every 3 years. We can see this from the ACF, as every 36 months it looks roughly like there's a period completed. We also seem a potentially significant bump around a frequency of 0.33 in our periodogram. 
+
+With that said, we should know that we are limited by our data. With 10 years of monthly data, we don't have much data to claim periodic behavior every 3 years.
+
+```{r, echo=F, warning=F, message=F, cache=T}
+
+# AIC table funciton with no seasonal component
+
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q), method="ML")$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+
+# AIC table funciton with AR(1) seasonal componenet and a period=36
+
+aic_table_seasonal <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q),
+                               seasonal=list(order=c(1,0,0),
+                                             period=36),
+                               method="ML")$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+
+# Create normal AIC table
+crimeres_aic_table <- aic_table(logcrime_res,4,5)
+
+# Creating AIC table with AR(1) param and seasonal (p,0,q), period=17
+crimeres_aic_table_seasonal <- aic_table_seasonal(logcrime_res,3,3) 
+
+```
+<center><h4><b>AIC Values of ARIMA models for Model Errors with</b></h4></center> 
+<center><h4><b>No Seasonal Component</b></h4></center>
+
+```{r, echo=F, warning=F, message=F}
+kable(crimeres_aic_table,digits=2)
+```
+
+<center><h4><b>AIC Values of ARIMA models for Model Errors with</b></h4></center> 
+<center><h4><b>AR(1) Seasonal Component, period=36</b></h4></center> 
+```{r, echo=F, warning=F, message=F}
+kable(crimeres_aic_table_seasonal,digits=2)
+```
+
+In the non-seasonal model, we see the ARMA(1,0,0) model has a low AIC value. On top of that, it's a simple model! If we want to look at the AIC values in our seasonal table, we can see the ARMA(1,0,0)x(1,0,0) with period=36 does well. It feels a little presumptuous to run with this model, ideally we would like more than 10 years of data to diagnose cyclic behavior every 3 years. If we were to do further analysis with more data, this would certainly be worth investigating. For now we will stick with the ARMA(1,0,0) model for our errors. 
+
+Now we'll look at diagnostics for the ARMA model fitted to our residuals:
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+# plot them side by side
+par(mfrow=c(1,2))
+
+logres_ar <- arima(logcrime_res, order=c(1,0,0))
+res_rests <- ts(logres_ar$residuals, start=c(1966,1), end=c(1975,10), frequency=12)
+
+acf(logres_ar$residuals, lag.max=75, main="ACF of residuals of ARMA Errors")
+spectrum(res_rests, span=c(3,5,3), main="Periodogram of residuals of ARMA Errors", xlab="Frequency, Cycles per Year")
+```
+
+Here we see 2 violations of our hypothesis testing lines of IID errors in our model. It should certainly be noted that the violations come at lags of 15, and 36. This is not surprising, as we saw evidence for cyclic behavior at a lag of 36 in our AIC table and previous ACF plots. Perhaps with more data we would've gone with the seasonal model and this lag correlation would've been taken care of. Looking at the periodogram, we see no dominant cycles - which is evidence of IID errors (which we want). Given our data and what we know so far - we'll stick with this model. 
+
+Let's take a look at it's summary:
+
+```{r, echo=F, warning=F, message=F}
+logres_ar
+```
+
+Our AR1 Coefficient is roughly 7.7 times the size of our standard error - this is nice as we would have reason for concern if our AR1 Coefficient was within 1.96 standard errors of 0.
+
+The likelihood profile may help to assure us even further of our selected AR1 coefficient:
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+# plot them side by side
+par(mfrow=c(1,2))
+
+K <- 500
+ar1 <- seq(from=0.2,to=0.9,length=K)
+profile_loglik <- rep(NA,K)
+for(k in 1:K){
+   profile_loglik[k] <- logLik(arima(logcrime_res,order=c(1,0,0),
+      fixed=c(ar1[k],NA)))
+}
+plot(profile_loglik~ar1,ty="l", ylab="Profile Log Likelihood", xlab="AR1 Coefficient", main="Likelihood Profile of AR1 Parameter")
+
+max_ll <- max(profile_loglik) 
+abline(h = max_ll - 1.92, lty = 2, col = 'red')
+
+ar1 <- seq(from=0.37,to=0.71,length=K)
+profile_loglik <- rep(NA,K)
+for(k in 1:K){
+   profile_loglik[k] <- logLik(arima(logcrime_res,order=c(1,0,0),
+      fixed=c(ar1[k],NA)))
+}
+plot(profile_loglik~ar1,ty="l", ylab="Profile Log Likelihood", xlab="AR1 Coefficient", main="Likelihood Profile of AR1 Parameter")
+abline(h = max_ll - 1.92, lty = 2, col = 'red')
+```
+
+In the plots above, the red line shows the cutoff for the confidence interval for our AR1 coefficient, given by [Wilk's theorem](https://en.wikipedia.org/wiki/Likelihood-ratio_test#Distribution:_Wilks.27s_theorem). To be explicit, the interval is given by 
+$$\{\theta_d : {\ell}({\theta^*}) - {\ell^\mathrm{profile}_d}(\theta_d)\} < 1.92.$$
+
+With ${\ell}({\theta^*}) =$ `r coef(logres_ar)[1]`. Which is the log of the MLE, $\theta_d^*$, given by our ARIMA fit.
+
+We see this confidence interval is well above zero - giving us more reason to believe we've selected an AR1 coefficient that fit our data well.
+
+<hr />
+
+## Summary / Conclusion
+
+At this point, we're content with our model and ought to go on and summarize what we've found.
+
+#### Model Fit
+
+We've found that a reasonable model for armed robberies in Boston between 1966 and 1976 is a linear model with ARMA errors after performing a log transform on the number of robberies, specifically, the model is:
+
+$$(1 - .5453\mathrm{B})(\log{X_n} - 3.4522 - 0.3495n + .0001n^2) = \epsilon_n)$$
+
+Here $n$ is the $n$th month, beginning with $n=1$ in January of 1966. $X_n$ would then be the number of armed robberies recorded in Boston at month $n$.
+
+#### Seasonality
+
+Upon taking the log transform of our data, we noticed a loss in seasonality by comparing ACF plots and Periodograms. After further investigation, it was noticed that the seasonal behavior was displayed in the latter half of the months, which had dominating variance on a normal scale. When put on a log scale, this dominating variance was dampened and no more seasonality was observed. This is not to say that it's not worth noticing - perhaps a log transform was not ideal here and another transform may be better which preserves seasonality.
+
+## Future Analysis
+
+#### Business Cycles
+
+We noticed evidence of 3 year cycles in our analysis of the residuals of our linear regression model. Lack of sufficient data for strong evidence gave us pause in declaring this behavior significant. The length of regular business cycles are a debated topic, we can see from the [National Bureau of Economic Research](http://www.nber.org/cycles.html) that cycles have been observed around 3 years at certain points in history. It certainly would be worth investigating this in the future if more data are available and aggregated. 
+
+
+<hr />
+
+#### Unemployment and Crime
+
+A brief look into a relationship between crime numbers and unemployment may be reasonable, it seems like natural that a change in unemployment may affect crime rates; i.e., people have less money due to less work and are thus may have to commit crime in order to make a living. 
+
+The unemployment data shown below is available [here](http://data.bls.gov/timeseries/LNU04000000).
+
+```{r, echo=F, warning=F, message=F}
+unemployment <- read.csv(text='
+Labor Force Statistics from the Current Population Survey,,,,,
+Original Data Value,,,,,
+,,,,,
+Series Id:,LNU04000000,,,,
+Not Seasonally Adjusted,,,,,
+Series title:,(Unadj) Unemployment Rate,,,,
+Labor force status:,Unemployment rate,,,,
+Type of data:,Percent or rate,,,,
+Age:,16 years and over,,,,
+Years:,1966 to 1976,,,,
+,,,,,
+Series ID,Year,Period,Value,,
+LNU04000000,1966,M01,4.4,,
+LNU04000000,1966,M02,4.2,,
+LNU04000000,1966,M03,4.0,,
+LNU04000000,1966,M04,3.6,,
+LNU04000000,1966,M05,3.7,,
+LNU04000000,1966,M06,4.6,,
+LNU04000000,1966,M07,3.9,,
+LNU04000000,1966,M08,3.6,,
+LNU04000000,1966,M09,3.3,,
+LNU04000000,1966,M10,3.2,,
+LNU04000000,1966,M11,3.4,,
+LNU04000000,1966,M12,3.5,,
+LNU04000000,1967,M01,4.2,,
+LNU04000000,1967,M02,4.2,,
+LNU04000000,1967,M03,3.9,,
+LNU04000000,1967,M04,3.5,,
+LNU04000000,1967,M05,3.2,,
+LNU04000000,1967,M06,4.6,,
+LNU04000000,1967,M07,4.1,,
+LNU04000000,1967,M08,3.7,,
+LNU04000000,1967,M09,3.7,,
+LNU04000000,1967,M10,3.8,,
+LNU04000000,1967,M11,3.7,,
+LNU04000000,1967,M12,3.5,,
+LNU04000000,1968,M01,4.0,,
+LNU04000000,1968,M02,4.2,,
+LNU04000000,1968,M03,3.8,,
+LNU04000000,1968,M04,3.2,,
+LNU04000000,1968,M05,2.9,,
+LNU04000000,1968,M06,4.5,,
+LNU04000000,1968,M07,4.0,,
+LNU04000000,1968,M08,3.5,,
+LNU04000000,1968,M09,3.3,,
+LNU04000000,1968,M10,3.2,,
+LNU04000000,1968,M11,3.3,,
+LNU04000000,1968,M12,3.1,,
+LNU04000000,1969,M01,3.7,,
+LNU04000000,1969,M02,3.7,,
+LNU04000000,1969,M03,3.5,,
+LNU04000000,1969,M04,3.2,,
+LNU04000000,1969,M05,2.9,,
+LNU04000000,1969,M06,4.1,,
+LNU04000000,1969,M07,3.8,,
+LNU04000000,1969,M08,3.5,,
+LNU04000000,1969,M09,3.7,,
+LNU04000000,1969,M10,3.5,,
+LNU04000000,1969,M11,3.3,,
+LNU04000000,1969,M12,3.2,,
+LNU04000000,1970,M01,4.2,,
+LNU04000000,1970,M02,4.7,,
+LNU04000000,1970,M03,4.6,,
+LNU04000000,1970,M04,4.3,,
+LNU04000000,1970,M05,4.1,,
+LNU04000000,1970,M06,5.6,,
+LNU04000000,1970,M07,5.3,,
+LNU04000000,1970,M08,5.0,,
+LNU04000000,1970,M09,5.2,,
+LNU04000000,1970,M10,5.1,,
+LNU04000000,1970,M11,5.5,,
+LNU04000000,1970,M12,5.6,,
+LNU04000000,1971,M01,6.6,,
+LNU04000000,1971,M02,6.6,,
+LNU04000000,1971,M03,6.3,,
+LNU04000000,1971,M04,5.7,,
+LNU04000000,1971,M05,5.3,,
+LNU04000000,1971,M06,6.5,,
+LNU04000000,1971,M07,6.2,,
+LNU04000000,1971,M08,5.9,,
+LNU04000000,1971,M09,5.8,,
+LNU04000000,1971,M10,5.4,,
+LNU04000000,1971,M11,5.7,,
+LNU04000000,1971,M12,5.5,,
+LNU04000000,1972,M01,6.5,,
+LNU04000000,1972,M02,6.4,,
+LNU04000000,1972,M03,6.1,,
+LNU04000000,1972,M04,5.5,,
+LNU04000000,1972,M05,5.1,,
+LNU04000000,1972,M06,6.2,,
+LNU04000000,1972,M07,5.9,,
+LNU04000000,1972,M08,5.5,,
+LNU04000000,1972,M09,5.4,,
+LNU04000000,1972,M10,5.1,,
+LNU04000000,1972,M11,4.9,,
+LNU04000000,1972,M12,4.8,,
+LNU04000000,1973,M01,5.5,,
+LNU04000000,1973,M02,5.6,,
+LNU04000000,1973,M03,5.2,,
+LNU04000000,1973,M04,4.8,,
+LNU04000000,1973,M05,4.4,,
+LNU04000000,1973,M06,5.4,,
+LNU04000000,1973,M07,5.0,,
+LNU04000000,1973,M08,4.7,,
+LNU04000000,1973,M09,4.7,,
+LNU04000000,1973,M10,4.2,,
+LNU04000000,1973,M11,4.6,,
+LNU04000000,1973,M12,4.6,,
+LNU04000000,1974,M01,5.7,,
+LNU04000000,1974,M02,5.8,,
+LNU04000000,1974,M03,5.3,,
+LNU04000000,1974,M04,4.8,,
+LNU04000000,1974,M05,4.6,,
+LNU04000000,1974,M06,5.8,,
+LNU04000000,1974,M07,5.7,,
+LNU04000000,1974,M08,5.3,,
+LNU04000000,1974,M09,5.7,,
+LNU04000000,1974,M10,5.5,,
+LNU04000000,1974,M11,6.2,,
+LNU04000000,1974,M12,6.7,,
+LNU04000000,1975,M01,9.0,,
+LNU04000000,1975,M02,9.1,,
+LNU04000000,1975,M03,9.1,,
+LNU04000000,1975,M04,8.6,,
+LNU04000000,1975,M05,8.3,,
+LNU04000000,1975,M06,9.1,,
+LNU04000000,1975,M07,8.7,,
+LNU04000000,1975,M08,8.2,,
+LNU04000000,1975,M09,8.1,,
+LNU04000000,1975,M10,7.8,,
+LNU04000000,1975,M11,7.8,,
+LNU04000000,1975,M12,7.8,,
+LNU04000000,1976,M01,8.8,,
+LNU04000000,1976,M02,8.7,,
+LNU04000000,1976,M03,8.1,,
+LNU04000000,1976,M04,7.4,,
+LNU04000000,1976,M05,6.8,,
+LNU04000000,1976,M06,8.0,,
+LNU04000000,1976,M07,7.8,,
+LNU04000000,1976,M08,7.6,,
+LNU04000000,1976,M09,7.4,,
+LNU04000000,1976,M10,7.2,,
+LNU04000000,1976,M11,7.4,,
+LNU04000000,1976,M12,7.4,,
+', header=T, skip=12)
+
+# remove last bit of data not included in our crime time series
+unemployment <- unemployment[1:length(crime$date),]
+
+unem_ts <- ts(unemployment$Value, frequency=12, start=c(1966,1), end=c(1975,10))
+
+plt <- cbind(crime$num_robberies, unemployment$Value)
+pltts <- ts(plt, frequency=12, start=c(1966, 1), end=c(1975, 10), names=c("Num \n Robberies", "Unemployment \n Rate"))
+
+plot(pltts, main="Boston Robberies and Unemployment", xlab="Date")
+```
+
+It may work to decompose our time series into seasonal, trend, and irregular components using R's *stl* function. This uses loess smoothing to identify seasonal components, and after the seasonal components are remove - the trend is identified and removed. Specifics of this decomposition can be found [here](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/stl.html) and [here](https://www.otexts.org/fpp/6/5). Note the grey bar on the right is of the same length in each plot - thus a smaller grey bar indicates larger variance explained by each component.
+
+```{r, echo=F, warning=F, message=F}
+crime_decomp <- stl(crimets, s.window=7)
+unemp_decomp <- stl(unem_ts, s.window=7)
+```
+
+Here is an example of the stl breakdown of our crime series:
+```{r, echo=F, warning=F, message=F}
+plot(crime_decomp, main="STL Breakdown of Crime Time Series")
+```
+
+The remainder portion of the plot is what is left after the seasonal and trend are removed from our data. Now we'll compare remainders for both crime and unemployment.
+
+```{r, echo=F, warning=F, message=F}
+crime_rem <- crime_decomp$time.series[,3]
+unemp_rem <- unemp_decomp$time.series[,3]
+
+plt <- cbind(crime_rem, unemp_rem)
+pltts <- ts(plt, frequency=12, start=c(1966, 1), end=c(1975, 10), names=c("Remainder \n Num Robberies", "Remainder \n Unemployment Rate"))
+
+plot(pltts, main="Boston Robberies and Unemployment \n De-Trended and De-Seasonaled", xlab="Date")
+```
+
+Here we see some evidence of coinciding troughs and peaks. Although sometimes it appears that robbery spikes or dips may precede the unemployment rate, which is perplexing. A lag relationship between robberies and unemployment rate in this way wouldn't make much sense. A relationship may still be worth investigating, but, given that we have not much data to make any strong conclusions, we may be best off leaving this analysis for another time.
+
+<hr />
+
+#### Explanations for our Trend (Non-Technical)
+
+The observation of an increase in crime during the 1960s is not new. Some interesting explanation of its increase has been put forth by the Psychologist/Cognitive Scientist [Steven Pinker](http://stevenpinker.com/]). It mentions theories regarding the coming of age of baby boomers and changes in cultural norms. Eventually, Pinker combines the values of the counter-culture, societal connectedness, and the de-valuing of the family unit as possible explanations for a rise in crime during that time. An excerpt from his book can be found [here](http://quod.lib.umich.edu/h/humfig/11217607.0002.206/--decivilization-in-the-1960s?rgn=main;view=fulltext). While not rigorously statistical, perhaps some analysis could be devised in the future to further examine his points.
+
+<hr />
+
+## References
+
+Ionides, E. (n.d.). Stats 531 (Winter 2016) 'Analysis of Time Series' Retrieved March 10, 2016, from http://ionides.github.io/531w16/
+
+6.5 STL decomposition. (n.d.). Retrieved March 10, 2016, from https://www.otexts.org/fpp/6/5
+
+Pinker, S. (n.d.). Decivilization in the 1960s. Retrieved March 10, 2016, from http://quod.lib.umich.edu/h/humfig/11217607.0002.206/--decivilization-in-the-1960s?rgn=main;view

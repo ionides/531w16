@@ -1,0 +1,242 @@
+---
+title: "531 Midterm Project"
+output: html_document
+---
+
+The time series dataset we analyze here is the monthly information of the Brazilian GDP (Gross Domestic Product) series which starts from January of 1980 until December of 1997 containing 216 months. We will get a basic idea of how this series data extend along the time horizon by checking the trend, cycles (if any) using tools like specturm analysis, local linear regression firstly. In a futher step, we try to fit a model for this data and get some insight of how that model means in reality by looking at the model we build. Predition will always be the thing we are interested in based on the model and the dataset we get which is also a work we will touch on at the last of my project. 
+
+##Data Analysis#
+Firstly, we try to generate a basic picture of our data here. This plot below shows the time series of 216 month's Brazilian GDP index.
+
+```{r}
+data=read.csv(file="http://www2.stat.duke.edu/~mw/data-sets/ts_data/brazil_econ", skip=14, sep="",header=FALSE)
+
+```
+
+```{r,echo=FALSE}
+colnames(data)=c("GDP","IPI","WD")
+data=data[1:215,]
+data=as.data.frame(data)
+training=as.numeric(as.character(data$GDP[1:190]))
+test=as.numeric(as.character(data[191:215,1]))
+plot(training,type='l',ylab="GDP")
+```
+
+<br /> 
+Intuitively by checking the plot, we can detect the seasonality property and probability linear trend (which need further examination) of the raw data. In order to get an idea of the period of the seasonal effect we do periodogram checking. The smoothed periodogram indicates that there is a dominated cycle with frequency about 0.8. That mean the Brazilian GDP data has a cycle of thriving and recession every 12 months. This the slowest cycle we can tell from analyzing periodogram. We can see that there are also some bumps at frequency about 0,17, 0.33 corresponding to cycles with period 6 months and 3 months. That means Brazilian GDP along these twenty years has strong annual cycle, with also quartly cycle and half-year cycle within each year although the relative power is weaker compared with the annual cycle.
+
+
+
+```{r,echo=FALSE}
+spectrum(training,spans=c(3,5,3), main="Smoothed periodogram")
+new_training=diff(training,lag=12)
+
+```
+
+Decompose the original data in a further step, we seperate the chaotic line into long term trend plus cycle plus colored noise here.
+
+
+
+
+```{r}
+low_f= ts(loess(training~seq(1:190),span=0.5)$fitted)
+high_f=ts(training-loess(training~seq(1:190),span=0.1)$fitted)
+cycle=training-low_f-high_f
+plot(ts.union(training,low_f,high_f,cycle),main="Decomposed GDP as Trend + Cycle + Noise")
+```
+
+We will conclude that the Brazilian economy kept blooming in the years 1980-1997 in general. While the econony has its own pattern in inspite of the upgoing trend considering GDP as an indicator of the well-being of overall economy. Within each year, it has its prosperity basically at May, June and July and stagnancy at the beginning and the end of a year. On the basis of that, there is some highy frequency noise of the behaviour of the econmy which we can develop ARMA model for that part if we want to know the detail. (As for the detailed model to clarify clearly how the parttern is, we will discuss next).
+
+
+## Model Selection#
+<br />
+
+#### SARMA Model
+
+<br /> Now we are thinking of developing a model to figure out in detail how the underlying system goin on beneath the obeservations. The first model comes to mind when looking at the seasonal pattern is the SARIMA$(p,d,q){\times}(P,D,Q)_{12}$ (Seasonal AutoRegressive Moving Average Model). The ACF plot below intensify our analysis that period effect should 12 months.
+```{r, echo=FALSE}
+acf(training,main="ACF of differenced GDP ")
+```
+
+We first difference the data with lag of twelve and get the new series of $Y_{n}=(1-B^{12})X_{n}$
+
+```{r, echo=FALSE}
+par(mfrow=c(2,1))
+plot(seq(1,178),new_training,type="l",xlab="Month",ylab="Differenced")
+acf(new_training,main=" ")
+
+```
+
+From the plot we believe that this new seires $Y_{n}$ is generally a weak stationary time series with equal variance while the ACF of this ${Y_n}$ show the correlaiton along time axis. All these properties motivates us to build a ARMA model for the ${Y_n}$ data. So we use the AIC model selection criteria to choose the best model for ${Y_n}$.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("AR",0:P,sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+d_aic_table <- aic_table(new_training,4,5)
+
+
+sarma <- arima(training, order=c(1,0,0),
+                          seasonal=list(order=c(0,1,0),period=12)
+)
+
+require(knitr)
+kable(d_aic_table,digits=2)
+```
+
+The priciple for the AIC selection is to choose the model with the least AIC while keeping the model as simple and compact as possible without losing the effeciveness. As for this specific case, AR(1) and ARMA(1,1) are all good choice. We need to actually build the model and check the fitness of the model to select a better (in the sense of interpretability) model.
+We start from the less complicated one AR(1) and if it fits well there will be no necessarity to try ARMA(1,1).
+So we model we first try is $Y_n = {\phi}Y_{n-1}+\epsilon_n$.
+We plug in $X_n$ in to $Y_n$ and derive the model of $X_n$ to be a SARMA $(1,0,0)\times(0,1,0)_12$
+$$(1-{\phi}X_{n})((1-B^{12})X_n-\mu)=\epsilon_n$$
+
+
+We check the goodness of model by examing the dependency and normality of the residuals after regression. The plot of residuals shows the property of white noise with probably two exception around time points 120. Those two might be outliers. In addition, we take a peek of the ACF and QQ plot of the residuals and it seems the residuals well-fit the assumption. Also, the Ljung-Box reinforces our confidence that these are qualified independent residuals
+
+```{r}
+par(mfrow=c(2,2))
+plot(resid(sarma),ylab=" ",main="Residuals of SARIMA model") 
+plot(abs(sarma$residuals),ylab=" ",main="Absolute value of Residuals")
+acf(resid(sarma),main="ACF of errors")
+qqnorm(sarma$residuals)
+qqline(sarma$residuals)
+Box.test(sarma$residuals)
+```
+
+Since this model is quite satisfactorying, we now show the coefficients of the model and the plot of how it fitted inside the training set.
+```{r,echo=FALSE}
+sarma
+plot(seq(1,190),training,type='l',main="SARMA+Trend model 
+     Fitted within training set",col="blue",ylab="GDP")
+legend(0,145, c("original","fitted"), cex=0.8, 
+       col=c("blue","red"), pch=21:22, lty=1:2);
+lines(seq(1,190),training-sarma$residuals,type="l",col='red',pch=22, lty=2)
+```
+
+
+#### Deterministic Trend + ARMA Error Model
+
+
+In addition to the SARMA model, there is another option that we can fit a model of Linear trend + sinusoidal function +ARMA Error.
+$$X_n= {\beta} n + A sin({\pi}X_n/6 ) + B cos({\pi}X_n/6 ) + ARMA\ Error$$
+Note that $X_n$ denote the obervation at time point n
+Here shows the deterministic trend estimated by OLS Method to get the parameter as well as the residuals for further ARMA model.
+```{r, echo=FALSE}
+x=seq(1:190)
+m2=lm(training~sin(2*pi*x/12)+cos(2*pi*x/(12))+x)
+
+par(mfrow=c(2,1))
+plot(training,type='l',xlab="days",ylab="fitted value")
+lines(m2$fitted.values,col='red')
+
+plot(m2$residuals,xlab="days",ylab="residuals",type='l')
+```
+
+
+```{r}
+m2
+```
+
+
+We check the AIC table for the redisuals ARMA(p,q) to select the p and q and it shows that p=2 and q=2 gives the least AIC without getting the model too large. As the reasoning we give before,we will try this model first and accept that if it behaves well. Else, we can enlarge the model to include more parameters if the first picked one fails. Anyway we try the ARMA(2,2) at the first hand.
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("AR",0:P,sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+d2_aic_table <- aic_table(m2$residuals,4,5)
+
+
+
+require(knitr)
+kable(d2_aic_table,digits=2)
+```
+
+
+
+<br /> The ACF plot of the residuals after fitting ARMA(2,2) does not seem so good, the outstanding value at lag 12 indicates that we should extend the model to ARMA(12,2) to incorporate the autocorrelation after 12 months. 
+```{r, echo=FALSE}
+arma=arima(m2$residuals,order=c(2,0,2))
+acf(arma$residuals,main=" ")
+```
+
+Here show the detailed examination of the residuals after fitting ARMA(12,2) model. We have not seen obvious evidence to object the white noise assumption by those four results. So that should be a pretty good model
+```{r, echo=FALSE}
+arma11 <- arima(m2$residuals,order=c(12,0,2))
+arma11
+arma1 <- arima(m2$residuals,order=c(12,0,2),fixed=c(0,0,NA,0,NA,0,0,0,0,NA,0,NA,NA,NA,NA))
+par(mfrow=c(2,2))
+plot(arma1$residuals,ylab="residuals")
+plot(abs(arma1$residuals),ylab="|residuals|")
+acf(arma1$residuals,main=" ")
+qqnorm(arma1$residuals)
+qqline(arma1$residuals)
+```
+
+
+The second model we conclude here is 
+$$X_n=93.67 + 0.64sin({\pi}X_n /6)-6.75cos({\pi}X_n /6) + 0.204X_n + E_n$$
+where $E_n$ is a ARMA(12,2) proces with coefficients shown below
+
+```{r}
+arma1
+```
+
+
+
+
+##Forecasting#
+
+<br /> For each of the prediction graphs, the Blak line is the real GDP data of the Brazil Country for the following 25 months and the red line is forecasting we made from the corresponding model with the confidence interval marked by the dashed lines.
+
+####Prediction from SARMA model#
+ 
+```{r, echo=FALSE}
+prediction=predict(sarma,n.ahead=25)
+plot(seq(191,215),test,type='l',ylim=c(110,170),main="Prediction with 
+     Linear trend + SARMA model ")
+lines(seq(191,215),prediction$pred,type="l",col='red')
+lines(seq(191,215),prediction$pred-2*prediction$se,col='red',pch=22, lty=2)
+lines(seq(191,215),prediction$pred+2*prediction$se,col='red',pch=22, lty=2)
+```
+
+####Prediction from Sinoidal Trend + ARMA Error Model
+
+```{r, echo=FALSE}
+X=seq(191,215)
+lp=93.67+0.64*sin(X*pi/6)-6.75*cos(X*pi/6)+0.204*X
+arp=predict(arma1,n.ahead=25)
+plot(seq(191,215),test,type='l',ylim=c(110,170),main="prediction with 
+     Linear trend + SARMA model ")
+lines(seq(191,215),lp+arp$pred,col="red")
+lines(seq(191,215),lp+arp$pred+2*arp$se,col="red",pch=22,lty=2)
+lines(seq(191,215),lp+arp$pred-2*arp$se,col="red",pch=22,lty=2)
+```
+
+
+##Conclusion#
+Both of the models fit the data well and act pretty beautifully regarding forecasting within a short time period ahead. However, interpret the model to get some real-life insight is not that obvious which also is one of the shortcomings of the general ARMA, SARMA model, espcially models with a lot parameters.We obtain the numeric quantity of how previous GDP effect the furture GDP beviors while not knowing why the parameters are what they are without further developing. Just stand at the point as a statistical analysing, 
+
+
+
+##Reference##
+[1]"http://www2.stat.duke.edu/~mw/data-sets/ts_data/brazil_econ" for dataset
+
+[2]Robert H.Shumway, David S.Stoffer "Time Series Analysis and Its Application with R Example"(Third Edition)
+
+[3]http://ionides.github.io/531w16
