@@ -1,0 +1,278 @@
+---
+title: "STATS531_Midterm Project"
+date: "March 8th, 2016"
+output: html_document
+---
+
+###1. Introduction
+
+In this project, we study the daily minimum temperatures time series in Melbourne, Australia. The data set consists of 3650 observations. It records the weather change from 1981 to 1990. We will use two models to fit the data and test their performance.
+
+###2. Explore the Data
+
+First we read in the data.  
+
+```{r,message=FALSE,warning=FALSE}
+data=read.csv("daily-minimum-temperatures-in-me.csv",header=F)
+colnames(data)=c("date","temp")
+data$temp=as.numeric(as.character(data$temp))
+data=na.omit(data)
+```
+The six number summary of the lowest temperature in Fahrenheit for each year are as follows.
+```{r,echo=F}
+summary(data$temp)
+```
+In order to test how good our model fits the data, we seperate the data set into training set and test set. The training set includes the first 3300 observations and the test set includes the remaining 350 observations. We will produce the model using training set and then test the performance of the model using test set.
+```{r}
+training=data[1:3300,2]
+test=data[3301:3650,2]
+```
+
+Then we plot the training data over time. 
+```{r}
+plot(training,type="l")
+```
+
+From the plot, we see that there is a strong periodic behavior, with regularly spaced peaks. The time interval between these peaks are about 360 days. This is as expected from common knowledge.
+
+Now we take a look at spectrum density.
+```{r}
+spectrum(training)
+```
+
+We first use R to see an unparametric method result of the data.
+```{r}
+spec=spectrum(training,spans=c(3,5,3), main="Smoothed periodogram")
+```
+
+We now determine the dominant frequency.
+```{r}
+spec$freq[which.max(spec$spec)]
+```
+We see that the dominant frequency is 0.002666667, which corresponds to a period of 365 days.
+
+Then we look at the ACF of the training data. 
+```{r}
+acf(training,lag=1000)
+```
+
+The ACF also shows that the training set has a period of about 365 years.
+
+All these evidence lead us to fit a seasonal model.
+
+###3.1 Fitting an Model
+
+According to above statement, we ought to fit a SARMA $(p,d,q)\times(1,0,0)_{12}$ with period of 365. However, we have to face the problem that R cannot afford a lag of more than 350. 
+Fortunately, after looking at the plot, we can work under a null hypothesis that there is no trend. Therefore, we can subtract a sinusoidal function from the data and then analyze the residual.
+```{r}
+x=seq(1,3300)
+l=lm(training~sin(2*pi/365*x)+cos(2*pi/365*x))
+summary(l)
+```
+We fit a model that $${X_n}=11.12704+1.83179 \times sin(2{\pi}n/365)+3.81381\times cos(2{\pi}n/365)+{\eta_n}$$
+where ${\eta_n}$ are mean zero residuals.
+
+We plot the data and fitted values. 
+```{r}
+plot(training,type="l",col="red")
+lines(l$fitted.values,col="blue")
+```
+
+Then we focus on the residuals. First we plot the ACF of residuals 
+```{r}
+r=l$residuals
+acf(r)
+```
+
+ACF plot shows much sign of autocorrelation. That means we can fit an ARMA model for residuals.
+
+Akaike's information criterion AIC is given by $$AIC = -2 \times {\ell}({\theta^*}) + 2D$$
+
+Let's tabulate some AIC values for a range of different choices of p and q.
+```{r,message = FALSE,warning=FALSE}
+aic_table = function(data,P,Q){
+  table = matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] = arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table)=list(paste("AR",0:P,sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+d_aic_table = aic_table(r,4,5)
+require(knitr)
+kable(d_aic_table,digits=2)
+```
+
+From the AIC table, we select ARMA(2,0), ARMA(3,0), and ARMA(3,1) as candidates. We choose ARMA(2,0) model to analyze this dataset first.
+```{r}
+arma=arima(r,order = c(2,0,0))
+arma
+```
+Then we do some basic analysis on residuals of ${\eta_n}$
+```{r}
+acf(arma$residuals,lag.max = 500)
+```
+
+The ACF plot for residuals of ${\eta_n}$ shows that these residuals seem like white noises.
+```{r}
+Box.test(arma$residuals)
+```
+
+Box test shows us residuals of ${\eta_n}$ can be regarded as independent.
+```{r}
+qqnorm(arma$residuals)
+qqline(arma$residuals)
+```
+
+From the qqplot above, we can see that the quantiles lie roughly on a straight line.
+
+Thus it is reasonable to assume residuals of ${\eta_n}$ are  independent and identically normally distributed. Hence ${\eta_n}$ can be written as $${\eta_n}=-0.5574 \times{\eta_{n-1}}+0.0741 \times{\eta_{n-2}}+{\epsilon_n}$$
+where $${\epsilon_n} {\sim} {iidN(0,5.68)}$$.
+
+Therefore the whole model can be written as:$${X_n}=11.12704+1.83179 \times sin(2{\pi}n/365)+3.81381\times cos(2{\pi}n/365)+{\eta_n}$$,
+where  $${\eta_n}=-0.5574 \times{\eta_{n-1}}+0.0741 \times{\eta_{n-2}}+{\epsilon_n}$$
+$${\epsilon_n} {\sim} {iidN(0,5.691374)}$$.
+
+The result is so good that it is unnecessary to try ARMA(3,0) or ARMA(3,1) model.
+
+###3.2 Test the Performance of the Model
+
+In the end of this part, we use the test set to test the performance of our model.
+```{r,message=FALSE,warning=FALSE}
+library(forecast)
+x=seq(3301,3650)
+predict=predict(arma,n.ahead=350)
+plot(seq(3301,3650),test,type='l',ylim=c(0,25))
+lines(predict$pred+11.12704+1.83179*sin(2*pi/365*x)+3.81381*cos(2*pi/365*x),type="l",col='red')
+```
+
+In the plot, the black line plot the test data as well as the red line plot our predicted data. Unfortunately, after looking at this plot, we can hardly say that the model predicts well. This is because the standard error of predicted data is too small so that almost every test lies out of confidence interval of our predicted data.
+
+To avoid the restriction of R, we could summary the data and fit another model.
+
+###3.3 Fitting a SARMA Model
+
+So as to make the data easy to analyze, we take monthly temperature mean. Also, we divide the data into two parts. The first 100 observations are training data and the last 20 observations are test data
+```{r}
+data1=data
+data1$date=as.Date(data1$date)
+data1$year=as.numeric(format(data1$date,format="%Y"))
+data1$month=as.numeric(format(data1$date,format="%m"))
+data1=aggregate(data1[,2],list(data1[,3],data1[,4]),mean)
+colnames(data1)=c("year","month","temp")
+data1=data1[order(data1$year,data1$month),]
+data1$t=data1$year*12+data1$month-23772
+training1=data1[1:100,3]
+test1=data1[101:120,3]
+```
+
+Then we take a look at the monthly data.
+```{r}
+plot(training1,type="l")
+```
+
+Obviously, there is a periodic behavior, with period of 12 months.
+
+Now we take a look at spectrum density.
+```{r}
+spectrum(training1)
+```
+
+We use R to see an unparametric method result of the data.
+```{r}
+spec1=spectrum(training1,spans=c(3,5,3), main="Smoothed periodogram")
+```
+
+We now determine the dominant frequency.
+```{r}
+spec1$freq[which.max(spec1$spec)]
+```
+We see that the dominant frequency is 0.08, which corresponds to a period of 12 months.
+
+Then we look at the ACF of the training data. 
+```{r}
+acf(training1)
+```
+
+The ACF also shows that the training set has a period of about 12 months.
+
+We first difference the data with lag of twelve and get the new series of $Y_{n}=(1-B^{12})X_{n}$ and then plot the new data and its ACF.
+```{r}
+training2=diff(training1,lag=12)
+plot(training2,type = "l")
+acf(training2)
+```
+
+From the plot we believe that this new seires $Y_{n}$ is generally a weak stationary time series with equal variance, which motivates us to build a ARMA model for ${Y_n}$. So we use the AIC model selection criteria to choose the best model for ${Y_n}$.
+```{r}
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("AR",0:P,sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+d_aic_table <- aic_table(training2,4,5)
+require(knitr)
+kable(d_aic_table,digits=2)
+```
+
+From the AIC table, we select ARMA(2,0) for ${Y_n}$ since ARMA(2,0) model has least AIC and number of parameters. Thus we choose SARMA $(2,0,0)\times(1,0,0)_{12}$ model to analyze this dataset.
+
+```{r}
+sarma=arima(training1,
+            xreg=seq(1:100), order=c(2,0,0),
+            seasonal=list(order=c(1,0,0),period=12)
+)
+sarma
+```
+
+Also, we make some basic diagnostics.
+
+```{r}
+acf(sarma$residuals)
+Box.test(sarma$residuals)
+qqnorm(sarma$residuals)
+qqline(sarma$residuals)
+```
+
+The ACF plot shows these residuals are uncorrelated. Box test shows us residuals are significantly independent. QQ-plot indicates that the quantiles lie on a straight line.
+
+Thus it is reasonable to assume residuals are independent and identically normally distributed.
+
+Hence the whole SARMA model can be written as: $$(1-0.8716\times {B^{12}})(1-0.1932\times {B}-0.2760\times B^2)({X_n}-11.5115)={\epsilon_n}$$
+
+where ${\epsilon_n}$ are independent Gaussian random variables with mean 0 and variance 1.515.
+
+###3.4 Test the Performance of the SARMA Model
+
+Similarly, we test the performance of the SARMA model.
+
+```{r}
+predict=predict(sarma,n.ahead=20,newxreg = seq(101,120))
+plot(seq(101,120),test1,type='l',ylim=c(0,20))
+lines(seq(101,120),predict$pred,type="l",col='red')
+lines(seq(101,120),predict$pred-1.98*predict$se,col='red',pch=22, lty=2)
+lines(seq(101,120),predict$pred+1.98*predict$se,col='red',pch=22, lty=2)
+```
+
+As the graph above, the black line is the origin test data. The red solid line is the curve we predict while the two red dashed lines are 95% confidence interval of our predicted data.
+
+We can find that all real test data lies in the 95% confidence interval, which means our prediction works.
+
+###4. Conclusion
+
+Both of the models fit the training data well since all residuals subject to normal distribution. However, the first model do not perform well in test data. This probably because we only use AR model to fit residuals while AR model act weakly in forecasting. The second perform good in both training data set and test data set. We can predict future lowest temperature with 95% level of confidence.
+
+
+###5. Reference
+[1] "http://datamarket.com/data/list/?q=provider:tsdl" for dataset
+
+[2]Robert H.Shumway, David S.Stoffer "Time Series Analysis and Its Application with R Example"(Third Edition)
+
+[3]http://ionides.github.io/531w16

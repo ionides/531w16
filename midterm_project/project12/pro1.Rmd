@@ -1,0 +1,389 @@
+---
+title: "STATS 531 Midterm Project"
+author: ”Time Series Analysis in US Total Retail Revenue“
+date: "Mar 1, 2016"
+output:
+  html_document:
+    toc: true
+    theme: flatly
+  
+
+---
+#1.The Introduction of the project
+<br />
+Retailing is the business where an organization directly sells its products and services to an end consumer and this is for his personal use. By definition whenever an organization be it a manufacturing or a whole seller sells directly to the end consumer it is actually operating in the Retail space. 
+<br />
+For this midterm project, we are going to find some basic pattern of the total revenue in US. Meanwhile, we are also going to fit other data with the pattern we known. We will choose to use the revenue of furniture and home furnishing stores to be fitted. The data we used this time is coming from https://www.census.gov, which is the data of Manufacturing & Trade Inventories & Sales, in the aspect of retailers of monthly sales.
+<br />
+We deal with both adjusted and unadjusted data in this case. The adjusted data is modified by [The X-13ARIMA-SEATS Seasonal Adjustment Program](https://www.census.gov/srd/www/x13as/). 
+
+
+Generally speaking, there are several goals in this project:
+<br />
+
+1. Try to analyze the total retail revenue data on frequency domain and by filtering.
+<br />
+2. Try to fit the data with different models, including SARIMA, linear regression with SARIMA errors.
+<br />
+3. Forecasting the future development in retail. 
+<br />
+4. Use the pattern of the total retail revenue data to fit other specific data.
+<br />  
+
+#2.Introduction to the original data
+<br />
+First of all, we do some pre-processing before the analysis of our data.
+```{r}
+setwd("D:\\531\\project1\\pro1")
+
+#ReadData
+
+Adj_Data_Unmodified = read.csv("Adj.csv", header = T)
+Org_Data_Unmodified = read.csv("Org.csv", header = T)
+
+library(zoo)
+library(astsa)
+library(knitr)
+library(forecast)
+
+Sys.setlocale("LC_TIME", "C") 
+Org_Data_Unmodified$Period = as.Date(as.yearmon(Org_Data_Unmodified$Period, "%b-%y"))
+Adj_Data_Unmodified$Period = as.Date(as.yearmon(Adj_Data_Unmodified$Period, "%b-%y"))
+
+Org_Data_Unmodified = cbind(c(1:dim(Org_Data_Unmodified)[1]),Org_Data_Unmodified)
+colnames(Org_Data_Unmodified) = c("Number","Period","Value")
+Adj_Data_Unmodified = cbind(c(1:dim(Adj_Data_Unmodified)[1]),Adj_Data_Unmodified)
+colnames(Adj_Data_Unmodified) = c("Number","Period","Value")
+
+
+Org_Data_Unmodified$Value = as.numeric(gsub(",","",Org_Data_Unmodified$Value))
+Adj_Data_Unmodified$Value = as.numeric(gsub(",","",Adj_Data_Unmodified$Value))
+
+Org_Data = Org_Data_Unmodified
+Adj_Data = Adj_Data_Unmodified
+```
+
+Now, in order to have a whole picture of our data, we provide the basic plots of adjusted and unadjusted data in the same figure, trying to find some basic pattern.
+```{r}
+plot(Org_Data$Period,Org_Data$Value,type = "l", col = "red", main = "Time Plot of Total Revenue")
+lines(Org_Data$Period,Adj_Data$Value,type = "l")
+
+acf(Org_Data$Value, lag.max = 30, main = "ACF of Unadjusted Total Revenue")
+pacf(Org_Data$Value, main = "PACF of Unadjusted Total Revenue")
+```
+
+The original data plot shows that there are significant linear trend in long term, for both adjusted and unadjusted data, which indicate that it is unstationary. What's more, there are some seasonal pattern in the unadjusted data, while the seasonal pattern of adjusted data have already been removed. 
+The autocorrelation function and partial autocorrelation function also show similar things. 
+
+```{r}
+Box.test(Org_Data$Value,type="Ljung-Box")
+```
+We also do the basic LB-test, which indicate that our data is not white noise.
+<br />
+Now, we try to use the HP-filter and 1-step first difference to get the pattern of our unadjusted data.
+```{r}
+library(mFilter)
+Org_Data_HP <- hpfilter(Org_Data$Value, freq=10,type="lambda",drift=F)$cycle
+plot(Org_Data$Number,Org_Data_HP,type="l",xlab="Index",ylab="", main = "HP-fiter of Unadjusted Data")
+
+#1-step diff
+plot(diff(Org_Data$Value),type = "l", main = "1-step Difference of Unadjusted Data")
+
+```
+
+
+The result shows that both 1-step first difference and HP filter can get the seasonal pattern very well. What's more, from the plot shown above, we can find out that there are significant seasonal pattern, which mean SARIMA might be a good choice for us.
+
+
+#3. Analysis in Frequency Domain
+We now analyze our data in frequency domain. There are several things we can do right now. 
+- Firstly, we will provide the original spectrum of our data, which will show the periodical pattern,
+- Secondly, the local regression will be applied. We tried to separate the variation in different range of frequency.
+- Finally, we will try to explain what we find in the frequency domain.
+
+##3.1 Spectrum Analysis
+<br />
+And now, we will take a look at our data in frequency domain. The parameters we used in span is set by the tests we have done.
+```{r}
+##Spectrum
+spectrum(Org_Data_Unmodified$Value,span = c(3,3))
+```
+<br />
+The spectrum reveals that, there are some strong seasonal pattern for 12 months, 6 months, 4 months and 3 months.
+We can use different difference operator to eliminate the seasonal pattern. Thus, based on the tests we have done, we would prefer to use $B^{12}$. There are several reason, 1.Our data is monthly data, which imply that $B^{12}$ is a good choice. 2. As the plot we shown below:
+```{r}
+  Org_Data["12V"]=append(c(1:12),diff(Org_Data_Unmodified$Value,12))
+  Org_Data = tail(Org_Data,dim(Org_Data)[1]-12)
+  plot(Org_Data$Number,Org_Data$`12V`,type = "l")
+```
+<br />
+The $B^{12}$ seems to extract all the seasonal pattern.
+
+##3.2 Local Regression
+Now, we will try to extract the long term/short term trend from the data. The method we used here was local regression:
+```{r}
+Org_loess <- loess(Value~Number,span=0.5,data= Org_Data)
+plot(Org_Data$Number,Org_Data$Value,type="l",col="red")
+lines(Org_loess$x,Org_loess$fitted,type="l")
+```
+
+We used different span parameters to extract different range of frequency. After testing, we would like to use span = 0.5 and span = 0.1 to extract low and high range of frequency. We will take the rest of the part as the variation in mid-range.
+```{r}
+  #Extracting Cycle
+  Org_low <- ts(loess(Value~Number,span=0.5,data= Org_Data)$fitted)
+  Org_hi <- ts(Org_Data$Value - loess(Value~Number,span=0.1,data= Org_Data)$fitted)
+  Org_cycles <- Org_Data$Value - Org_low - Org_hi
+  plot(ts.union(Org_Data$Value, Org_low,Org_hi,Org_cycles),
+     main="Decomposition of retail revenue as trend + Sesonal + Fluctuation")
+```
+
+The plot above shows that, we have an increasing linear long term trend during these 20 years. And there are a significant fluctuation on around 2008, which is reasonable due to the financial crisis. In the high-range domain, we can find out that we extract the seasonal pattern successfully.
+
+```{r}
+  spec_cycle <- spectrum(ts.union(Org_Data$Value,Org_hi),spans=c(3,3),plot=FALSE)
+  freq_response_cycle <- spec_cycle$spec[,2]/spec_cycle$spec[,1]
+  plot(spec_cycle$freq,freq_response_cycle,
+       type="l",log="y",
+       ylab="frequency ratio", xlab="frequency", ylim=c(5e-6,1.1),
+       main="frequency response (dashed line at 1.0)")
+  abline(h=1,lty="dashed",col="red")  
+```
+
+The frequency response function also shows that the seasonal pattern plays an important role in the data.
+  <br />
+
+#4.Fit SARIMA Model
+In this part, we will fit a SARiMA model for our data. Since SARIMA model has 7 parameters to determine before we fit the model at the same time, including (p,d,q) and (P,D,Q) and season period (S), we would not prefer to justify all of the parameters at the same time. Thus, we would set (S) and (d,D) at first, then justify (p,q) and (P,Q) separately. Therefore, we can use the AIC table to determine which model should be used.
+What's more, since we would prefer less variable in this case, we would also provide BIC and other criterion for concern.
+<br />
+
+##4.1 Fit the AR and MA Part in SARIMA
+From the previous analysis, we can notice that (S = 12) is a good choice for our model. Meanwhile, we would use AIC criterion to choose AR and MA at first. 
+```{r}
+Table_For_ARMA_AIC <- function(data,P,Q){
+table <- matrix(NA,(P+1),(Q+1))
+for(p in 0:P) {
+for(q in 0:Q) {
+table[p+1,q+1] <- Arima(data,order=c(p,0,q),seasonal=list(order=c(0,1,0),period=12))$aic
+}
+}
+dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+table
+}
+Retail_aic_table <- Table_For_ARMA_AIC(Org_Data$Value,6,6)
+kable(Retail_aic_table,digits=2)
+```
+
+As the results shown above, the AIC table indicates that the larger the model, the better results we might have. Thus, we would now turn to use BIC criterion instead of AIC.
+
+```{r}
+Table_For_ARMA_BIC <- function(data,P,Q){
+table <- matrix(NA,(P+1),(Q+1))
+for(p in 0:P) {
+for(q in 0:Q) {
+table[p+1,q+1] <- Arima(data,order=c(p,0,q),seasonal=list(order=c(0,1,0),period=12))$bic
+}
+}
+dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+table
+}
+Retail_bic_table <- Table_For_ARMA_BIC(Org_Data$Value,6,6)
+kable(Retail_bic_table,digits=2)
+```
+
+BIC table give us different results. Based on BIC table, we would prefer to use (3,0,3) as the ARMA parameters, which seems like a quarterly pattern.
+
+##4.2 Fit the SAR and SMA Part in SARIMA
+And now, we turn to the parameters of SAR and SMA. Based on our tests, we can notice that, most of the time, the results would return non-stationary AR part. What's more, the computation of parameters are really time consuming if we set SAR and SMA too large. Thus in this case, we would prefer to set (2,2) as below:
+
+```{r}
+Table_For_Season_AIC <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- Arima(data,order=c(3,0,3),seasonal=list(order=c(p,1,q),period=12))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+Retail_aic_table <- Table_For_Season_AIC(Org_Data$Value,2,2)
+kable(Retail_aic_table,digits=2)
+```
+
+<br />
+The results turns out that SARIMA(3,0,3)(0,1,2)[12] is a good choice for us. Meanwhile in this circumstance, BIC is not useful at all.
+
+##4.3 Residual Analysis
+Based on the analysis above, we get our SARIMA model for the total revenue data:
+```{r}
+Org_Result_1 = Arima(Org_Data$Value,order=c(3,0,3),seasonal=list(order=c(0,1,2),period=12))
+```
+<br />
+And we turn to the analysis of residuals. We
+```{r}
+plot(Org_Result_1$residuals)
+acf(Org_Result_1$residuals)
+```
+<br />
+The residuals seems like white noise but still have a little pattern. Thus, we shows the Q-Q plot against normal distribution below:
+```{r}
+qqnorm(Org_Result_1$residuals)
+qqline(Org_Result_1$residuals)
+```
+<br />
+It seems like that there is a little long tail here. However, basically we can say that our residuals is a Gaussian white noise.
+<br />
+At the same time, we try to fit the linear regression with SARIMA errors:
+```{r}
+Org_Result_test = Arima(Org_Data$Value,order=c(3,0,3),xreg = Org_Data$Number,seasonal=list(order=c(0,1,2),period=12))
+
+acf(Org_Result_test$residuals)
+```
+<br />
+There are not any consequential improvement when we use linear regression. Therefore we would prefer to use the original one, in order to keep our model clear and simple.
+
+**5.Fitted result**
+<br />
+Now, we show the detail results of our model.
+```{r}
+Org_Result_1
+```
+<br />
+According to the log-likelihood test, we can know that most of those parameters are significant, which indicate that our model is a great model.
+<br />
+Meanwhile, we also provide the figure between the original data and fitted value:
+```{r}
+plot(Org_Result_1$x,type="l", main = "Original Data and Fitted Result")
+lines(fitted(Org_Result_1),col="red")
+```
+<br />
+By comparing these two lines, the plot above shows that the model we used fit the data very well. Since we already have a great SARIMA model, We can as well as forecast the future retail amount by our model. Practically, the prediction data can give us some understanding about what will happen in the future.
+However, at first, we need to testify the goodness of our model. Therefore, we eliminate the last year data from the original one, and compared the prediction to the actual input.
+
+```{r}
+Test_Org_Data = head(Org_Data,n=dim(Org_Data)[1]-12)
+Org_Result_2 = Arima(Test_Org_Data$Value,order=c(3,0,3),seasonal=list(order=c(0,1,2),period=12))
+test = forecast.Arima(Org_Result_2)
+plot(test, main = "Testing about the prediction of SARIMA")
+lines(Org_Data$Value, type= "l", col = "red")
+```
+
+In the plot above, red line is the original data, while the blue line shows that our prediction done well in this case, and therefore we can apply our model to predict next year retail revenue. The following result are shown below, which is the prediction of next year data:
+```{r}
+forecast.Arima(Org_Result_1)
+```
+
+#6.Seasonlly Adjusted Data Analysis
+<br />
+From the previous study, including frequency response function and SARIMA model, we notice that the seasonal pattern is so strong that we pay too much attention on it. Thus from now on, we would use the seasonally adjusted data. From the website, the Census.gov, we can learn that they modified the data by [The X-13ARIMA-SEATS Seasonal Adjustment Program](https://www.census.gov/srd/www/x13as/), which decompose the seasonal pattern in different part, and show the real trend of the time series. The seasonally adjusted data is just what we are looking for, since we are trying to analyze the "real" data.
+
+We first plot the original data.
+```{r}
+plot(Adj_Data$Value,type= "l", main = "Seasonaly Adjusted Revenue")
+```
+<br />
+The plot here shows significant linear trend. Thus for SARIMA model, we would prefer to set (d) = 1. Now we look at the spectrum about the adjusted data and unadjusted data:
+```{r}
+Org_Data = Org_Data_Unmodified
+Adj_Data = Adj_Data_Unmodified
+spectrum(ts.union(ts(Org_Data$Value),ts(Adj_Data$Value)),spans=c(3,5,3))
+```
+
+With the spectrum plotted, we can find out that most of the cycle has been eliminated by the X-13 method. What's more, we also provide the plot of the frequency response function between the adjusted data and unadjusted data.
+
+```{r}
+  spec_cycle <- spectrum(ts.union(Org_Data$Value,ts(Adj_Data$Value)),spans=c(3,3),plot=FALSE)
+  freq_response_cycle <- spec_cycle$spec[,2]/spec_cycle$spec[,1]
+  plot(spec_cycle$freq,freq_response_cycle,
+       type="l",log="y",
+       ylab="frequency ratio", xlab="frequency", ylim=c(5e-6,1.1),
+       main="frequency response (dashed line at 1.0)")
+  abline(h=1,lty="dashed",col="red")  
+```
+
+Based on these three plots in frequency domain, we conclude that most of the cycle has been eliminated. Thus ARIMA is better than SARIMA if we want to fit the seasonally adjusted data.
+<br />
+The AIC table are provided as below:
+```{r}
+Table_For_ARMA_AIC <- function(data,P,Q){
+table <- matrix(NA,(P+1),(Q+1))
+for(p in 0:P) {
+for(q in 0:Q) {
+table[p+1,q+1] <- Arima(data,order=c(p,1,q),method = "ML")$aic
+}
+}
+dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+table
+}
+Retail_aic_table <- Table_For_ARMA_AIC(Adj_Data$Value,6,6)
+kable(Retail_aic_table,digits=2)
+```
+
+The table indicate that ARMA(1,1) would be a good choice for us.
+Thus,
+```{r}
+Adj_Result_test = Arima(Adj_Data$Value,order=c(1,1,1),method = "ML")
+plot(Adj_Result_test$residuals, main = "Residuals of Adjusted Data")
+acf(Adj_Result_test$residuals)
+```
+
+The result shows that our model fit the data well, and the residuals seems to be a white noise.
+```{r}
+plot(Adj_Result_test$x,type="l")
+lines(fitted(Adj_Result_test),col="red")
+```
+The plot of fitted value and origin value are also shown, which indicate that our model do well in this case. It is also available to provide the prediction about seasonally adjusted data.
+
+```{r}
+forecast.Arima(Adj_Result_test)
+```
+
+
+#7.Other Data for Analysis
+<br />
+In this part, we will turn to use others data for our analysis. Since at beginning, we choose to analyze the data of total retail revenue, it is natural that we would expect to use the pattern of total revenue to fit the model on some specific item revenue. 
+<br />
+For instance, we use the monthly sales data of Furniture and Home Furnishings Stores, which comes from the same website:
+```{r}
+Home_Data = read.csv("Home.csv")
+Home_Data$Value = as.numeric(gsub(",","",Home_Data$Value))
+```
+
+For convenience's sake, we fit the model with ARIMA(3,1,3), since there is a significant linear trend and ARMA(3,3) is large enough for us, meanwhile we also have done the AIC and BIC test, concluded that ARIMA(3,1,3) might be a good choice.
+<br />
+The different between those models below is that, in the second model, we use the HP-filtering result of total retail revenue to regress the error part of ARIMA.
+```{r}
+Home_Result_1 <-  Arima(Home_Data$Value,order=c(3,1,3))
+Home_Result_2 <-  Arima(Home_Data$Value,xreg=Org_Data_HP,order=c(3,1,3))
+```
+
+The plot is shown below, which the black line is the original data:
+```{r}
+plot(Home_Result_1$x,type="l", main = "ARIMA without Regression")
+lines(fitted(Home_Result_1),col = "red")
+```
+```{r}
+plot(Home_Result_1$x,type="l", main = "ARIMA with Regression" )
+lines(fitted(Home_Result_2),col = "blue")
+```
+<br />
+Obviously, the model with linear regression part do better than the traditional ARIMA model. Hence one can conclude that the pattern of total retail revenue do have some contribution in fitting the Furniture & Home Furnishings Stores revenue.
+  
+#8.Conclusion
+<br />
+In this project, to conclude, there are several things we have done.
+- Firstly we try to analysis the basic pattern of the unadjusted total retail revenue data in US, which indicates that there are some seasonal pattern and significant long term linear trend. 
+- Thus we would prefer to fit a SARIMA model for our data. We choose the best version of the SARIMA model, and do some prediction for the future. The results shows that our model do well in fitting and forecasting.
+- Then, we compare our unadjusted data to the seasonally adjusted data to find out the differences.
+- Finally, with the pattern we got from the total revenue, we try to fit the data of home furnishing revenue, and discover that it performs better than the ordinary ARIMA model. 
+
+In conclusion, SARIMA model and regression with ARIMA error are good models for both prediction are fitting. And analysis in frequency domain is a helpful tool for us in time series analysis. 
+
+#9.Reference
+1.[Lecture notes of STATS 531](http://ionides.github.io/531w16/)
+<br />
+2.[Retail data of US](https://www.census.gov/)
+<br />
+3.[Detail of X13 adjusted](https://www.census.gov/srd/www/x13as/)
+

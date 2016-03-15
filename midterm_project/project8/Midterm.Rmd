@@ -1,0 +1,767 @@
+---
+title: "Forecasting Chicken Pox Outbreaks using Digital Epidemiology"
+date: "3/10/2016"
+output:
+  pdf_document:
+    fig_caption: yes
+    keep_tex: yes
+    number_sections: no
+  html_document:
+    fig_caption: yes
+    force_captions: yes
+    highlight: pygments
+    number_sections: yes
+    theme: cerulean
+---
+
+
+
+
+# Abstract
+
+Public health surveillance systems are important for tracking disease dynamics. However not all diseases are reported, especially those with benign or mild symptoms. In recent years, social and real-time digital data sources have provided new means of studying disease transmission. Such affordable and accessible data have the potential to offer new insights into disease epidemiology at the national and international scales. I used the extensive information repository Google Trends, to examine the digital epidemiology of a common childhood disease in Australia, chicken pox, caused by varicella zoster virus (VZV), over an eleven-year period. I built a model to test whether Google Trends data could forecast recurrent seasonal outbreaks by estimating the magnitude and seasonal timing. I tested 8 different forecasting models, which are nested versions of each other, against a null cosine model that captured the general seasonality of chicken pox. I also included two models to 'fit', rather than 'forecast' the chicken pox data. The model that included the Google Trends data and a subsection of the parameters fit better than a 'full model' which included all parameters and the null model when examined by Akaike Information Criterion and a likelihood ratio test. These data and the methodological approaches provide a novel way to track, and forecast the global burden of childhood disease. I hope to exapnd this research into other childhood diseases for which surveillance is lacking.
+
+# Introduction
+
+Childhood infectious diseases continue to be a major global problem, and surveillance is needed to inform strategies for the prevention and mitigation of disease transmission. Our ability to characterize the global picture of childhood diseases is limited, as detailed epidemiological data are generally nonexistent or inaccessible across much of the world. Available data suggest that recurrent outbreaks of acute infectious diseases peak within a relatively consistent, but disease-specific seasonal window, which differs geographically (1,2,3,4,5). Geographic variation in disease transmission is poorly understood, suggesting substantial knowledge gains from methods that can expand global epidemiological surveillance. Seasonal variations in host-pathogen interactions are common in nature (6). In humans, the immune system undergoes substantial seasonal changes in gene expression, which is inverted between European locations and Oceana (7). The regulation of seasonal changes in both disease incidence and immune defense is known to interact with environmental factors such as annual changes in day length, humidity and ambient temperature (8). Accordingly, quantification of global spatiotemporal patterns of disease incidence can help to disentangle environmental, demographic, and physiological drivers of infectious disease transmission. Furthermore, the recognition of the regional timing of outbreaks would establish the groundwork for anticipating clinical cases, and when applicable, initiating public health interventions.
+
+Since childhood disease outbreaks are often explosive and short-lived (9), temporally rich (i.e., weekly or monthly) data are needed to understand their dynamics. Similarly, in order to establish the recurrent nature of outbreaks that occur at annual or multi-annual frequencies, long-term data are needed. Thus, ideal disease incidence data have both high temporal resolution and breadth (i.e., frequent observations over many years). Over the past decade, the internet has become a significant health resource for the general public and health professionals (10,11). Internet query platforms, such as Google Trends, have provided powerful and accessible resources for identifying outbreaks and for implementing intervention strategies (12,13,14). Research on infectious disease information seeking behaviour has demonstrated that internet queries can complement traditional surveillance by providing a rapid and efficient means of obtaining large epidemiological datasets (13,15,16,17,18). For example, epidemiological information contained within Google Trends has been used in the study of rotavirus, norovirus, and influenza (14,15,17,18). These tools offer substantial promise for the global monitoring of diseases in countries that lack clinical surveillance but have sufficient internet coverage to allow for surveillance via digital epidemiology.
+
+# Acquisition of Google Trends Data
+
+Google Trends data were used to assess patterns of information seeking behavior over long time periods, from January 2004 to July 2015. To evaluate childhood disease information seeking behaviour, we obtained country-specific data from Google (19). Google Trends represent the relative number of searches for a specific key word (e.g. ``chicken pox'') standardized within each country such that the values range from 0 to 100. A search volume of 0 is assigned, by Google Trends, to weeks/months with a minimal amount of searches. 
+
+In order to relate Google Trends data to the dynamics of chicken pox (or other diseases of interest), care must be taken to select appropriate search terms. Chicken pox is the classical manifestation of disease, and therefore, language-specific queries of ''chicken pox'' are a straightforward choice for data-mining. In contrast, infections with generic symptoms, such as fever and diarrhea, could arise from many other diseases, making it difficult to identify appropriate queries. In either case, search terms vary subtly from country to country. For instance, in the U.S. ''chickenpox'' is typically written as a single word, whereas in the U.K. and Australia, people refer to ''chicken pox'' as two words. Here I examined data from Australia, where the data were subset within the range that included consecutive weeks with $> 0$ search volume. Chicken pox data from Australia were digitized from (20), and age structure data were digitized from the United Nations (21).
+
+# Forecasting Outbreaks using Google Trends
+
+To determine whether the information seeking behaviour observed in Google data, $\text{T}$, was able to forecast chicken pox outbreak magnitude and timing in Australia, I built and fitted multiple statistical models to forecast chicken pox case data. I evaluated the epidemiological information contained in Google Trends by comparing the Google Trends model with a seasonal null model that did not incorporate Google data. The null model lacked information seeking in the force of infection parameter, which we defined as the monthly per capita rate at which children age 0--14 years are infected. In order to estimate the number of symptomatic VZV infections per month, we multiplied the force of infection with an estimate of the population aged 0--14 years (21). All models were fitted to the case data from a VZV-vaccinated population (Australia), which exhibited reduced seasonality. To estimate the number of symptomatic VZV infections each month, $I_t$, I used Google Trends data from the previous two months, $\text{T}_{t-1}$ and $\text{T}_{t-2}$, where t is time in monthly time steps. The full chicken pox process model tracked the force of infection, $\lambda_t$, 
+
+\begin{equation}
+  \lambda_t = \left[\beta_1\text{cos}\left(\frac{2\pi}{12}(t+\omega)\right)\text{T}_{t-1}^{\alpha} + \beta_2\lvert \text{T}_{t-1}-\text{T}_{t-2}\rvert + \beta_3\right]\epsilon_t. 
+\end{equation}
+\noindent The model also contained environmental stochasticity, $\epsilon_t$, which was drawn from a gamma distribution with a mean of 1 and variance $\theta$. I estimated 7 parameters for the full model: the mean and the phase of the seasonality ($\beta_1$ and $\omega$), parameters scaling the Google Trends data ($\alpha$ and $\beta_2$), the baseline force of infection ($\beta_3$), the process noise dispersion parameter ($\theta$), and the reporting dispersion parameter ($\tau$) of a normal distribution, with a mean of 1, from which case reports were drawn. The parameters were estimated using maximum likelihood by iterated particle filtering (MIF) in the R-package pomp (22,23). We forecasted each model starting with 10000 parameter combinations generated from a sobol design, and replicated through pomp four times, with interatively smaller random walk standard deviations.
+
+The process model (Eqn. 1) contained environmental stochasticity, $\epsilon_t$, which was drawn from a gamma distribution with a mean of 1 and variance $\theta$. In order to estimate the number of symptomatic VZV infections per month, I multiplied the force of infection, $\lambda$, with an estimate of the population aged 0--14 years (21), $\text{C}$,
+
+\begin{equation}
+ I_t = \lambda_t \text{C}.
+\end{equation}
+
+I modeled the observation process, which represents the number of cases actually reported, to account for stochasticity in the reporting of symptomatic VZV infections. Case reports were drawn from a normal distribution with a mean report rate, $\rho=1$, and dispersion parameter ($\tau$) which was estimated.
+
+\begin{equation}
+\text{chickenpox}_t \sim \mathcal{N}(\rho I_t,\tau I_t).
+\end{equation}
+
+I evaluated the epidemiological information contained in Google Trends by comparing the Google Trends model with a seasonal null model where the force of infection did not incorporate Google Trends data. The null model force of infection was modeled as:
+
+\begin{equation}
+  \lambda_t = \left[\beta_1\text{cos}\left(\frac{2\pi}{12}(t+\omega)\right) + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+
+In addition to the full model, I tested nested variations of the full model (Eqn. 1), including; a model without the cosine function;
+
+\begin{equation}
+  \lambda_t = \left[\beta_1(\text{T}_{t-1}^{\alpha}) + \beta_2\lvert \text{T}_{t-1}-\text{T}_{t-2}\rvert + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+\noindent a model without the cosine function or the $\beta_2$ parameter;
+
+\begin{equation}
+  \lambda_t = \left[\beta_1(\text{T}_{t-1}^{\alpha}) + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+\noindent a model without the cosine function or the $\alpha$ parameter;
+
+\begin{equation}
+  \lambda_t = \left[\beta_1(\text{T}_{t-1}) + \beta_2\lvert \text{T}_{t-1}-\text{T}_{t-2}\rvert + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+\noindent a model without the cosine function, $\alpha$, or the $\beta_2$ parameters;
+
+\begin{equation}
+  \lambda_t = \left[\beta_1(\text{T}_{t-1}) + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+\noindent a model without the $\alpha$ parameter;
+
+\begin{equation}
+  \lambda_t = \left[\beta_1\text{cos}\left(\frac{2\pi}{12}(t+\omega)\right)\text{T}_{t-1} + \beta_2\lvert \text{T}_{t-1}-\text{T}_{t-2}\rvert + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+\noindent a model without the $\beta_2$ parameter;
+
+\begin{equation}
+  \lambda_t = \left[\beta_1\text{cos}\left(\frac{2\pi}{12}(t+\omega)\right)\text{T}_{t-1}^{\alpha} + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+\noindent and a model without the $\alpha$ or $\beta_2$ parameters;
+
+\begin{equation}
+  \lambda_t = \left[\beta_1\text{cos}\left(\frac{2\pi}{12}(t+\omega)\right)\text{T}_{t-1} + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+In addition to the forecasting models, I also wrote two models to fit the Google Trends data to chicken pox data, without forecasting.
+
+\begin{equation}
+  \lambda_t = \left[\beta_1(\text{T}_{t}) + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+\begin{equation}
+  \lambda_t = \left[\beta_1(\text{T}_{t}^{\alpha}) + \beta_3\right]\epsilon_t. 
+\end{equation}
+
+
+# Results
+
+Models that included the cosine function (Eqns. $1,9,10,11$) fit about 20 likelihood units better (Table 1), indicating the need for the inclusion of the cosine function. The cosine function is important in forecasting because without a seasonal function, the model would incorrectly forecast the next time step at all peaks and troughs. By including the cosine function, the models were able to correctly estimate the downturn after a peak, and upturn after a trough. Overall, model F (Eqn. 10) fit the best, despite estimating fewer parameters than the other models. It used one more parameter than the null model, yet fit 14 Log-likelihood units better. AIC and likelihood ratio tests were based off of this model.
+
+The Google Trends model fit the case data and preformed better than the null model in Australia, as the null model AIC was $> 28$ units above Google Trends model AIC. Since both models were seasonally forced, all models that included the cosine function captured the seasonal timing of outbreaks. However, the Google Trends model was able to predict the interannual variation in outbreak size (Fig~X), while the null model could not (Fig Y). 
+
+
+\begin{center}
+ \begin{tabular}{|c |c |c |c |c |c |c|} 
+ \hline
+ Equation \# & Model & Model Structure & LogLik & Est \# Params & AIC & $\Delta$ AIC \\ [0.5ex] 
+ \hline\hline
+ Eqn 1 & A & Full & $-565.43$ & 7 & $1144.9$ & $24.0$\\ 
+ \hline
+ Eqn 4 & H & Null & \textbf{-569.47} & 6 & \textbf{1150.9} & $30.0$\\
+ \hline
+ Eqn 5 & B & No Cos & $-584.96$ & 6 & $1181.9$ & $61.0$\\
+ \hline
+ Eqn 6 & C & No Cos, $\beta_2$ & $-585.02$ & 5 & $1180.0$ & $59.1$\\
+ \hline
+ Eqn 7 & D & No Cos, $\alpha$ & $-586.08$ & 5 & $1182.2$ & $61.3$\\
+  \hline 
+ Eqn 8 & I & No Cos, $\beta_2, \alpha$ & $-585.63$ & 4 & $1179.3$ & $58.4$\\
+ \hline
+ Eqn 9 & E & No $\alpha$ & \textbf{-554.47} & 6 & \textbf{1120.9} & $0.0$\\
+ \hline
+ Eqn 10 & F & No $\beta_2$ & $-563.35$ & 6 & $1138.7$ & $17.8$\\
+ \hline
+ Eqn 11 & G & No $\alpha, \beta_2$ & $-558.32$ & 5 & $1128.0$ & $7.1$\\
+ \hline \hline
+ Eqn 12 & M & No Forecast, $\beta_2, \alpha$ & $-584.42$ & 4 & NA & NA\\
+ \hline
+ Eqn 13 & N & No Forecast, $\beta_2$ & $-583.98$ & 5 & NA & NA\\ [1ex] 
+ \hline
+\end{tabular}
+\end{center}
+
+From these results, I simulated the Maximum-Likelihood parameter set for each the Null model (Eqn. 4) and the best fit Google Trends model (Model E, Eqn. 9) 10000 times to elucidate the improvement Google Trends adds to the model fit. I have included my code on how I simulated the model below (not shown - uncomment if you want to run it).
+
+```{r, echo = F}
+#rm(list=ls())
+#require('pomp');
+#setwd("/Users/kevinbakker/Desktop/GT_Flux_runs/")
+##read in MLE
+#MLE<- read.csv(file='CPOX_E_MLE.csv',header=TRUE)
+#setwd("/Users/kevinbakker/Desktop/GT_Flux_runs/CPOX_E/")
+##load models
+#source('pomp_obj_seas_E.R')
+#current.set<- unlist(MLE)
+
+#simE <- NULL
+
+#for(j in 1:10000){
+#  sim.test <- simulate(my.model,param=current.set)
+#  simE <- cbind(simE, as.vector(sim.test@states[2,]))
+# }
+
+#write.csv(simE, 'simE.csv')
+
+#names(x)
+#dim(x)
+```
+
+I then loaded the simulations and plotted it against the data, showing the means and standard deviations at each month.
+
+```{r, echo = F, message = F}
+source('pomp_obj_seas_E.R')
+simE<- read.csv(file='simE.csv',header=TRUE)
+time.length <- length(simE[,1])
+simE <- simE[,2:10000]
+	meanE <- vector()
+	medianE <- vector()
+	sdE <- vector()
+	qtlowE <- vector()
+	qthighE <- vector()
+	SDtopE <- vector()
+	SDbottomE <- vector()
+
+for (i in 1:time.length){
+	meanE[i] <- apply(simE[i,],1,mean)
+	sdE[i] <- apply(simE[i,],1,sd);
+	# meanE[i] <- mean(simE[i,]);
+	# medianE[i] <- median(simE[i,]);
+	# sdE[i] <- sd(simE[i,]);
+	# qtlowE[i] <- quantile(simE[i,],probs = 0.1);
+	# qthighE[i] <- quantile(simE[i,],probs = 0.9);
+	SDtopE[i] <- meanE[i] + sdE[i];
+	SDbottomE[i] <- meanE[i] - sdE[i];
+}
+# quartz(height=8, width=14)
+  plot(monthly.cases$time,monthly.cases$cases,type='l',col='black',ylim=c(35,350), lwd=3,ylab="Chicken Pox Cases", xlab="Time", main="Australia Google Trends Model E")
+  lines(monthly.cases$time,meanE, col='darkblue', lwd=2)
+  lines(monthly.cases$time,SDtopE, lty=5, col='darkblue', lwd=1)
+  lines(monthly.cases$time,SDbottomE, lty=5, col='darkblue',lwd=1)
+legend(2006,350,c('Data', 'Mean of 10000 Simulations','Standard Deviation of Simulations'),lty=c(1,1,5), lwd=c(3,2,1), col=c('black','darkblue', 'darkblue') )
+```
+
+Additionally, I examined the best forecasting Google Model fit vs the data and included the R-squared and p-values.
+
+```{r, echo = F}
+#quartz(height=8, width=8)
+
+plot(meanE,monthly.cases$cases, cex=2,xlim=c(0,300), ylim=c(0,300), pch=19,xlab="Predicted Chicken Pox Cases", ylab="Observed Cases", main="Australia Google Model",col="darkblue")
+
+abline(lm(monthly.cases$cases~meanE), col='black', lwd=3, lty=4);
+						z<- lm(monthly.cases$cases~meanE);
+						r2<-summary(z)$r.squared;
+						all <- summary(z);
+						pval<- all$coefficients[2,4]
+						r2label = bquote(italic(R)^2 == .(format(r2, digits = 3)));
+						plabel = bquote(italic(p) == .(format(pval, digits = 3)));
+						text(x=25, y=250, labels=r2label);
+						text(x=25, y=220, labels=plabel);
+```
+
+I did the same for the null model, showing the mean and standard deviations at each point.
+
+```{r, echo = F, message = F}
+setwd('/Users/kevinbakker/Desktop/GT_Flux_runs/CPOX/Sobol_design')
+require('pomp')
+
+current.country<- 'Australia'
+if (is.loaded("null_chickenpox_meas_dens")) dyn.unload("chickenpox_google_trends_NULL_model.so")
+system("R CMD SHLIB chickenpox_google_trends_NULL_model.c")
+dyn.load("chickenpox_google_trends_NULL_model.so")
+	
+require('chickenpox.pack')
+model.code <- c("Chickenpox_Null_model",'_',current.country)
+p.obj <- null.model(COUNTRY='Australia')
+param.sets<- read.csv(paste(c('Chickenpox_Null_model_',current.country,'_Sobol_design_results.csv'),collapse=''))
+PARAM.SET<- unlist(subset(param.sets,LogLik==max(param.sets$LogLik)))
+time.vec<- p.obj@covar[3:dim(p.obj@covar)[1]]
+
+#simNullz <- NULL
+#for(i in 1:10000){
+#		sim<- simulate(p.obj,params=PARAM.SET)
+#  simNullz <- cbind(simNullz, as.vector(sim@states[2,]))
+#}
+
+#write.csv(simNullz, 'simNULLz.csv')
+
+setwd('/Users/kevinbakker/Desktop/GT_Flux_runs/')
+simNullz<- read.csv(file='simNULLz.csv',header=TRUE)
+
+time.length <- length(simNullz[,1])
+ simNullz <- simNullz[,2:10000]
+	meanNullz <- vector()
+	medianNullz <- vector()
+	sdNullz <- vector()
+	qtlowNullz <- vector()
+	qthighNullz <- vector()
+	SDtopNullz <- vector()
+	SDbottomNullz <- vector()
+
+for (i in 1:time.length){
+	 meanNullz[i] <- apply(simNullz[i,],1,mean)
+	 sdNullz[i] <- apply(simNullz[i,],1,sd);
+	#meanNullz[i] <- mean(simNullz[i,]);
+	#medianNullz[i] <- median(simNullz[i,]);
+	#sdNullz[i] <- sd(simNullz[i,]);
+	#qtlowNullz[i] <- quantile(simNullz[i,],probs = 0.1);
+	#qthighNullz[i] <- quantile(simNullz[i,],probs = 0.9);
+	SDtopNullz[i] <- meanNullz[i] + sdNullz[i];
+	SDbottomNullz[i] <- meanNullz[i] - sdNullz[i];
+}
+
+#	quartz(height=8, width=14)
+  plot(time.vec,p.obj@data,type='l',col='black',ylim=c(35,350), lwd=3,ylab="Chicken Pox Cases", xlab="Time", main="Australia Null Model")
+  lines(time.vec,meanNullz, col='darkred', lwd=2)
+  lines(time.vec,SDtopNullz, lty=5, col='darkred', lwd=1)
+  lines(time.vec,SDbottomNullz, lty=5, col='darkred',lwd=1)
+legend(2006,350,c('Data', 'Mean of 10000 Simulations','Standard Deviation of Simulations'),lty=c(1,1,5), lwd=c(3,2,1), col=c('black','darkred', 'darkred') )
+```
+
+The Google Trends model had a much larger standard deviation, allowing for the model (with the standard deviations) to capture most of the troughs and peaks throughout the time series. The null model had a smaller standard deviation, with more peaks and troughs outside these values.
+
+I also examined the forecast fit for the null model (means) vs the data and included the R-squared and p-values.
+
+```{r, echo = F}
+#quartz(height=8, width=8)
+plot(meanNullz,p.obj@data, cex=2,xlim=c(0,300), ylim=c(0,300), pch=19,xlab="Predicted Chicken Pox Cases", ylab="Observed Cases", main="Australia Null Model",col="darkred")
+
+abline(lm(p.obj@data[1,]~meanNullz), col='black', lwd=3, lty=4);
+						z<- lm(p.obj@data[1,]~meanNullz);
+						r2<-summary(z)$r.squared;
+						all <- summary(z);
+						pval<- all$coefficients[2,4]
+						r2label = bquote(italic(R)^2 == .(format(r2, digits = 3)));
+						plabel = bquote(italic(p) == .(format(pval, digits = 3)));
+						text(x=25, y=250, labels=r2label);
+						text(x=25, y=220, labels=plabel);
+
+```
+
+When comparing the R-squared values for the null model and the best fit Google model, the Google Trends data was able to explain around 5 percent of the data. While not huge, it is significant (Table 1). To get a better idea of how Google Trends was better able to explain the interannual variation in chicken pox cases, I examined the peak and trough month of each year. I found the peak and trough month for each year, pulled out the number of cases in that month and created density distributions of the Google Trends and null models for each peak and trough for each year.
+
+```{r, echo = F}
+rm(list=ls())
+setwd("/Users/kevinbakker/Desktop/GT_Flux_runs/CPOX_E/")
+simE<- read.csv(file='simE.csv',header=TRUE)
+
+#load models
+source('pomp_obj_seas_E.R')
+
+#For each year figure out what month has the max cases
+month<- vector()
+value <- vector()
+
+for(i in 1:9){
+	start <- 1+((i-1)*12)
+	end <- 12+((i-1)*12)
+	
+month[i] <- which.max(monthly.cases$cases[start:end])
+value[i] <- max(monthly.cases$cases[start:end])
+}
+
+setwd("/Users/kevinbakker/Desktop/GT_Flux_runs/")
+simNull<- read.csv(file='simNULLz.csv',header=TRUE)
+
+
+```
+
+```{r, echo = T}
+ col2rgb("darkred", alpha=TRUE) 
+
+redtrans <- rgb(139, 0, 0, 127, maxColorValue=255) 
+
+
+ col2rgb("darkblue", alpha=TRUE) 
+
+bluetrans <- rgb(0, 0, 139, 127, maxColorValue=255) 
+
+```
+
+The results show that peaks in cases are typical near the end of the year (Oct/Nov, while a few years had peaks in other months). 
+
+```{r, echo = T}
+month
+value
+```
+
+I  then picked out each of the 10000 simulations for the two models at each of those months, assigning each it's own vector.
+
+```{r, echo = F}
+simE <- simE[,2:10000]
+
+month11 <- vector()
+month22 <- vector()
+month35 <- vector()
+month41 <- vector()
+month59 <- vector()
+month71 <- vector()
+month80 <- vector()
+month95 <- vector()
+month105 <- vector()
+
+for(j in 1:9999){
+month11[j] <- simE[11,j]
+month22[j] <- simE[22,j]
+month35[j] <- simE[35,j]
+month41[j] <- simE[41,j]
+month59[j] <- simE[59,j]
+month71[j] <- simE[71,j]
+month80[j] <- simE[80,j]
+month95[j] <- simE[95,j]
+month105[j] <- simE[105,j]
+}
+
+simNull <- simNull[2:10001]
+Nmonth11 <- vector()
+Nmonth22 <- vector()
+Nmonth35 <- vector()
+Nmonth41 <- vector()
+Nmonth59 <- vector()
+Nmonth71 <- vector()
+Nmonth80 <- vector()
+Nmonth95 <- vector()
+Nmonth105 <- vector()
+
+for(j in 1:9999){
+Nmonth11[j] <- simNull[9,j]
+Nmonth22[j] <- simNull[20,j]
+Nmonth35[j] <- simNull[33,j]
+Nmonth41[j] <- simNull[39,j]
+Nmonth59[j] <- simNull[57,j]
+Nmonth71[j] <- simNull[69,j]
+Nmonth80[j] <- simNull[78,j]
+Nmonth95[j] <- simNull[93,j]
+Nmonth105[j] <- simNull[103,j]
+}
+```
+
+From that, I created density distributions for each model at the peak month for each year. This is a 3x3 matrix in pdf output, but had to make each year it's own figure to make it fit into an .rmd file. 
+
+```{r, echo = F}
+#quartz(height=15, width=15)
+#par(mfrow=c(3,3))
+
+d11 <- density(month11)
+plot(d11, main="Kernel Density of 10000 Simulations\n 2006 Peak Cases (Nov-282)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d11, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=282, lwd=4, col='black')
+
+par(new=TRUE)
+Nd11 <- density(Nmonth11)
+plot(Nd11, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd11, col=redtrans, border=redtrans, ylab='', xlab='Cases', cex.lab=1)
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+
+d22 <- density(month22)
+plot(d22, main="Kernel Density of 10000 Simulations\n 2007 Peak Cases (Oct-203)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d22, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=203, lwd=4, col='black')
+
+par(new=TRUE)
+Nd22 <- density(Nmonth22)
+plot(Nd22, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd22, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d35 <- density(month35)
+plot(d35, main="Kernel Density of 10000 Simulations\n 2008 Peak Cases (Nov-292)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d35, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=295, lwd=4, col='black')
+
+par(new=TRUE)
+Nd35 <- density(Nmonth35)
+plot(Nd35, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd35, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d41 <- density(month41)
+plot(d41, main="Kernel Density of 10000 Simulations\n 2009 Peak Cases (May-190) ", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d41, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=190, lwd=4, col='black')
+
+par(new=TRUE)
+Nd41 <- density(Nmonth41)
+plot(Nd41, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd41, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d59 <- density(month59)
+plot(d59, main="Kernel Density of 10000 Simulations\n 2010 Peak Cases (Nov-212)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d59, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=212, lwd=4, col='black')
+
+par(new=TRUE)
+Nd59 <- density(Nmonth59)
+plot(Nd59, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd59, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d71 <- density(month71)
+plot(d71, main="Kernel Density of 10000 Simulations\n 2011 Peak Cases (Nov-240)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d71, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=240, lwd=4, col='black')
+
+par(new=TRUE)
+Nd71 <- density(Nmonth71)
+plot(Nd71, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd71, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d80 <- density(month80)
+plot(d80, main="Kernel Density of 10000 Simulations\n 2012 Peak Cases (Aug-229)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d80, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=229, lwd=4, col='black')
+
+par(new=TRUE)
+Nd80 <- density(Nmonth80)
+plot(Nd80, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd80, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d95 <- density(month95)
+plot(d95, main="Kernel Density of 10000 Simulations\n 2013 Peak Cases (Nov-261)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d95, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=261, lwd=4, col='black')
+
+par(new=TRUE)
+Nd95 <- density(Nmonth95)
+plot(Nd95, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd95, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d105 <- density(month105)
+plot(d105, main="Kernel Density of 10000 Simulations\n 2014 Peak Cases (Sept-220)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d105, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=220, lwd=4, col='black')
+
+par(new=TRUE)
+Nd105 <- density(Nmonth105)
+plot(Nd105, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd105, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+
+```
+
+These results are interesting in that the null model does a better job hitting the peaks in each year other than 2007. The null model performed very good at capturing the peak in 2006, 2010, 2011, and 2012.  
+
+I did the same for the density distributions for each model at the trough month for each year. First I pulled out the months where the minimum number of cases occured each month, and how many cases there were.
+
+```{r, echo = F}
+#For each year figure out what month has the min cases
+Nmonth<- vector()
+Nvalue <- vector()
+
+for(i in 1:9){
+	start <- 1+((i-1)*12)
+	end <- 12+((i-1)*12)
+	
+Nmonth[i] <- which.min(monthly.cases$cases[start:end])
+Nvalue[i] <- min(monthly.cases$cases[start:end])
+}
+```
+
+```{r, echo = T}
+Nmonth
+Nvalue
+```
+
+
+```{r, echo = F}
+month5 <- vector()
+month16 <- vector()
+month26 <- vector()
+month48 <- vector()
+month50 <- vector()
+month62 <- vector()
+month76 <- vector()
+month86 <- vector()
+month98 <- vector()
+
+for(j in 1:9999){
+month5[j] <- simE[5,j]
+month16[j] <- simE[16,j]
+month26[j] <- simE[26,j]
+month48[j] <- simE[48,j]
+month50[j] <- simE[50,j]
+month62[j] <- simE[62,j]
+month76[j] <- simE[76,j]
+month86[j] <- simE[86,j]
+month98[j] <- simE[98,j]
+}
+
+Nmonth5 <- vector()
+Nmonth16 <- vector()
+Nmonth26 <- vector()
+Nmonth48 <- vector()
+Nmonth50 <- vector()
+Nmonth62 <- vector()
+Nmonth76 <- vector()
+Nmonth86 <- vector()
+Nmonth98 <- vector()
+
+for(j in 1:9999){
+Nmonth5[j] <- simNull[3,j]
+Nmonth16[j] <- simNull[14,j]
+Nmonth26[j] <- simNull[24,j]
+Nmonth48[j] <- simNull[46,j]
+Nmonth50[j] <- simNull[48,j]
+Nmonth62[j] <- simNull[60,j]
+Nmonth76[j] <- simNull[74,j]
+Nmonth86[j] <- simNull[84,j]
+Nmonth98[j] <- simNull[96,j]
+}
+```
+
+
+```{r, echo = F}
+#quartz(height=15, width=15)
+#par(mfrow=c(3,3))
+
+d5 <- density(month5)
+plot(d5, main="Kernel Density of 10000 Simulations\n 2006 Trough Cases (May-38)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d5, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=38, lwd=4, col='black')
+
+par(new=TRUE)
+Nd5 <- density(Nmonth5)
+plot(Nd5, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd5, col=redtrans, border=redtrans, ylab='', xlab='Cases', cex.lab=1)
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+
+d16 <- density(month16)
+plot(d16, main="Kernel Density of 10000 Simulations\n 2007 Trough Cases (Apr-69)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d16, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=69, lwd=4, col='black')
+
+par(new=TRUE)
+Nd16 <- density(Nmonth16)
+plot(Nd16, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd16, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d26 <- density(month26)
+plot(d26, main="Kernel Density of 10000 Simulations\n 2008 Trough Cases (Feb-85)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d26, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=85, lwd=4, col='black')
+
+par(new=TRUE)
+Nd26 <- density(Nmonth26)
+plot(Nd26, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd26, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d48 <- density(month48)
+plot(d48, main="Kernel Density of 10000 Simulations\n 2009 Trough Cases (Dec-118) ", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d48, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=118, lwd=4, col='black')
+
+par(new=TRUE)
+Nd48 <- density(Nmonth48)
+plot(Nd48, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd48, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d50 <- density(month50)
+plot(d50, main="Kernel Density of 10000 Simulations\n 2010 Trough Cases (Feb-78)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d50, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=78, lwd=4, col='black')
+
+par(new=TRUE)
+Nd50 <- density(Nmonth50)
+plot(Nd50, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd50, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d62 <- density(month62)
+plot(d62, main="Kernel Density of 10000 Simulations\n 2011 Trough Cases (Feb-87)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d62, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=87, lwd=4, col='black')
+
+par(new=TRUE)
+Nd62 <- density(Nmonth62)
+plot(Nd62, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd62, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d76 <- density(month76)
+plot(d76, main="Kernel Density of 10000 Simulations\n 2012 Trough Cases (Apr-107)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d76, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=107, lwd=4, col='black')
+
+par(new=TRUE)
+Nd76 <- density(Nmonth76)
+plot(Nd76, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd76, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d86 <- density(month86)
+plot(d86, main="Kernel Density of 10000 Simulations\n 2013 Trough Cases (Feb-122)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d86, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=122, lwd=4, col='black')
+
+par(new=TRUE)
+Nd86 <- density(Nmonth86)
+plot(Nd86, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd86, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+#############
+
+d98 <- density(month98)
+plot(d98, main="Kernel Density of 10000 Simulations\n 2014 Trough Cases (Feb-116)", xlab='Cases', yaxt='n', cex.lab=1, cex.main=1.5, cex.axis=1.5)
+polygon(d98, col=bluetrans, border=bluetrans, xlab='Cases', cex.lab=1)
+abline(v=116, lwd=4, col='black')
+
+par(new=TRUE)
+Nd98 <- density(Nmonth98)
+plot(Nd98, main="", xlab='', ylab='', yaxt='n', xaxt='n')
+polygon(Nd98, col=redtrans, border=redtrans, ylab='', xlab='Cases')
+legend('topright', inset=.05, cex=1, fill=c(bluetrans, redtrans), legend=c('Google Trends', 'Null'))
+
+```
+
+This figure best explains why the Google Trends model is a better fit to chicken pox data than the null model. While the Google Trends model best captured the actual peak in 2012, 2013, and 2014, it's density distribution was always closer to the actual cases than the null model. The trough in 2006 is hard to characterize as the model is trying to also estimate initial conditions, which could explain why neither the Google Trends model or the null model were able to accurately forecast the number of cases here in May, 2006. Of the models tested that included Google Trends data, model E (Eqn. 9) was best able to forecast chicken pox incidence. It performed better than the null model that captured the mean seasonality of chicken pox incidence.  Interestingly, the null model was better able to capture chicken pox peak months, but performed poorly in capturing the troughs each year.
+
+Finally, it may come as a surprise that the two models 'fitting' chicken pox data (models M and N), rather than forecasting, performed similar to the forecasting models that did not include the cosine function.  This may be due to the fairly poor correlation between Google Trends data in Australia to the actual case data (due to vaccination).  If I chose a different country that does not vaccinate, such as Thailand, I would expect the model fits to be better.
+
+# Conclusion
+
+By taking advantage of freely available, real-time, internet search query data, we were able to validate information seeking behaviour as an appropriate proxy for otherwise cryptic chicken pox outbreaks and use those data to forecast outbreaks one month in advance. This modeling approach, which incorporated Google Trends, was able to better forecast outbreaks than models that ignored Google Trends. These results suggest that information seeking can be used for rapid forecasting, when the reporting of clinical cases are unavailable or too slow.
+
+Studies of disease transmission at the global level, and the success of interventions, are limited by data availability. Disease surveillance is a major obstacle in the global effort to improve public health, and is made difficult by underreporting, language barriers, the logistics of data acquisition, and the time required for data curation. I demonstrated that seasonal variation in information seeking reflected disease dynamics, and as such, was able to reveal global patterns of outbreaks and their mitigation via immunization efforts. Thus, digital epidemiology is an easily accessible tool that can be used to complement traditional disease surveillance, and in certain instances, may be the only readily available data source for studying seasonal transmission of non-notifiable diseases. I focused on chicken pox and its dynamics to demonstrate the strength of digital epidemiology for studying childhood diseases at the population level, because VZV is endemic worldwide and the global landscape of VZV vaccination is rapidly changing. Unfortunately, there is still a geographic imbalance of data sources: the vast majority of digital epidemiology data are derived from temperate regions with high internet coverage. However, because many childhood diseases remain non-notifiable throughout the developing world, digital epidemiology provides a valuable approach for identifying recurrent outbreaks when clinical data are lacking. It remains an open challenge to extend the reach of digital epidemiology to study other benign and malignant diseases with under-reported outbreaks and to identify spatiotemporal patterns, where knowledge about the drivers of disease dynamics are most urgently needed.
+
+# Citations
+
+1 London, W. P. & Yorke, J. A. Recurrent Outbreaks of Measles, Chickenpox and Mumps. I. Seasonal Variation in Contact Rates. American Journal of Epidemiology, 1973, 98, 453-468
+
+2 Metcalf, C. J. E.; Bjørnstad, O. N.; Grenfell, B. T. & Andreasen, V. Seasonality and Comparative Dynamics of Six Childhood Infections in Pre-vaccination Copenhagen. Proceedings of the Royal Society B: Biological Sciences, 2009, 276, 4111-4118
+
+3 van Panhuis, W. G.; Grefenstette, J.; Jung, S. Y.; Chok, N. S.; Cross, A.; Eng, H.; Lee, B. Y.; Zadorozhny, V.; Brown, S.; Cummings, D. & Burke, D. S. Contagious diseases in the United States from 1888 to the present New England Journal of Medicine, 2013, 369(22), 2152-2158
+
+4 Altizer, S.; Dobson, A.; Hosseini, P.; Hudson, P.; Pascual, M. & Rohani, P. Seasonality and the Dynamics of Infectious Diseases. Ecology letters, 2006, 9, 467-84
+
+5 Grassly, N. & Fraser, C. Seasonal infectious disease epidemiology Proceedings of the Royal Society B: Biological Sciences, 2006, 273, 2541-50
+
+6 Martinez-Bakker, M. & Helm, B. The influence of biological rhythms on host--parasite interactions Trends in ecology & evolution, Elsevier, 2015
+
+7 Dopico, X. C.; Evangelou, M.; Ferreira, R. C.; Guo, H.; Pekalski, M. L.; Smyth, D. J.; Cooper, N.; Burren, O. S.; Fulford, A. J.; Hennig, B. J. & others Widespread seasonal gene expression reveals annual differences in human immunity and physiology Nature communications, Nature Publishing Group, 2015, 6
+
+8 Stevenson, T. J. & Prendergast, B. J. Photoperiodic time measurement and seasonal immunological plasticity Frontiers in neuroendocrinology, Elsevier, 2015, 37, 76-88
+
+9 Keeling, M. & Rohani, P. Modeling infectious diseases in humans and animals Princeton University Press, 2008
+
+10 Higgins, O.; Sixsmith, J.; Barry, M. & Domegan, C. A literature review on health information seeking behaviour on the web: a health consumer and health professional perspective ECDC Technical Report, Stockholm, 2011
+
+11 Brownstein, J.; Freifeld, C. & Madoff, L. Digital disease detection---harnessing the Web for public health surveillance New England Journal of Medicine, 2009, 360(21), 2153-2157
+
+12 Bryden, J.; Funk, S. & Jansen, V. A. Word usage mirrors community structure in the online social network Twitter EPJ Data Science, 2013, 1, 1-9
+
+13 Salathé, M.; Bengtsson, L.; Bodnar, T. J.; Brewer, D. D.; Brownstein, J. S.; Buckee, C.; Campbell, E. M.; Cattuto, C.; Khandelwal, S.; Mabry, P. L. & Vespignani, A. Digital epidemiology PLoS Computational Biology, 2012, 8, 1-5
+
+14 Hulth, A.; Rydevik, G.; Linde, A. & Montgomery, J. Web queries as a source for syndromic surveillance. PloS one, 2009, 4(2), e4378
+
+15 Shaman, J. & Karspeck, A. Forecasting seasonal outbreaks of influenza. Proceedings of the National Academy of Sciences of the United States of America, 2012, 109, 20425-30
+
+16 Ginsberg, J.; Mohebbi, M. H.; Patel, R. S.; Brammer, L.; Smolinski, M. S. & Brilliant, L. Detecting influenza epidemics using search engine query data. Nature, Nature Publishing Group, 2009, 457, 1012-1014
+
+17 Desai, R.; Lopman, B. A.; Shimshoni, Y.; Harris, J. P.; Patel, M. M. & Parashar, U. Use of internet search data to monitor impact of rotavirus vaccination in the United States. Clinical Infectious Diseases, 2012, cis121
+
+18 Desai, R.; Hall, A.; Lopman, B.; Shimshoni, Y.; Rennick, M.; Efron, N.; Matias, Y.; Patel, M. & Parashar, U. Norovirus disease surveillance using Google internet query share data. Clinical Infectious Diseases, 2012, 55(8), e75-e78
+
+19 Google Google Trends. https://www.google.com/trends/. 2015
+
+20 Australian-Government National Notifiable DIseases Surveillance System. http://www9.health.gov.au/cda/source/rpt1sela.cfm. Accessed May 1, 2015 2015
+
+21 UN http://esa.un.org/unpd/wpp/ Accessed June 18, 2015 2015
+
+22 King, A. A.; Nguyen, D. & Ionides, E. L. Statistical Inference for Partially Observed Markov Processes via the R Package pomp Journal of Statistical Software, 2015, In Press
+
+23 King, A. A.; Ionides, E. L.; Bretó, C. M.; Ellner, S. P.; Ferrari, M. J.; Kendall, B. E.; Lavine, M.; Nguyen, D.; Reuman, D. C.; Wearing, H. & Wood, S. N. pomp: Statistical Inference for Partially Observed Markov Processes, 2015
+

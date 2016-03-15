@@ -1,0 +1,145 @@
+---
+title: "Time Series Analysis for Stock Data"
+date: "March 08, 2016"
+output: html_document
+---
+\newcommand\prob{\mathbb{P}} \newcommand\E{\mathbb{E}} \newcommand\var{\mathrm{Var}} \newcommand\cov{\mathrm{Cov}}  \newcommand\R{\mathbb{R}} \newcommand\data[1]{#1^*} \newcommand\params{\, ; \,} \newcommand\transpose{\scriptsize{T}} \newcommand\eqspace{\quad\quad\quad} \newcommand\lik{\mathscr{L}} \newcommand\loglik{\ell} \newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1} \newcommand\ar{\phi} \newcommand\ma{\psi}
+
+#**<big>1. Introduction</big>**.
+##**<big>1.1 Background</big>**.
+Stock proce analysis is very popular and important in financial study and time series is widely used to implement this topic. The data we use in this report is the daily stock price of ARM Holdings plc (ARM) from April 18th of 2005 to March 10th of 2016, which are extracted from Yahoo finance website. The dataset contains open, high, low, close and adjusted close prices of ARM stock each day of this period. And we use the close price as a general measure of ARM stock prices.
+
+##**<big>1.2 Objectives</big>**.
+We aim to construct the proper model for ARM dataset. Extracting the random component by eliminating the seasonal component and trend component, and then we use difference function to stablize the data. After that, we fit the ARMA model to the data and select the proper $p$ and $q$ values. For futher study, we make simple forecast based on the model we select and examine the accuracy.
+ 
+#**<big>2. Analysis of Data</big>**.
+First, read in the stock price data and we could see the form below.
+```{r }
+data <- read.csv("ARM2.csv",header = TRUE)
+head(data)
+```
+
+```{r,fig.width=5, fig.height=4, fig.align='center' }
+N <- nrow(data)
+ms <- data$Close[N:1] 
+plot(ms, type = "l")
+```
+
+The plot shows the close price of ARM increase in general during this period of time. But there is no obvious pattern in the fluctuation of of stock price. In other words, there is no seasonality, but an obvious upward trend. Also, the variance is not stable seeing from the plot and it seems to increase especially from 1000 to 1500 and from 1800 to 2100. Thus, we may use logarithm or square root transformation on original data to stabilize the variance.
+
+Therefore, we plot the first degree differencing on both the original data and transformed data. The figures are shown below. 
+
+```{r, fig.width=5, fig.height=4, fig.align='center'}
+plot(diff(ms), type = "l", main = "Original data")
+plot(diff(log(ms)), type = "l", main = "Log-transformed data")
+plot(diff(sqrt(ms)), type = "l", main = "Square root transformed data")
+```
+
+We notice that the first degree differences of original data and square root transformed data show increasing variance in general as time goes on, while the logarithm transformation provides relatively stable variance over time. Therefore, we choose to use logarithm transformation to the original data.
+
+```{r,fig.width=5, fig.height=4, fig.align='center'}
+ms_df <- diff(log(ms))
+acf(ms_df)
+```
+
+Since there exists some evidence for small non-zero autocorrelation of lags 0,1,2,26, we decide to use decomposition to get more stationary data. 
+
+Time series could be decomposed into three components[1]. These three components are the trend0cycle, the seasonal component and random component, which are denoted as $T_t$, $S_t$ and $E_t$ respectively, with the original time series denoted by $Y_t$. We could write the time series $Y_t$ as a functon of these components:
+$$Y_t = f(T_t, S_t, R_t)$$
+
+The function $f$ could take the additive form:
+$$Y_t =  T_t + S_t + R_t.$$
+
+By identifying the various components, we aim to separate the random component from the other components of the series. That is, we want to eliminate the noise and isolate the true signal. The below figure shows the decomposition of ARM data. 
+
+
+```{r}
+ms_ts <- ts(ms_df,frequency = 365,start = 2013-01-10 )
+ms_de <- decompose(ms_ts)
+plot(ms_de)
+```
+
+Then we fit the ARMA(p,q) model with parameter vector $\theta=(\ar_{1:p},\ma_{1:q},\mu,\sigma^2)$ given by 
+$$ \ar(B)(X_n-\mu) = \ma(B) \epsilon_n,$$ 
+where 
+$$\begin{aligned} 
+\mu &= \E[X_n], \\ar(x)&= 1-\ar_1 x-\dots -\ar_px^p, \\ma(x)&= 1+\ma_1 x+\dots +\ma_qx^q, \\ \epsilon_n \sim&\mathrm{ iid }\, N[0,\sigma^2]. 
+\end{aligned}$$
+
+Akaike's information criterion AIC is given by 
+$$ AIC = -2 \times \loglik(\data{\theta}) + 2D$$.
+
+And we use AIC to select $p$ and $q$.
+```{r}
+ms_rand <- ms_de$random
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+```
+
+```{r , include=FALSE}
+ms_aic_table <- aic_table(ms_rand,4,5)
+```
+
+```{r}
+require(knitr)
+kable(ms_aic_table,digits=2)
+```
+
+From the AIC table, we choose the ARMA(1,1) model to analyse the dataset. Although there exists other options, such as ARMA(2,3) and ARMA(3,2), who has lower AIC value, simplicity is also an important criterion when seclecting $p$ and $q$. Thus, ARMA(1,1) is more proper.
+
+```{r }
+arma11 <- arima(ms_rand, order = c(1,0,1));arma11
+```
+
+The estimated $\mu$, $\mu_hat = 0,$ with standard error of $4*10^{-4}$, estimate of $\sigma^2$ is 0.0004913. Then the confidence interval derived from Fisher information is $[-7.84*10^{-4}, 7.84*10^{-4}].$ 
+
+We use the plot of residuals for diagnostic analysis.
+```{r,fig.width=5, fig.height=4, fig.align='center'}
+ms_rand1 <- ms_rand[183:2650]
+r <- resid(arima(ms_rand1, order = c(1,0,1)))
+plot(r)
+acf(r)
+```
+
+The ACF doesn't show much sign of autocorrelation, however, lag 26 obviously goes beyond the band. The residuals show up and down trend in the plot, and is relatively unstable during the period of 500-1000.
+
+#**<big>3. Further Exploration</big>**.
+
+To better examine the model we constructed before, we decide to take 90% of the data as train data and 10% as test data to do the forecasting and then calculate the accuracy using RMSE[2].
+
+```{r}
+library(forecast, quietly = T)
+ms_train <- ms_rand1[1:((0.9)*length(ms_rand1))]
+ms_test <- ms_rand1[(0.9*length(ms_rand1)):length(ms_rand1)]
+train11 <- arima(ms_train, order = c(1,0,1))
+pred <- predict(train11, n.ahead = (length(ms_rand1)-(0.9*length(ms_rand1))))$pred
+forecast <- forecast(train11, h = 25)
+plot(forecast)
+```
+
+The heavy gray bar and light gray bar seperately represent the 99% and 95% confidence interval for the forecast. And we could see that some have exceeded this interval.
+
+```{r}
+accuracy(pred,ms_test)[2]
+```
+
+The value of RMSE is 0.01759577, which is pretty small. And this may indicate the $ARMA(1,1)$ model is reasonable although we need to further study this for better analysis.
+
+#**<big>4. Conclusion</big>**
+We find that ARMA(1,1) model with white noice fits the ARM stock price data.Durng the analysis, we use logarithm transformation and difference function to stablize the variance, and apply time series decomposition to the data to extracting the true signal. And then, the AIC table suggests that ARMA(1,1) is the proper choice. After diagnoise the result using residual plot and ACF, we futher make a forecast using the ARMA(1,1) model, which needs more effort for better analyse.
+
+#**<big>Reference</big>**
+[1] Orlaith Burke, "Classical Decomposition" *Statistical Methods Autocorrelation: Decomposition and Smoothing*(2011): 15-16.
+
+\
+[2] Elisabeth Woschnagg, "Relevent Measures In Forcast Evaluation" *Evaluating Forecast Accuracy*(2004): 12-13
+
+

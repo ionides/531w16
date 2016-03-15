@@ -1,0 +1,297 @@
+---
+title: "Weekly Maximum Solar Radiation Prediction Report"
+date: "March 10, 2016"
+output: 
+  html_document:
+    toc: true
+---
+
+
+##1. Introduction
+
+The scientific question motivating my work is how to predict the weekly maximum solar radiation in San Francisco using time series, and based on our prediction models, what will be the maximum solar radiation in San Francisco this week? San Francisco locates at Northern California with latitude 37° N and longitude 122° W, which is famous of its plenty of sunshine throughout the year. Many factors with seasonal effects or long-term trends may influence the change of solar radiation. Based on the weekly maximum solar radiation data at San Francisco International Airport from January 2001 to December 2010, we aim to fit applicable time series models and predict the future maximum solar radiation. 
+
+##2. Data
+ 
+I got my original data from National Solar Radiation Data Base 1991-2010 Update provided by website: http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2010/hourly/list_by_state.html. Site file 724940 provides various hourly solar radiation data at San Francisco International Airport from January 1st 1991 to December 31st 2010 based on different measure models and directions. According to National Solar Radiation Database 1991-2010 Update: User's Manual, I choose METSTAT-modeled global horizontal solar radiation (data in column P), which is total amount of direct and diffuse solar radiation measured by Meteorological-Statistical solar model received on a horizontal surface. The unit of the data is “$Wh/m^2$”. I want to fit models with most recent data, so I only use hourly solar radiation from Jan 1st 2001 to Dec 31st 2010, totally more than 80000 observations. In order to decrease the number of observations and fit models effectively, I decide to use weekly max solar radiation during these ten years. I achieve this by two steps. First, I use ten loops for data in year 2001 to year 2010 respectively to get daily max solar radiation totally 3652 observations. Second, I get weekly maxima from daily maxima. In the US, a week starts on Sunday ends on Saturday. However, Jan 1st 2001 is Monday, and Dec 31st 2010 is Friday. This means the first and the last week both have six days. I use the maximum among the first six observations of daily max solar radiation as the weekly maximum for the first week. I use the maximum among the last six observations of daily max solar radiation as the weekly maximum for the last week. For the 7th to the 3646th observations in daily max solar radiation, I put them into a loop to get weekly maxima for each of the remaining week. Combining these weekly maxima together, I get data of the weekly max solar radiation from Jan 1st 2001 to Dec 31st 2010. There are totally 522 observations. I use the first 366 data points (from Jan 1st 2001 to Dec 31st 2007) as the training data to set up our model. I use the last 156 data points (from Jan 1st 2008 to Dec 31st 2010) to check the performance of our model forecast. 
+
+```{r, echo=F,message=F}
+solar2001=read.csv("724940_2001_solar.csv")
+solar2002=read.csv("724940_2002_solar.csv")
+solar2003=read.csv("724940_2003_solar.csv")
+solar2004=read.csv("724940_2004_solar.csv")
+solar2005=read.csv("724940_2001_solar.csv")
+solar2006=read.csv("724940_2006_solar.csv")
+solar2007=read.csv("724940_2007_solar.csv")
+solar2008=read.csv("724940_2008_solar.csv")
+solar2009=read.csv("724940_2009_solar.csv")
+solar2010=read.csv("724940_2010_solar.csv")
+solar2001hor=solar2001[,16]
+solar2002hor=solar2002[,16]
+solar2003hor=solar2003[,16]
+solar2004hor=solar2004[,16]
+solar2005hor=solar2005[,16]
+solar2006hor=solar2006[,16]
+solar2007hor=solar2007[,16]
+solar2008hor=solar2008[,16]
+solar2009hor=solar2009[,16]
+solar2010hor=solar2010[,16]
+mydata11 <- list()
+for (i in 1:365) {
+  mydata11[[i]] <- solar2001hor[(24*i-22):(24*i+1)]
+}
+max2001=NULL
+for (i in 1:365) {
+  max2001[i]<-max(mydata11[[i]],na.rm=T)
+}
+mydata12 <- list()
+for (i in 1:365) {
+  mydata12[[i]] <- solar2002hor[(24*i-22):(24*i+1)]
+}
+max2002=NULL
+for (i in 1:365) {
+  max2002[i]<-max(mydata12[[i]],na.rm=T)
+}
+mydata13 <- list()
+for (i in 1:365) {
+  mydata13[[i]] <- solar2003hor[(24*i-22):(24*i+1)]
+}
+max2003=NULL
+for (i in 1:365) {
+  max2003[i]<-max(mydata13[[i]],na.rm=T)
+}
+mydata14 <- list()
+for (i in 1:366) {
+  mydata14[[i]] <- solar2004hor[(24*i-22):(24*i+1)]
+}
+max2004=NULL
+for (i in 1:366) {
+  max2004[i]<-max(mydata14[[i]],na.rm=T)
+}
+mydata15 <- list()
+for (i in 1:365) {
+  mydata15[[i]] <- solar2005hor[(24*i-22):(24*i+1)]
+}
+max2005=NULL
+for (i in 1:365) {
+  max2005[i]<-max(mydata15[[i]],na.rm=T)
+}
+mydata16 <- list()
+for (i in 1:365) {
+  mydata16[[i]] <- solar2006hor[(24*i-22):(24*i+1)]
+}
+max2006=NULL
+for (i in 1:365) {
+  max2006[i]<-max(mydata16[[i]],na.rm=T)
+}
+mydata17 <- list()
+for (i in 1:365) {
+  mydata17[[i]] <- solar2007hor[(24*i-22):(24*i+1)]
+}
+max2007=NULL
+for (i in 1:365) {
+  max2007[i]<-max(mydata17[[i]],na.rm=T)
+}
+mydata18 <- list()
+for (i in 1:366) {
+  mydata18[[i]] <- solar2008hor[(24*i-22):(24*i+1)]
+}
+max2008=NULL
+for (i in 1:366) {
+  max2008[i]<-max(mydata18[[i]],na.rm=T)
+}
+mydata19 <- list()
+for (i in 1:365) {
+  mydata19[[i]] <- solar2009hor[(24*i-22):(24*i+1)]
+}
+max2009=NULL
+for (i in 1:365) {
+  max2009[i]<-max(mydata19[[i]],na.rm=T)
+}
+mydata20 <- list()
+for (i in 1:365) {
+  mydata20[[i]] <- solar2010hor[(24*i-22):(24*i+1)]
+}
+max2010=NULL
+for (i in 1:365) {
+  max2010[i]<-max(mydata20[[i]],na.rm=T)
+}
+#weekly max
+max=c(max2001,max2002,max2003,max2004,max2005,max2006,max2007,max2008,max2009,max2010)
+max.subset=max[-c(1:6,3647:3652)]
+max.weekperiod <- list()
+for (i in 1:520) {
+  max.weekperiod[[i]] <- max.subset[(7*i-6):(7*i)]
+}
+
+max.weeknew=NULL
+for (i in 1:520) {
+  max.weeknew[i]<-max(max.weekperiod[[i]])
+}
+max.weeknew<-c(max(max[1:6]),max.weeknew,max(max[3647:3652]))
+max.weeknew.data=max.weeknew[1:366]
+maxsolar=max(max.weeknew.data) #1038
+##which(max.weeknew==maxsolar)  #week 230
+minsolar=min(max.weeknew.data) #377
+##which(max.weeknew.data==minsolar) #week 311
+par(mfrow = c(1, 1))
+plot(max.weeknew.data,type="l",las=1,axes=FALSE,ann=FALSE,ylim=range(max.weeknew))
+points(max.weeknew.data,type="l")
+axis(1, at=c(0,52,104,156,209,261,313), lab=c("2001","2002","2003","2004","2005","2006","2007"))
+axis(2, las=1, at=c(0,400,500,600,700,800,900,1000,1100))
+box()
+abline(h=mean(max.weeknew.data),col="blue",lty=2)
+title(main="Weekly Max Solar Radiation 
+      from 2001(Jan 1st Week) to 2007(Dec Last Week)")
+title(ylab="weekly max solar radiation")
+abline(v=311,col="red",lty=2)
+```
+
+From the plot of training data, we can see a strong seasonality with a period one year: in each year, weekly max solar radiation increases first then decrease; the peaks occur in the middle of each year. Also, there are small fluctuations but don’t affect the seasonal trend. The mean of weekly max solar radiation is 778.153 $Wh/m^2$ shown by blue dotted line. Both the histogram and the QQ-plot show that the distribution of weekly max solar radiation is not normal.
+
+```{r, echo=F}
+hist(max.weeknew.data,main="Histgram of Weekly Max Solar Radiation")
+qqnorm(max.weeknew.data)
+qqline(max.weeknew.data)
+#plot: from the plot we can see there is a strong seasonality
+#There is seasonality remaining: 
+```
+
+##3. Periodogram and Detrend
+
+I take a periodogram of our training data to confirm the frequency, and I get the following: 
+
+```{r, echo=F}
+#do periodogram to see the period of max.weeknew.data
+spec.pgram(max.weeknew.data)
+abline(v=0,col="red",lty=2)
+abline(v=1/52,col="red",lty=2)
+abline(v=1/26,col="red",lty=2)
+# freuency of 1/52, period is 52 weeks
+```
+
+The plot above indicates a freuency of 1/52, i.e. period is 52 weeks and the data is of seasonality. Next, I look at the acf of the data. Note that at the seasonal lags, the acf decays very slowly and the acf showing not stationary also confirms that the period is 52 weeks.
+
+```{r, echo=F}
+#look at the acf of the data:
+acf(max.weeknew.data, lag.max = 100, type = "correlation", plot = T,main = "Correlogram of Weekly Max Solar Radaition")
+```
+
+I draw two red vertical lines at 1/52 and 1/26, where exactly dominant spikes locate. Thus, the periodogram shows that the frequency of our training data is 1/52 (the period is 52 weeks). This coincides with our analysis of training data before: the seasonal trend has a period of one year (approximately 52 weeks).  In order to clearly see the trend of our data, I use stl function to decompose our time series into seasonal, trend and irregular components (residuals) by loess.
+
+```{r, echo=F}
+# Do Seasonal and Trend decomposition using Loess 
+junk=ts(max.weeknew.data, start=c(2001, 1), end=c(2007, 12), frequency=52)
+junk1=stl(junk,"per") 
+plot(stl(junk,"per"), main="Seasonal Decomposition of Time Series by Loess")
+#both seasonality and decreasing trend
+#there is a decreasing trend, we take a difference to remove the trend
+max.weeknew.diff=diff(max.weeknew.data)
+```
+
+We can clearly see a seasonality and a downward trend. Before fitting data into models, we need to detrend to get a stationary time series. First, I take the first difference of our training data to remove the downward trend. Then I take the seasonal difference to remove the seasonal trend. After taking these two differences, I get the plot of our training data. It appears that most of the seasonality is gone. Data move up and down around the mean level zero. It looks to be stationary.
+
+```{r, echo=F}
+#remove seasonality
+max.weeknew.diff.sea = diff(max.weeknew.diff,lag=52)
+plot(max.weeknew.diff.sea,las=1,axes=FALSE,ann=FALSE, type = "l")
+abline(h=0)
+axis(1, at=c(0,45,90,135,180,225,270), lab=c("2001","2002","2003","2004","2005","2006","2007"))
+axis(2, las=1, at=c(-150,-50,0,50,150))
+box()
+title(main="First and Seasonal Differenced Weekly Max Solar Radiation 
+      from 2001 to 2007")
+title(ylab="Detrend weekly max solar radiation")
+# most of seasonality is gone
+```
+
+##4.Seasonal ARIMA Model
+###4.1 Fit Models
+
+There is a downward trend but also a seasonality in data, so I use a multiplicative seasonal ARIMA model with nonseasonal orders p, d, and q, seasonal orders P, D, and Q, and seasonal period s. The model has a form: ARIMA$(p,d,q)\times(P,D,Q)_{s}$. We can choose adequate factors for our model by acf of the data that both first and seasonal differences have been taken. 
+
+```{r, echo=F,message=F}
+#Try to fit SARIMA
+par(mfrow = c(1, 1))
+acf(max.weeknew.diff.sea, lag.max = 160, type = "correlation", plot = T, main = "ACF of the First and Seasonal Differenced Solar Radiation",ci.type="ma")
+#m1
+m1= arima(max.weeknew.data, order = c(0, 1, 1), seasonal = list(order = c(0, 1, 1), period = 52))
+#aic = 3103.36 smaller ARIMA(0,1,1)X(0,1,1)52
+#m2: overfitting
+m2= arima(max.weeknew.data, order = c(0, 1, 1), seasonal = list(order = c(0, 1, 2), period = 52))
+#aic = 3105.32
+#Plot of Fitting Model
+plot(max.weeknew.data,type="l",axes=FALSE,ann=FALSE,ylim=range(max.weeknew))
+lines(fitted(m1),type="l",col="blue")
+axis(1, at=c(0,52,104,156,209,261,313,368), lab=c("2001","2002","2003","2004","2005","2006","2007","2008"))
+axis(2, las=1, at=c(0,400,500,600,700,800,900,1000,1100))
+box()
+title(main="ARIMA(0,1,1)X(0,1,1)52 Fitted Values VS Real Value 
+      from 2001(Jan first Week) to 2007(Dec Last Week)")
+title(ylab="weekly max solar radiation")
+legend("bottomleft", lty=1:1, col=c("black","blue"),c("real","fit"),bty="n")
+```
+
+From the acf plot, the correlation is significant at seasonal lag 52, so we can confirm that the model has a seasonal period S=52 and D=1. There is also a significant correlation at lag1 in acf. These information suggests that a simple model which incorporates the lag1 and lag 52 autocorrelations might be adequate. Thus, we can specify our multiplicative seasonal ARIMA$(0,1,1)\times(0,1,1)_{52}$ model (named as m1). The AIC for model m1 is 3103.36, and coefficients are: ma1:-0.8683 and sma1:-0.9214. 
+
+Also, I over fit the model to be ARIMA$(0,1,1)\times(0,1,2)_{52}$ (named as m2). The AIC for m2 is 3105.32, and coefficients are: ma1:-0.8689, sma1:-0.9707 and sma2:-0.0179. AIC for overfitted model m2 increased. Estimate of coefficients for ma1 and sma1 have changed very little, and the new coefficients for sma2 sufficiently close to 0, so I choose model m1. Thus, our multiplicative seasonal ARIMA model is: ARIMA$(0,1,1)\times(0,1,1)_{52}$.  
+
+
+###4.2 Diagnostic
+
+The plot of residuals does not suggest any major irregularities with the model. The histogram 
+of residuals looks normal, but the QQ-plot suggests some heavily-tailed distribution. 
+
+```{r, echo=F,message=F}
+#Diagnostic check
+library(TSA)
+plot(rstandard(m1),main="Residuals from ARIMA(0,1,1)X(0,1,1)52 Model",type="l")
+abline(h=0)
+hist(rstandard(m1),breaks=20,main="Histgram of Residuals")
+#qq plot
+max.weeknew.diff=diff(max.weeknew)
+max.weeknew.diff.sea = diff(max.weeknew.diff,lag=52)
+m1= arima(max.weeknew, order = c(0, 1, 1), seasonal = list(order = c(0, 1, 1), period = 52))
+qqnorm(rstandard(m1)[157:522])
+qqline(rstandard(m1)[157:522])
+#almost normal
+acf(rstandard(m1),lag.max = 60,main="ACF of Residuals from ARIMA(0,1,1)X(0,1,1)52 Model")
+#no obviuos significant correlation
+```
+
+Acf shows that residuals of the fitted model have little serial correlation, and we can accept that they are independent. Also, I get the periodogram of the residuals of the fitted model. There is no obvious trend. Most residuals are in the 95% confidence interval, and they fluctuate across a horizontal level. The periodogram of the residuals suggests white noise. 
+
+```{r, echo=F,message=F}
+spec=spec.pgram(rstandard(m1))
+#the ACF  OF the residuals of SARIMA model suggest that the residuals have little serial correlation, a white noise modle is appropriate for these data 
+#white noise
+```
+
+###4.3 Forecast of Seasonal ARIMA Model
+
+I use the fitted ARIMA$(0,1,1)\times(0,1,1)_{52}$ model to predict weekly max solar radiation from Jan 1st 2008 to Dec 31st 2010. As shown in the plot, our prediction  generally follows trends of real data. The predicted data curve and real data curve are almost coincide. Almost all data points fall in the 95% confidence interval of our prediction except those in early weeks of 2008 and 2010. In general, our fitted multiplicative seasonal ARIMA model gives pretty good prediction.
+
+```{r, echo=FALSE, message=FALSE,warning=FALSE}
+#Forecast and Prediction
+par(mfrow = c(1, 1))
+m=156
+p=predict(m1,n.ahead=156)
+plot(max.weeknew[209:522],type="l",axes=FALSE,ann=FALSE,ylim=c(0,max(p$pred+1.96*p$se)))
+points(max.weeknew[209:522],type="l",axes=FALSE,ann=FALSE,ylim=c(0,max(p$pred+1.96*p$se)))
+axis(1, at=c(0,52,104,159,210,262), lab=c("2005","2006","2007","2008","2009","2010"))
+axis(2, las=1, at=c(0,400,500,600,700,800,900,1000,1100,1200))
+box()
+lines(159:314, p$pred, col = "red", type = "l" )
+lines(159:314, p$pred+1.96*p$se, col = "blue", type = "l" )
+lines(159:314, p$pred-1.96*p$se, col = "blue", type = "l" )
+abline(v=159,col="green",lty=1)
+legend("bottomleft", lty=1, col=c("black","red","blue"),c("real","fit","95% CI"),bty="n")
+title(main="SARIMA Prediction of weekly max solar radiation 
+      from 2008(Jan 1st Week) to 2010(Dec Last Week)")
+title(ylab="weekly max solar radiation")
+```
+
+##5. Conclusions and Problems
+
+Our multicplicative seasoanl ARIMA$(0,1,1)\times(0,1,1)_{52}$  model predicts weekly max solar radiation very well. The 95% confidence interval for the forecast of ARIMA$(0,1,1)\times(0,1,1)_{52}$ covers most real data. The predict curve of ARIMA$(0,1,1)\times(0,1,1)_{52}$ also shows data fluctuations.  The answer to my question is that the weekly maximum solar radiation in San Francisco can be predicted by the seasonal ARIMA model. Running in R, seasonal ARIMA model predicts the maximum solar radiation in San Francisco during this week is about 971.9234 $Wh/m^2$. However, there are still some problems needed to be pointed out. First, the residuals of ARIMA$(0,1,1)\times(0,1,1)_{52}$ model does not show perfect normality. The QQ-plot of the model suggests somewhat heavily-tailed distribution. I tried to do log or square root transformation for my data, but the QQ-plot of residuals of fitted models do not get any better. I guess the imperfect normality of residuals occurs because the distribution of our weekly max solar radiation data are not normal. However, our purpose is to do prediction, and the forecast of our fitted models are pretty well. Second, in our weekly max data, the first observation is the maximum of six days, so the last observation. This may lead some inaccuracy. Finally, the period of our data is not perfectly accurate. There are approximatley but not exactly 52 weeks in a year. Some errors may occur when we use the period 52 weeks to conduct a long-term analysis of our dataset. 
+

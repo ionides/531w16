@@ -1,0 +1,224 @@
+---
+title: "Midterm Project - Monthly Fatal Crashes in Michigan"
+date: "March 10, 2016"
+output: html_document
+---
+
+
+### 1. Introduction
+
+Collect the monthly data of fatal traffic crashes in Michigan(Year 1994~2014), from http://www.michigantrafficcrashfacts.org, we try to find specific trend and pattern of the crashes number. Traffic safety offices will find guidance to schedule their policies, people from relative industries such as insurance will also find it helpful in predictive analysis .
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(knitr)
+library(forecast)
+library(mFilter)
+origin = read.csv('fatal crash.csv', header = T)
+origin$Date = strptime(origin$Date,"%m/%d/%Y")
+origin$year = as.numeric(format(origin$Date, format="%Y"))
+origin$month = as.numeric(format(origin$Date, format="%m"))
+data = origin[origin$Date>='1994-01-01',]
+time = data$year + data$month/12
+```
+
+Firstly, we can use quantitative summary and the plot to explore the data. The plot presents an obivious seasonal pattern and a slow decreasing trend over the 20 years. 
+
+```{r, echo=FALSE}
+summary(data)
+plot(data$FatalCrash~time,type="l",
+     xlab = 'Year', ylab = 'Fatal Crash', main = 'Plot of Monthly Fatal Crashes Series')
+```
+
+The acf plot also suggests autocorrelation and strong seasonal pattern.
+```{r}
+acf(data$FatalCrash, main = 'ACF Plot of Monthly Fatal Crashes')
+```
+
+
+### 2. Frequency Domain Analysis
+
+By plotting the smoothed specturm density function, we find the frequency near 0.08 dominates the density. Since the units of x-axis is cycles per obeservation(month), we can conclude that 12.5 month, which is approximately 1 year, is a significant period here. The 2 years period is also significant suggested by the error bar, which is a harmonic of 1 year. 
+```{r}
+spectrum(data$FatalCrash,spans=c(3,5,3), main="Smoothed periodogram")
+```
+
+
+<br /> 
+Then we decompose the series as different level of frequency variation, and try to extract the business cycles. The low frequency item is a decreasing trend, which suggests Fatal Crash goes down over the last 20 years. This is resonable because of the improvement of road condition, car safety features and state policies. And we can find a business cycle with 1 year period.
+
+```{r, echo=FALSE}
+FatalCrash = data$FatalCrash
+```
+
+```{r, warning=FALSE}
+crash.low <- ts(loess(FatalCrash~time,span=0.5)$fitted,frequency=12)
+crash.hi <- ts(FatalCrash - loess(FatalCrash~time,span=0.05)$fitted,frequency=12)
+crash.cycles <- FatalCrash - crash.hi - crash.low
+plot(ts.union(FatalCrash, crash.low,crash.hi,crash.cycles),
+     main="Decomposition of Fatal Crashes as trend + noise + cycles", lwd = 1.5)
+```
+
+
+### 3. Fit a SARIMA(p,d,q)×(P,D,Q) Model
+
+Due to the existence of trend, a stationary ARMA model will not fit well here. We plot the first order differenced data below, it becomes mean stationary with seasonality. 
+
+```{r}
+plot(c(NA,diff(data$FatalCrash))~time, lwd = 1, type = 'l', ylab = 'difference of fatal crash', main = 'Plot of Differenced Series')
+```
+
+Therefore, we try to fit $SARIMA(p,1,q)×(0,1,0)_{12}$ model, and tabulate some AIC values for a range of different choices of p and q.
+
+```{r, echo=FALSE}
+Table_For_ARMA_AIC <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,1,q),seasonal=list(order=c(0,1,0),period=12))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+Fatal_aic_table <- Table_For_ARMA_AIC(data$FatalCrash,5,5)
+kable(Fatal_aic_table,digits=2)
+```
+
+The AIC value goes smaller when the model becomes more complex, and finally prefers the largest model we have considered, so we switch to look at the BIC value and see if things will change. 
+```{r}
+Table_For_ARMA_BIC <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- Arima(data,order=c(p,1,q),seasonal=list(order=c(0,1,0),period=12))$bic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+Fatal_bic_table <- Table_For_ARMA_BIC(data$FatalCrash,5,5)
+kable(Fatal_bic_table,digits=2)
+```
+
+The BIC reaches minimum(2025.13) when p = 0 and q = 1, this combination also provides a local minimum(2018.17) value of AIC when both p and q are not large, so we prefers to choose the $SARIMA(0,1,1)×(0,1,0)_{12}$ model. 
+
+Analyzing the ACF of residuals after fitting this model as above, we still see a high autocorrelation when Lag = 12.
+```{r}
+result_ar01 = arima(data$FatalCrash,order=c(0,1,1),seasonal=list(order=c(0,1,0),period=12))
+acf(result_ar01$residuals)
+```
+
+Now we try $SARIMA(0,1,1)×(0,1,1)_{12}$ model to further improve the fitting.
+
+```{r}
+result_ma1sma1 = arima(data$FatalCrash,order=c(0,1,1),seasonal=list(order=c(0,1,1),period=12))
+summary(result_ma1sma1)
+```
+
+<br /> 
+From the above result, using the value of s.e., we know both coefficients of ma1 and sma1 are significant. The AIC value of this model is 1892, which is also much smaller than before. Plotting the ACF of residuals again, we find it becomes independent. And the qqnorm suggests the residual is approximately normal with a little bit heavy tail.
+
+```{r}
+acf(result_ma1sma1$residuals)
+qqnorm(result_ma1sma1$residuals)
+qqline(result_ma1sma1$residuals)
+```
+
+<br /> 
+The model can be written as:
+$$ (1-B)(1-B^{12})X_n= (1-0.9156B)(1-0.9141B^{12}) \epsilon_n , $$
+where $\epsilon_n$ is a white noise process. 
+Compare the fitted value and original value of fatal crash below, the SARIMA model makes a good performance.
+
+```{r, echo=FALSE}
+plot(data$FatalCrash~time,type="l", xlab = 'Year', ylab = 'Fatal Crash',
+     main = 'Fitted Fatal Crashes by SARIMA(0,1,1)*(0,1,1)', lwd = 1)
+lines(fitted(result_ma1sma1)~time,col="red", lty = 2)
+legend("topright", c('original series', 'fitted series'), lty = c(1,2), lwd =1, col=c('black','red'))
+```
+
+### 4. Fit an ARMA Errors Model
+
+The time series of fatal crashes present peaks in the summer. However, we find that traffic crashes happen much more in the winter, which seems contradictory at the first glance. By some further investigation, we notice that the traffic crashes happens in clear weather condition(clear crash) have a close relationship with those fatal ones, so we try to analyze fatal crashes using a regression on clear weather crashes(from year 2004 to 2014) with ARMA errors model. 
+
+```{r, echo=FALSE}
+compare.data = read.csv('fatal vs clear.csv')
+summary(compare.data)
+time1 = time[time>2004]
+```
+
+<br />
+Since we are interested in changes over business cycle timescales, we use the Hodrick-Prescott (HP) filter to extract the cyclical component, and find the detrended fatal crashes and detrended clear crashes cycle together. 
+
+```{r}
+fatal_hp <- hpfilter(compare.data$Fatal.Crash, freq=50,type="lambda",drift=F)$cycle
+clear_hp <- hpfilter(compare.data$Clear.Crash, freq=50,type="lambda",drift=F)$cycle
+plot(time1,fatal_hp,type="l",xlab="Year",ylab="")
+par(new=TRUE)
+plot(time1,clear_hp,col="red",type="l",lty =2, axes=FALSE,xlab="",ylab="", main = 'Detrended Fatal Crash and Clear Crash')
+legend("topright", c('fatal_hp', 'clear_hp'), lwd =1, lty = c(1,2), col=c('black','red'))
+axis(side=4, col="red")
+```
+
+Therefore, we fit a regression model with these two detrended series with ARMA errors, and use the AIC values to tabulate the parameters. The AIC table below chooses the ARMA(2,3) model as best with AIC = 937.43.	
+
+```{r, echo=FALSE}
+Table_For_ARMAerr_AIC <- function(data1,data2,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data1,xreg = data2,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+Fatalerr_aic_table <- Table_For_ARMAerr_AIC(fatal_hp,clear_hp,5,5)
+kable(Fatalerr_aic_table,digits=2)
+```
+
+<br />
+Looking at the details of ARMA(2,3) errors model, all the coefficients are significant. The coefficient of clear_hp is 0.0014, since the fatal crash and clear crash data have different scale, the result suggests a significant linear relationship between these two series. 
+
+```{r, echo=FALSE}
+result_armaerr = arima(fatal_hp,xreg = clear_hp,order=c(2,0,3))
+summary(result_armaerr)
+```
+
+<br />
+The ACF plot and qqplot of residuals below also show that the residuals are Gaussian white noise, which indicates the ARMA error model fits well.
+
+```{r}
+acf(result_armaerr$residuals)
+qqnorm(result_armaerr$residuals)
+qqline(result_armaerr$residuals)
+```
+
+<br />
+The model can be written as:
+$$  Fatal^{HP}_n = -0.0057 + 0.0014  Clear^{HP}_n + \epsilon_n, $$
+$$ \epsilon_n = 1.6856 X_{n-1} - 0.9444 X_{n-2} + \omega_n - 2.4006 \omega_{n-1} + 1.8124 \omega_{n-2} - 0.4115 \omega_{n-3} $$
+where $\omega_n$ is a white noise process. The fitted value are plotted as following.
+
+```{r, echo=FALSE}
+plot(fatal_hp~time1,type="l",xlab = 'Year', ylab = 'Fatal Crash _ hp',
+     main = 'Fitted Fatal Crashes (after hp filter) by ARMA errors model', lwd = 1)
+lines(fitted(result_armaerr)~time1,col="red", lty = 2)
+legend("topright", c('original', 'fitted'), lwd =0.5, lty = c(1,2), col=c('black','red'))
+```
+
+### 5. Conclusion
+
+* The fatal crash time series has a seasonality of 1 cycle per year, it also has a descreasing trend over the last 20 years.
+* SARIMA(0,1,1)×(0,1,1) model with period = 12 fits this series well, which has often been used for forecasting monthly time series in economics and business.
+* The fatal crash series has association with number of traffic crashes in clearly weather condition, this makes sense because people tend to drive careless in good weather. Build an ARMA errors model on these two series can also get a good fit.
+
+### 6. Reference
+
+http://www.michigantrafficcrashfacts.org
+<br />
+http://ionides.github.io/531w16/#course-description
+<br />
+http://www.mlive.com/news/kalamazoo/index.ssf/2015/08/whats_the_most_deadly_holiday.html
+
+

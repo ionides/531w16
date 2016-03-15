@@ -1,0 +1,336 @@
+---
+title: "STATS 531 Midterm Project"
+date: "03/10/2016"
+output:
+  html_document:
+    fig_caption: true
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: false
+
+
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+\newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\matH{\mathbb{H}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+
+-------------------------------
+
+## Introduction
+
+* There were approximately 804,000 suicides globally in 2012, which is an age-standardized suicide rate of 11.4 per 100,000 people. The WHO estimates every 40 seconds someone dies of suicide. It is the second leading cause of death for people aged 15-29 globally.
+
+* Pinning down the exact causes of suicide is extremely difficult and controversial. It's seems that the suicide rate has strong correlations with many social factors like economics, education, Drug and Alcohol use, gun prevalence and divorce law.
+
+* Here, we are interested in finding the correlation between the suicide rate and unemployment in U.S..
+
+
+-------------------------------
+
+## Dataset
+
+* First, let's look at the historical suicide data in U.S..
+
+```{r, echo=T, eval=T}
+s_data = read.csv(file="us_suicide.csv", header=T, sep=",")
+head(s_data)
+```
+
+* The suicide rate is 100,000 per year. The rate is adjusted for the changing age structure of the population.
+
+* One can also break down suicide rate by gender, race, geography, etc. The data can be found online. It is interesting and relevant to investigate the consistency of any established pattern across sub-populations, but here we'll focus on a single, national analysis, combining both genders.
+
+```{r read_data_u}
+u_data <- read.table(file="adjusted_unemployment.csv",sep=",",header=TRUE)
+head(u_data)
+```
+
+* These are the unemployment data that we looked at in Chapter 8.
+
+* Denote the time $t_n = 1949+n$, $t_n=1,...,56$.
+
+* Write $\data{s_n}$ for suicide rate in year $t_n$. 
+
+* Write $\data{u_n}$ for mean unemployment in year $t_n$.
+
+```{r clean_data}
+t <- c(1950:2005)
+s <- s_data$U.S.
+u <- apply(u_data[u_data$Year %in% t, 2:13],1,mean)
+```
+
+* To get a first feeling about the data, we plot them together in one diagram.
+
+```{r data_plots,fig.height=5}
+plot(ts(cbind(s,u),start=1950),main="Percent unemployment(u) and suicide rate(s) for U.S.",xlab="Year")
+```
+
+
+---------------------
+
+## Detrend the data using Hodrick-Prescott(HP) Filter
+
+* We are interested in changes over business cycle timescales, once trends have been removed.
+
+* To extract the cyclical component, we use an econometric method called the Hodrick-Prescott(HP) filter.
+
+* Specifically, for a time series $\data{y_{1:N}}$, the HP filter is the time series $\data{s_{1:N}}$ constructed as
+
+$$\data{s_{1:N}} =  \arg\min_{s_{1:N}} 
+  \left\{ 
+    \sum^{N}_{n=1}\big(\data{y_n}-s_{n}\big)^2 + \lambda\sum^{N-1}_{n=2}\big(s_{n+1}-2s_{n}+s_{n-1}\big)^2 
+  \right\}.$$
+
+* A standard econometric choice of $\lambda$ for removing nonlinear trend, and therefore extracting the business cycle component, in annual data is $\lambda=100$.
+
+* We use this to define the HP-detrended suicide rate, $s^{HP*}_{1:N}$, and unemployment, $u^{HP*}_{1:N}$.
+
+```{r hp, message=FALSE}
+require(mFilter)
+s_hp <- hpfilter(s, freq=100,type="lambda",drift=F)$cycle
+u_hp <- hpfilter(u, freq=100,type="lambda",drift=F)$cycle
+```
+
+* Now we plot the detrended data together.
+```{r}
+plot(t,u_hp,type="l",xlab="Year",ylab="", main="Detrended unemployment and detrended suicide rate")
+par(new=TRUE)
+plot(t,s_hp,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4, col="red")
+legend(2000,0.85, c("u_hp","s_hp"),lwd=c(1,1),col=c("black","red"),cex=0.5)
+```
+
+* Looking at this figure may suggest that detrended suicide rate and detrended unemployment cycle together. 
+
+-----------------------
+
+## Model Selection
+
+
+### AIC Table
+
+
+* We can make a test to check that the detrended suicide rate and unemployment are with the same cycle.
+
+* For example, we can analyze $s^{HP*}_{1:N}$ using a regression with ARMA errors model,
+$$ S^{HP}_n = \alpha + \beta u^{HP}_n + \epsilon_n,$$
+where $\{\epsilon_n\}$ is a Gaussian ARMA process. 
+
+* To choose the parameters $p$, $q$ of ARMA(p,q) model, we give out the AIC table as below.
+
+```{r aic_table, message=F}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+e_aic_table <- aic_table(s_hp,4,4,xreg=u_hp)
+require(knitr)
+kable(e_aic_table,digits=2)
+```
+
+* We can see from the warning messages that we have numerical difficulties in optimizing the logliklihood function.
+
+* The AIC table suggests that the model with ARMA(2,2) erroes is the best small model.
+
+```{r arma22}
+arima(s_hp,xreg=u_hp,order=c(2,0,2))
+```
+
+* To chcek the causality and invertibility of ARMA(2,2) model, we check the roots of the polynomials using `polyroot` function.
+
+```{r}
+AR_root = polyroot(c(1,-1.7669,0.9033))
+abs(AR_root)
+MA_root = polyroot(c(1,-1.9978,0.9997))
+abs(MA_root)
+```
+
+* Finding the absolute value shows that we have the roots outside the unit circle, so this ARMA(2,2) model is causal and invertible.
+
+
+### Residual Analysis
+
+* Now, let's check the residuals for the fitted model, and look at their sample autocorrelation.
+
+```{r}
+r = resid(arima(s_hp, xreg=u_hp, order=c(2,0,2)))
+plot(r, type ="p")
+abline(h=0, lty=2)
+```
+
+* We can see two extreme outliers in year 1950 and 1977.
+
+* There is a little evidence for fluctuations decreasing in amplitude over time. But not serious here.
+
+```{r qqplot}
+qqnorm(r)
+```
+
+* The QQ-plot shows a few heavy right tails. 
+
+* We may want to check what happened in 1950 and 1977.
+
+```{r acf}
+acf(r)
+```
+
+* The residuals appear to be uncorrealated, since ACF at each lag falls betwwen the dotted lines. 
+
+* We may conclude the residuals are Gaussian white noise.
+
+### Analysis of Temporal Differences
+
+* We may think of an ARIMA(p,1,q) model to fit the annual changes in suicide rate, rather than difference from a trend. 
+
+* In this case, we consider the variable 
+$$ \Delta \data{s_n} = \data{s_n} - \data{s_{n-1}}.$$
+
+```{r}
+delta_s <- s[2:56] - s_data$U.S.[1:55]
+delta_t <- c(1951:2005)
+```
+
+```{r}
+plot(t,u,type="l",xlab="Year",ylab="")
+par(new=TRUE)
+plot(delta_t,delta_s,col="red",type="l",axes=FALSE,xlab="",ylab="")
+axis(side=4,col="red")
+```
+
+* The relationship between unemployment and differenced life expectancy is harder to see than when HP-detrended.
+
+* The relationship is also harder to find by statistical methods. 
+
+```{r}
+arima(s, xreg=u, order=c(2,1,2))
+```
+
+
+* Here, we see no evidence for the relationship.
+
+* An experiment found no evidence of an effect might have been a bad choice of experiment, or might have been carried out poorly.
+
+* It appears that temporal differencing has destroyed too much of the evidence we were hoping it would clarify.
+
+-----------------------
+
+## Fitted Model
+
+* Now, we use an ARMA(2,2) model to fit the detrended data.
+
+```{r}
+arima(s_hp, xreg=u_hp, order=c(2,0,2))
+```
+
+* The fitted model here is 
+$$s^{HP}_n-1.7669s^{HP}_{n-1}+0.9033s^{HP}_{n-2} = 0.0056 + 0.0920 u^{HP}_n + \epsilon_n-1.9978\epsilon_{n-1}+0.9997\epsilon_{n-2}$$
+
+* Although this model fits good, the coefficients are hard to interpret.
+
+* The standard errors, computed from the observed Fisher information approximation, suggset a statistically significant association between cyclical variation in unemployment and suicide rate.
+
+* We can also compute a p-value from a likelihood ratio test.
+```{r}
+log_lik_ratio <- as.numeric(
+   logLik(arima(s_hp,xreg=u_hp,order=c(2,0,2))) -
+   logLik(arima(s_hp,order=c(2,0,2)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+cat(LRT_pval)
+```
+
+* We may also notice from the plot that the relationship seems clearer befroe 1980s, say in the first 30 years of the time series.
+
+```{r}
+tt = 1:30
+arima(s_hp[tt], xreg=u_hp[tt], order=c(2,0,2))
+```
+
+* There is some suggestion that the association is stronger in the time period 1950-1980, but difference is not large compared to the standard error on the coefficient.
+
+* It seems reasonable that the relationship between suicide rate and the economy is changing over time because of the changes of human beings' values and life styles.
+
+* Since the ARMA(2,2) model is hard to interpret and seems to be unstable, we may want to choose another simpler model say ARMA(1,0) from the AIC table.
+
+```{r}
+arima(s_hp, xreg=u_hp, order=c(1,0,0))
+```
+
+* The fitted model is 
+$$s^{HP}_n-0.3707s^{HP}_{n-1} = 0.0097 + 0.1266 u^{HP}_n$$
+
+* We can compute a p-value from a likelihood ratio test.
+```{r}
+log_lik_ratio <- as.numeric(
+   logLik(arima(s_hp,xreg=u_hp,order=c(1,0,0))) -
+   logLik(arima(s_hp,order=c(1,0,0)))
+)
+LRT_pval <- 1-pchisq(2*log_lik_ratio,df=1)
+cat(LRT_pval)
+```
+
+* We can also see a stistically significant association between cyclical variation in unemployment and mortality from this model, although it doesn't fit as good as ARMA(2,2) model.
+
+
+---------------------------
+
+## Conclusions
+
+* We check that detrended suicide rate and detrended unemployment cycle together.
+
+* There is clear evidence of pro-cyclical suicide rate at a notional level in the US. For example, in 1981-1983 and 1991-1992, we have high unemployment but below-trend suicide rate.
+
+* More data, perhaps a state-level or panel analysisi combining many time series, might be able to improve the signal to noise ration and lead to clearer results.
+
+* To talk about the association, it is plausible that economic fluctuations drive the suicide fluctuations. (the reverse causation can not be true)
+
+* We regard unemployment as a **proxy variable** for economic fluctuations. We do not claim that increased unemployment itself is necessarily directly causing reduced mortality. 
+
+* The association we have found is clearest with no time lag, and (as we have seen previously) economic fluctuations between periods of boom and bust have historically had quite variable duration. A stable lagged relationship between economic activity and suicide rate has not yet been discovered.
+
+* Beside economic recession, the suicide rate may has association with education, Drug and Alcohol use, gun prevalence and divorce law, which needs further discussions.
+
+<br>
+
+--------------
+
+## References
+
+Lindsay Lee and Max Roser (2015) - 'Suicide'. Published online at OurWorldInData.org. 
+Retrieved from: http://ourworldindata.org/data/health/suicide/ [Online Resource]
+
+
+
+

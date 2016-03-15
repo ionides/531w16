@@ -1,0 +1,538 @@
+---
+title: 'Miterm Project: The relationship between S&P500 and CPI'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+csl: ecology.csl
+---
+\newcommand\data[1]{#1^*}
+
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](https://raw.githubusercontent.com/ruizhang-ray/531/master/cc-by-nc.png)
+
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+---
+
+<big><big><big>Objective<big><big><big>
+
+* Fit a model to the data of S&P500 and CPI.
+
+* Interpretate the model and find a possible association between them.
+
+<br>
+
+-------
+
+# Background information of S&P500 and CPI
+
+* **The Standard & Poor's 500**, often abbreviated as the S&P 500, is an American stock market index based on the market cpitalizations of 500 large companies having common stock listed on the NYSE or NASDAQ. The components of the S&P 500 are selected by committee. The committee selects the companies in the S&P 500 so they are representative of the industries in the United States economy.(https://en.wikipedia.org/wiki/S%26P_500_Index)
+
+* Growth of the S&P 500 index can translate into growth of business investment. It can also be a clue to higher future consumer spending. A declining S&P 500 index can signal a tightening of belts for both businesses and consumers. (http://www.aaii.com/investing-basics/article/the-top-10-economic-indicators-what-to-watch-and-why)
+
+*  **A consumer price index (CPI)** measures changes in the price level of a market basket of consumer goods and services purchased by households. Changes in CPI are used to assess price changes associated with the cost of living. (https://en.wikipedia.org/wiki/Consumer_price_index)
+
+* CPI is one of the most frequently used statistics for identifying period of inflation or deflation. This is because large rises in CPI during a short period of time typically denote periods of inflation and large drops in CPI during a short period of time usually mark periods of deflation. ([Investopedia](http://www.investopedia.com/terms/c/consumerpriceindex.asp))
+
+* Both S&P500 and CPI are very important economic indicator. They reveal the state of economy in different aspects. It is reasonable to think about the relationship between them. We all have the common sense that in the long time scale, the S&P500 and CPI rise if the economy grows and both of them fall if the economy shrinks. This is not I am intrested in. The uncertainty and perturbation of both seiries in short time are mainly studied in this project. Are these uncertainty and perturbation just some ruleless component? Are there any association between these perturbation of S&P500 and CPI?
+
+# Data
+
+We are going to look at the monthly data of S&P500 and CPI.
+
+* This data are downloaded from [Economic Research](https://research.stlouisfed.org/)
+
+* S&P500 are collected daily. However, there are only monthly data of CPI, therefore I download the S&P500 data which are aggregated by averaging monthly.  
+
+* There are many different CPI data with respect to different basket of goods. The data I used, "CPI: All items Less Food &Energy", is an aggregate of prices paid by urban consumers for a typical basket of goods, excluding food and energy. This measurement, known as ??Core CPI,?? is widely used by economists because food and energy have very volatile prices.
+
+* The seasonally adjusted data online are too smooth for me to analyze the cycle and perturbation component. Therefore, both of the data I use are not seasonally adjusted.
+
+```{r read_data}
+CPIurl="CPILFENS.csv"
+SPurl="SP500_monthly.csv"
+SP=read.table(SPurl,sep=",",header=TRUE)
+CPI=read.table(CPIurl,sep=",",header=TRUE)
+head(SP)
+head(CPI)
+
+```
+
+According to the `DATE`, we add `time` to each time series. We can see from the above result that `"."` is the missing value of S&P500. We only fit the model to the data collected after the July of 2009. 
+
+* Write $\data{s_n}$ for S&P500 in time $t_n=2009.5+n/12$. 
+
+
+* Write $\data{c_n}$ for CPI in time $t_n$.
+
+Following code is the preprocessing of data.
+
+```{r add time}
+#S&P500
+SP$DATE <- strptime(SP$DATE,"%Y-%m-%d")
+SP$DATE[SP$VALUE=="."]
+SP=SP[SP$VALUE!=".",]
+SP$Year=as.numeric(format(SP$DATE,format="%Y"))
+SP$Month=as.numeric(format(SP$DATE,format="%m"))
+SP$time=SP$Year+(SP$Month-1)/12                        #define January is the fisrt data in each year
+SP$VALUE=(as.numeric(as.character(SP$VALUE)))
+
+#CPI
+CPI$DATE <- strptime(CPI$DATE,"%Y-%m-%d")
+CPI$Year=as.numeric(format(CPI$DATE,format="%Y"))
+CPI$Month=as.numeric(format(CPI$DATE,format="%m"))
+CPI$time=CPI$Year+(CPI$Month-1)/12
+CPI$VALUE=as.numeric(CPI$VALUE)
+
+t=intersect(SP$time,CPI$time)
+t=t[which(t>2009.5)]
+sp=SP[SP$time %in%t,]
+lag=0
+CPIrow=c(1:dim(CPI)[1])[CPI$time%in%t]-lag
+cpi=CPI[CPIrow,]
+
+```
+
+Now we plot the both data.
+
+```{r plot_data,fig.height=6,fig.cap="Figure 1: Time series of S&P500 and CPI",fig.lp=prefix}
+par(mfrow=c(2,1))
+plot(VALUE~time,data=sp,type="l",main="S&P500")
+plot(VALUE~time,data=cpi,type="l",main="CPI")
+```
+
+From the plot we can see there are rising trend in both S&P500 and CPI after July 2009.
+
+Following is the code that I use **Loess Smoothing**(i.e. local linear regression approach) to extract the trend, noise and cycle components.
+
+* Low frequency component can be considered as trend, and very high frequency component might be considered as noise.
+
+* The mid-range frequency component can be considered as the cycle or the perturbation caused by the state of the economy, unlike the meaningless noise component. As mentioned above, I hope to find the relationship between the mid-range frequency components of S&P500 and CPI.
+
+```{r loess1, fig.cap="Figure 2: Decomposition of S&P500 as trend + noise + cycle",fig.height=5}
+sp_low <- ts(loess(sp$VALUE~t,span=0.5)$fitted,start=t[1],frequency=12)
+sp_high <- ts(sp$VALUE-loess(sp$VALUE~t,span=0.1)$fitted,start=t[1],frequency=12)
+sp_cycles <-ts(sp$VALUE-sp_low-sp_high,start=t[1],frequency=12)
+ts.sp=ts.union(sp$VALUE,sp_low,sp_high,sp_cycles)
+colnames(ts.sp)=c("value","trend","noise","cycles")
+plot(ts.sp,main="")
+```
+```{r loess2,fig.cap="Figure 3: Decomposition of CPI as trend + noise + cycle",fig.height=5}
+
+cpi_low <- ts(loess(cpi$VALUE~t,span=0.5)$fitted,start=t[1],frequency=12)
+cpi_high <- ts(cpi$VALUE-loess(cpi$VALUE~t,span=0.1)$fitted,start=t[1],frequency=12)
+cpi_cycles <-ts(cpi$VALUE-cpi_low-cpi_high,start=t[1],frequency=12)
+ts.cpi=ts.union(cpi$VALUE,cpi_low,cpi_high,cpi_cycles)
+colnames(ts.cpi)=c("value","trend","noise","cycles")
+plot(ts.cpi,main="")
+
+```
+
+We can plot the cycle components of two time series together.
+
+```{r plot_two_cycle_component, fig.cap="Figure 4: Cycle components of S&P500 (black) and CPI (red)."}
+par(mfrow=c(1,1))
+plot(t,sp_cycles,type="l",xlab="Year",ylab="", 
+     main="Cycle components of S&P500 (black) and CPI (red)")
+par(new=TRUE)
+plot(t,cpi_cycles,type="l",col="red",xlab="",ylab="",axes=FALSE)
+axis(side=4,col="red")
+```
+
+
+
+# Building models
+
+* Let $s_n^{cl}$ denote the cycle component of the S&P500 at time $t_n$ and $c_n^{cl}$ denote the cycle components of the CPI at time $t_n$
+
+* A general ARMA(p,q) model is:
+$$
+\begin{aligned}
+\phi(B)(X_n-\mu)=\psi(B)\epsilon_n,
+\end{aligned}
+$$
+where $B$ is the backshift operator, $\{\epsilon_n\}$ is a white noise process and
+$$
+\begin{aligned}
+\mu &= \mathbb{E}[X_n]\\
+\phi(x)&=1-\phi_1 x-\dots-\phi_p x^p,\\
+\psi(x)&=1+\psi_1 x+\dots-\psi_q x^q.\\
+\end{aligned}
+$$
+
+
+
+## Regression with ARMA errors model
+
+In this part, we will consider the following model:
+
+
+$$
+\begin{aligned}
+s_n^{cl}=\alpha+\beta c_n^{cl}+\epsilon_n \hspace{5mm} [M1]
+\end{aligned}
+$$
+
+where $\{\epsilon_n\}$ is a Guassian ARMA process. We can first try a ARMA(1,0) model.
+
+```{r arma11}
+p=1
+q=0
+mod1=arima(sp_cycles,xreg=cpi_cycles,order=c(p,0,q))
+mod1
+
+```
+
+* As we can see, the regression coefficients and the intercept are not statistically significant. 
+
+* Here, I omit the analysis I do for selecting and testing models because the techniques are the same as I show in the following part.
+
+* Actually I try many different ARMA models, howerver I failed to find a reasonable model with statistically significant regression coefficient. This drives me thinking about the following adjusted model.
+
+## Regression with lagged dependent variable and ARMA errors model
+
+From figure 4, I see that if we shift the red line to right a little bit, the peak of the S&P500 will match the trough of the CPI, and the trough of S&P500 will match the peak of the CPI. To test and check whether this is true, I consider the following model:
+
+$$
+\begin{aligned}
+s_n^{cl}=\alpha+\beta c_{n-h}^{cl}+\epsilon_n \hspace{5mm} [M2]
+\end{aligned}
+$$
+
+where $h$ is the lag of the CPI and $\{\epsilon_n\}$ is a Guassian ARMA process.The lag I use is 3. Also, we first try a ARMA(1,0) model.
+
+First, we reload a lagged CPI data and extract the trend, noise and cycle components using Loess.
+
+
+```{r lag3_regression_with_Arma_error}
+lag=3
+CPIrow=c(1:dim(CPI)[1])[CPI$time%in%t]-lag
+cpi.lag=CPI[CPIrow,]
+cpi_low <- ts(loess(cpi.lag$VALUE~t,span=0.5)$fitted,start=t[1],frequency=12)
+cpi_high <- ts(cpi.lag$VALUE-loess(cpi.lag$VALUE~t,span=0.1)$fitted,start=t[1],frequency=12)
+cpi_cycles <-ts(cpi.lag$VALUE-cpi_low-cpi_high,start=t[1],frequency=12)
+```
+
+Now, we can plot the cycle component of S&P500 with the shifted CPI.
+
+
+```{r shifted_plot,fig.cap="Figure 5: Cycle components of S&P500 (black) and lagged CPI (red)."}
+par(mfrow=c(1,1))
+plot(t,sp_cycles,type="l",xlab="Year",ylab="")
+par(new=TRUE)
+plot(t,cpi_cycles,type="l",col="red",xlab="",ylab="",axes=FALSE)
+axis(side=4,col="red")
+```
+
+Fit the model[M2] to the data.
+
+```{r [M2]}
+p=1
+q=0
+mod2=arima(sp_cycles,xreg=cpi_cycles,order=c(p,0,q))
+mod2
+
+```
+
+Now, we've got a significant regression coefficient.
+
+# Model selection and statistics inference of the selected model
+
+## Using AIC table to choose suitable p, q for the ARMA model
+
+We can use the aic table to choose a suitable ARMA model for the error.
+
+```{r aic_table,warning=FALSE,message=FALSE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg)$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+sp_aic_table <- aic_table(sp_cycles,3,3,xreg=cpi_cycles)
+require(knitr)
+kable(sp_aic_table,digits=2)
+
+```
+
+From the AIC table, we can see the model with small AIC are ARMA(1,2), ARMA(2,3) and ARMA(3,3). Although we don't see numerical inconsistency of the AIC table, ARMA(2,3) and ARMA(3,3) are at the boundry of this table, and large models are easily with the problem of redundancy. Therefore I choose ARMA(1,2), which is a simple model.
+
+Further, we can use following code to check the causality, invertibility and redundancy of the models.
+
+```{r redundancy}
+
+arma23=arima(sp_cycles,xreg=cpi_cycles,order=c(2,0,3))
+abs(polyroot(c(1,-arma23$coef[1:2])))
+abs(polyroot(c(1,arma23$coef[(2+1):(3+2)])))
+
+arma33=arima(sp_cycles,xreg=cpi_cycles,order=c(3,0,3))
+abs(polyroot(c(1,-arma33$coef[1:3])))
+abs(polyroot(c(1,arma33$coef[(3+1):(3+3)])))
+
+p=1
+q=2
+mod2=arima(sp_cycles,xreg=cpi_cycles,order=c(p,0,q))
+abs(polyroot(c(1,-mod2$coef[1:p])))
+abs(polyroot(c(1,mod2$coef[(p+1):(q+p)])))
+```
+
+From the above result, we can see both ARMA(2,3) and ARMA(3,3) are at the boundary of the invertibility, and only ARMA(1,2) are causal and invertible. This result justifies the choice of ARMA(1,2)
+
+## Hypothesis test
+Here,likelihood ratio test is used for the following two hypothesis test of model [M2].
+
+Test 1: $H_0$: $\alpha=0$ vs. $H_{\alpha}$: $\alpha\neq 0$
+
+```{r hypothesis_test1}
+log.lik.ratio=as.numeric(logLik(arima(sp_cycles,xreg=cpi_cycles,order=c(p,0,q),include.mean = TRUE))
+              -logLik(arima(sp_cycles,xreg=cpi_cycles,order=c(p,0,q),include.mean = FALSE)))
+p.value=1-pchisq(2*log.lik.ratio,df=1)
+p.value
+```
+
+Test 2: $H_0$: $\beta=0$ vs. $H_{\alpha}$: $\beta\neq 0$
+
+```{r hypothesis_test2}
+log.lik.ratio=as.numeric(logLik(arima(sp_cycles,xreg=cpi_cycles,order=c(p,0,q),include.mean = FALSE))
+              -logLik(arima(sp_cycles,order=c(p,0,q),include.mean = FALSE)))
+p.value=1-pchisq(2*log.lik.ratio,df=1)
+p.value
+```
+
+The above result shows that, with 95% confidence level, $\alpha=0,\  \beta\neq 0$ in model[M2].
+
+Now the model[M2] are adjusted to the model:
+
+$$
+\begin{aligned}
+s_n^{cl}=\beta c_{n-3}^{cl}+\epsilon_n \hspace{5mm} [M3]
+\end{aligned}
+$$
+
+where $\{\epsilon_n\}$ is a Guassian ARMA(1,2) process.
+
+Let's fit the model [M3] to the data.
+
+```{r mod3}
+p=1
+q=2
+mod3=arima(sp_cycles,xreg=cpi_cycles,order=c(p,0,q), include.mean=FALSE)
+mod3
+abs(polyroot(c(1,-mod3$coef[1:p])))
+abs(polyroot(c(1,mod3$coef[(p+1):(q+p)])))
+```
+
+From the standard error computed by `arima`, we can see all the coefficients are significant. Moreover, Since the roots of $\phi(x)$ and $\psi(x)$ are outside the unit circle, this model is causal and invertible.
+
+## Residual Analysis
+
+Now, we check the residuals for the fitted model and the sample autocorrelation of them.
+
+```{r residual_plot,fig.cap="Figure 6: residuals plot"}
+plot(mod3$residuals,ylab="residuals")
+```
+
+From residuals against time plot, we see no strong evidence of heteroskedasticity.
+
+```{r acf,fig.cap="Figure:7 sample autocorrelation plot of residuals and absolute value of residuals", fig.height=5}
+par(mfrow=c(1,2))
+acf(mod3$residuals, main="acf of residuals")
+acf(abs(mod3$residuals), main="acf of |residuals|")
+
+```
+
+Points of both autosample correlation plot are inside the region between the dashed line, which shows the null hypothesis of Gaussian white noise is accepted with 95% confidence level.
+
+## Bootstrap simulation
+
+Since the standard errors above are computed from the observed Fisher information approximation, to check whether the Fisher information approximation is valid, we can run a bootstrap simulation study.
+
+In the bootstrap simulation, the MLE $\theta^*$ given by `arima` are used to generate the pseudodata for $N$ times. In each simulation, we fit the model to the resample and get $\hat\theta_n$. Using $\hat\theta_{1:N}$ we can compute the estimated standard error and confidence interval.
+
+```{r bootstrap}
+set.seed(931129)
+J <- 5000
+params <- coef(mod3)
+ar <- params[grep("^ar",names(params))]
+ma <- params[grep("^ma",names(params))]
+xreg.coef <- params["cpi_cycles"]
+sigma <- sqrt(mod3$sigma2)
+theta <- matrix(NA,nrow=J,ncol=length(params),dimnames=list(NULL,names(params)))
+sgm <-rep(NA,length.out=J)
+for(j in 1:J){
+  X_j <- ts(arima.sim(
+    list(ar=ar,ma=ma),
+    n=length(sp_cycles),
+    sd=sigma),start=t[1],frequency=12)+xreg.coef*cpi_cycles
+  mod=arima(X_j,order=c(1,0,2),xreg=cpi_cycles,include.mean = FALSE)
+  # simulate a regression model with ARMA(1,2) error according to [M3]
+  
+  theta[j,] <- coef(mod)
+  sgm[j]=var(mod$residuals)
+}
+sqrt(diag(var(theta)))
+sqrt(diag(mod3$var.coef))
+```
+
+The standard error computed by bootstrap simulation and Fisher Information are similar.
+
+```{r CI}
+Bootstrap.CI=t(apply(theta,2,quantile,c(0.025,0.975)))
+Bootstrap.CI
+FisherInformation.CI= cbind(mod3$coef-1.96*sqrt(diag(mod3$var.coef)),mod3$coef+1.96*sqrt(diag(mod3$var.coef)))
+colnames(FisherInformation.CI)=c("2.5%","97.5%")
+FisherInformation.CI
+
+```
+
+The quantile-base 95% confidence interval computed by bootstrap simulation are similar to the 95% confidence interval computed by Fisher Information.
+
+All this evidence shows,in the neighborhood of the MLE, the results  deduced from Fisher information are trustworthy.
+
+# Further discussion of the model
+
+## Fit model [M3] to the data from 2006 to 2016
+
+Following, I will fit model [M3] to the 10-year data (that's all I can find on [Economic Research](https://research.stlouisfed.org/)). Let's see whether this model still works.
+
+```{r 10year}
+t=intersect(SP$time,CPI$time)
+sp.10=SP[SP$time %in%t,]
+lag=3
+CPIrow=c(1:dim(CPI)[1])[CPI$time%in%t]-lag
+cpi.10=CPI[CPIrow,]
+
+#extract trend+noise+cycle
+sp_low.10 <- ts(loess(sp.10$VALUE~t,span=0.5)$fitted,start=t[1],frequency=12)
+sp_high.10 <- ts(sp.10$VALUE-loess(sp.10$VALUE~t,span=0.1)$fitted,start=t[1],frequency=12)
+sp_cycles.10 <-ts(sp.10$VALUE-sp_low.10-sp_high.10,start=t[1],frequency=12)
+
+cpi_low.10 <- ts(loess(cpi.10$VALUE~t,span=0.5)$fitted,start=t[1],frequency=12)
+cpi_high.10 <- ts(cpi.10$VALUE-loess(cpi.10$VALUE~t,span=0.1)$fitted,start=t[1],frequency=12)
+cpi_cycles.10 <-ts(cpi.10$VALUE-cpi_low.10-cpi_high.10,start=t[1],frequency=12)
+
+
+p=1
+q=2
+mod3.10=arima(sp_cycles.10,xreg=cpi_cycles.10,order=c(p,0,q), include.mean=FALSE)
+mod3.10
+```
+
+We can see the regression coefficient of cycle component of CPI is no longer significant. To see what happens here, we can plot the cycle components of these two series.
+
+```{r plot_10_cycle,fig.cap="Figure 8: Cycle components of ten-year S&P500 and CPI"}
+par(mfrow=c(1,1))
+plot(t,sp_cycles.10,type="l",xlab="Year",ylab="")
+par(new=TRUE)
+plot(t,cpi_cycles.10,type="l",col="red",xlab="",ylab="",axes=FALSE)
+axis(side=4,col="red")
+
+```
+
+We can see, from about the second half year of 2007 to 2009, the cycle component of these two series rise and fall together, however after this peirod most of two series move in the opposite direction. It is the data of this period, which shows the opposite phenomenon from what we found in chapter 4,  that weakens the signifincance of the regression coefficient. This period, late 2007 to early 2009, is the Subprime Mortgage Crisis of United State. In this crisis, the state of economy is in a great recession and most of the economic indicator falls a lot, which might explain why our model doesn't fit to the data in this period.
+
+## Try other lags
+
+Now, I use the same data as in the chapter 4 and try to fit lags from 1 to 4.
+
+```{r lag1_4}
+t=intersect(SP$time,CPI$time)
+t=t[which(t>2009.5)]
+sp=SP[SP$time %in%t,]
+sp_low <- ts(loess(sp$VALUE~t,span=0.5)$fitted,start=t[1],frequency=12)
+sp_high <- ts(sp$VALUE-loess(sp$VALUE~t,span=0.1)$fitted,start=t[1],frequency=12)
+sp_cycles <-ts(sp$VALUE-sp_low-sp_high,start=t[1],frequency=12)
+
+table=matrix(nrow=4,ncol=2)
+for (lag in 1:4){
+  CPIrow=c(1:dim(CPI)[1])[CPI$time%in%t]-lag
+  cpi.lag=CPI[CPIrow,]
+  cpi_low <- ts(loess(cpi.lag$VALUE~t,span=0.5)$fitted,start=t[1],frequency=12)
+  cpi_high <- ts(cpi.lag$VALUE-loess(cpi.lag$VALUE~t,span=0.1)$fitted,start=t[1],frequency=12)
+  cpi_cycles <-ts(cpi.lag$VALUE-cpi_low-cpi_high,start=t[1],frequency=12)
+  
+  p=1
+  q=2
+  mod=arima(sp_cycles,xreg=cpi_cycles,order=c(p,0,q), include.mean=FALSE)
+  table[lag,1]=mod$coef[4]
+  table[lag,2]=sqrt(mod$var[4,4])
+}
+dimnames(table) <- list(paste("<b> lag=",1:4, "</b>", sep=""),c("cycle_coef","s.e."))
+kable(table,digits=2)
+```
+
+From this table, we can see under 95% confidence level, only when lag equals 3, we can get a significant regression coefficient of cycle component of the CPI.
+
+# Conclusion
+
+* A feasible model for the cycle component of S&P500 and CPI has been found:
+$$
+\begin{aligned}
+(1-0.29B)(s_n^{cl}+43.00 c_{n-3}^{cl})=(1+1.57B+0.92B^2)\epsilon_n
+\end{aligned}
+$$
+where ${\epsilon_n}$ is a Guassian white noise process.
+
+* As a gauge of the cost of living, CPI show us how the consumer's expenditure is affected by the prices of the common purchases. When the consumer is spending more on the basics, it is very likely that they will moderate savings and spending on large-ticket items. If the consumer cuts back spending because of highly basic expenses, a recession usually follows and this means public companies earn less and their stock prices drop. On the other hands, rapid growth of CPI is the signal of inflation. Therefore, Federal Reserve will take restrictive Fed actions. This makes operating a company more expensive, so the companies pull back on their expansion, the economy moves into recession and stock prices fall. ([ZACKS](http://finance.zacks.com/cpi-vs-stock-prices-5166.html))
+
+* My model for the association between the cycle components of S&P500 and CPI is consitent with the above theory. Further it shows us that there is one-quarter lag in this kind of counter relation. I guess the reason behind this might be that it takes about one quarter  for consumers to change their  expenditure structure. Also, the companies' lost profit caused by increased cost often takes time to be exposed, for example quarterly statement.
+
+* This model only fits for the cycle component. As we can see from figure 2 & 3, in the long run, the low frequency component (i.e. trend) of both series rise. The reason of this is that, generally, this two indicators are consistent with the state of economy, which means they rise when the it is booming and fall when it is in recession.
+
+* The model can't fit the data in the period of Subprime Mortgage Crisis, because, I think, in this period, people lost their fortune and cut back the total expenditure in a very short time, instead of changing the proportion of each expenditure. 
+
+------------
+
+# References
+
+* Class notes of Stats 531 (Winter 2016) 'Analysis of Time Series', instructor: Edward L. Ionides (http://ionides.github.io/531w16/)
+
+* ZACKS (http://finance.zacks.com)
+
+* Investopedia (http://www.investopedia.com/)
+
+* Interval Estimation III: Fisher's Information & Bootstrapping (http://www.life.illinois.edu/dietze/Lectures/Lesson16.pdf)
