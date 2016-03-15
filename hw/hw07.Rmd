@@ -1,0 +1,30 @@
+---
+title: "Homework 7: Preparation for presentation in class on Tuesday 3/22 or Thursday 3/24; a single slide submitted by Monday 3/21"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+-----------
+
+<big><big>Midterm project mini-presentations</big></big>
+
+* Some class time on 3/22 and 3/24 will be allocated to midterm project presentations. I'll circulate a sign-up sheet in class. Your homework this week is to prepare your presentation.
+
+* Each student will have an allocation of 3 minutes and will be expected to have a single slide summarizing their project. 
+
+* The slide will be submitted as a pdf file on Canvas, by midnight on Monday 3/21, so that I can set up all the presentations ahead of time on my laptop and the class can move smoothly from one presentation to the next.
+
+* Mini presentations are a great way to advertise the main goal and results of your project. From the audience perspective, you get an overview of what everyone else has been up to.
+
+
+------------
+
+----------
