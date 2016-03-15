@@ -84,6 +84,7 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 11. [Statistical methodology for nonlinear partially observed Markov process models](notes11/notes11.html). [(R script)](notes11/notes11.R)
 
+12. [Dynamic models and their simulation by Euler’s method](notes12/notes11.html). [(R script)](notes12/notes12.R)
 
 --------
 
