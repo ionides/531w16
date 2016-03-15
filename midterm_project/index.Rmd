@@ -13,8 +13,62 @@ csl: ecology.csl
 
 * I will contact everyone to give you the opportunity to have your name attached to your project, if you like, after the course is over and the class grades are assigned.
 
-* Here are the projects:
+* Here are the projects. Source code and data are available from [https://github.com/ionides/531w16/tree/master/midterm_project](https://github.com/ionides/531w16/tree/master/midterm_project).
+
+
+----------
+
+----------
 
 1. [A Study on Crude Oil Price and CPI Value](https://ionides.github.io/531w16/midterm_project/project1/Stats_531_Midterm_Project.html)
 
+2. [The Popularity of Miniskirt Over Time in China](https://ionides.github.io/531w16/midterm_project/project2/midterm.Rmd)
+
+3. [The Association between Recent Cholera Epidemics and Rainfall in Haiti](https://ionides.github.io/531w16/midterm_project/project3/midterm_project.html)
+
+4. [Armed robberies in Boston](https://ionides.github.io/531w16/midterm_project/project4/Stats_531_Midterm_Project.html)
+
+5. [The thickness of the total Ozone in the Earth](https://ionides.github.io/531w16/midterm_project/project5/mid_term.html)
+
+6. [Association between PM2.5 and temperature difference](https://ionides.github.io/531w16/midterm_project/project6/midterm_project.html)
+
+7. [The correlation between the suicide rate and unemployment in U.S.](https://ionides.github.io/531w16/midterm_project/project7/Midterm_Project.html)
+
+8. [Forecasting Chicken Pox Outbreaks using Digital Epidemiology](https://ionides.github.io/531w16/midterm_project/project8/Midterm.pdf)
+
+9. [Monthly Brazilian Gross Domestic Product](https://ionides.github.io/531w16/midterm_project/project9/531_midtermproject.html)
+
+10. [Interplay of Climate, Macroeconomic Conditions, and the Demand for Coffee on Coffee Futures Prices at the New York “C” Contract Market](https://ionides.github.io/531w16/midterm_project/project10/midtermproject.html)
+
+11. [Forecastinhg retail demand using stock keeping unit (SKU) data](https://ionides.github.io/531w16/midterm_project/project11/Mid_Term_project.htm)
+
+12. [Time Series Analysis in US Total Retail Revenue](https://ionides.github.io/531w16/midterm_project/project12/pro1.html)
+
+13. [Non-Metallic Mineral Products Research Project](https://ionides.github.io/531w16/midterm_project/project13/Midterm_Project_Report.html)
+
+14. [Weekly Maximum Solar Radiation Prediction Report](https://ionides.github.io/531w16/midterm_project/project14/Stats531_Midterm_Project.html)
+
+15. [Association between Gross Domestic Product and US Interest Rate](https://ionides.github.io/531w16/midterm_project/project15/midproject.html)
+
+16. [Predicting the S&P 500 index](https://ionides.github.io/531w16/midterm_project/project16/Midterm_Project.html)
+
+17. [Monthly Fatal Crashes in Michigan](https://ionides.github.io/531w16/midterm_project/project17/midterm_project_-_montyly_fatal_crashes_in_michigan.html)
+
+18. [Daily minimum temperatures in Melbourne, Australia](https://ionides.github.io/531w16/midterm_project/project18/stats531_midterm_project.html)
+
+19. [Crude Oil Price Modeling and Prediction](https://ionides.github.io/531w16/midterm_project/project19/crude_oil_price.html)
+
+20. [The relationship between S&P500 and CPI](https://ionides.github.io/531w16/midterm_project/project20/midterm.html)
+
+21. [Time Series Analysis for Stock Data](https://ionides.github.io/531w16/midterm_project/project21/531-Midterm_Project.html)
+
+22. [The exchange rate between Euro and USD](https://ionides.github.io/531w16/midterm_project/project22/mid-project.html)
+
+23. [An Analysis of Association between Yield Curve and S&P 500](https://ionides.github.io/531w16/midterm_project/project23/531-MidProject.html)
+
+24. [Association between Cleanliness and Strength in the Colorado River](https://ionides.github.io/531w16/midterm_project/project24/midterm_project.html)
+
+----------
+
+-----------
 

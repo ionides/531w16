@@ -9,6 +9,16 @@ output: html_document
 \newcommand\var{\mathrm{Var}}
 \newcommand\cov{\mathrm{Cov}}
 
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+# added to help debug
+library(pomp)
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  cache=TRUE
+)
+```
 
 ## Introduction
 
@@ -211,12 +221,12 @@ where the noise $\epsilon$ is independently normal distributed,  all predictors 
 
 It seems that we have got a good linear regression model by least square error. This model shows that the popularity of miniskirt is positively associated with the temperature, negatively associated with stock index, and the Toabao Miniskirt Search Index increases first then decreases as time goes on. But the linear regression diagnostic shows the violation of homoscedasticity and slight violation of normality.
 
-```{r,echo=FALSE}
+```{r plot,echo=FALSE}
 par(mfrow=c(2,2))
 plot(lmtts)
 ```
 
-```{r,echo=FALSE}
+```{r acf, echo=FALSE}
 par(mfrow=c(1,2))
 plot(time,ts(weekminiskirt),main="Linear Regression Model Miniskirt~ \n Time+Time^2+Temp+Stock",type="l",lty="dashed")
 lines(time,lmtts$fitted,type="l",col="red")
@@ -239,7 +249,7 @@ $\phi(B)(1-\Phi_1 B^{53})((1-B^{53})\eta_{n}-\mu)=\psi(B)\epsilon_{n}$
 
 where $\epsilon_{n}$ is independently identically normally distributed $N(0,\sigma^2)$ 
 
-```{r, echo=FALSE}
+```{r, aic_table_func, echo=FALSE}
 aic_table <- function(data,P,Q,xreg=NULL){
   table <- matrix(NA,(P+1),(Q+1))
   for(p in 0:P) {
@@ -258,7 +268,7 @@ aic_table <- function(data,P,Q,xreg=NULL){
 
 Since when using weekminiskirt as response, the calculation of AIC table meets problems of optimization: "Error in optim(init[mask], armafn, method = optim.method, hessian = TRUE,  : non-finite finite-difference value [1]", I transform the weekminiskirt on log scale, then we can calculate the AIC_table and fit the proper SARIMA erroe model. 
 
-```{r}
+```{r aic_table_eval}
 aic_table_log_tts <- aic_table(ts(log(weekminiskirt)),4,5,xreg=cbind(time,time^2,ts(weektemp),ts(log(weekstock))))
 ```
 

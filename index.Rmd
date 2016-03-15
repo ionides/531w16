@@ -124,6 +124,10 @@ Any material taken from any source, such as the internet, must be properly ackno
 
     + [Midterm exam for Stats531 Winter 2007](exam/w07/mt531w07.pdf). [Solutions](exam/w07/mt531w07sol.pdf).
 
+## Midterm project
 
+* [Information](midterm_project/midterm_project_info.html)
+
+* [Projects](midterm_project/index.html)
 
 ---------

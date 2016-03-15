@@ -180,6 +180,7 @@ From these results, I simulated the Maximum-Likelihood parameter set for each th
 I then loaded the simulations and plotted it against the data, showing the means and standard deviations at each month.
 
 ```{r, echo = F, message = F}
+stop("Data are not yet available open-access.")
 source('pomp_obj_seas_E.R')
 simE<- read.csv(file='simE.csv',header=TRUE)
 time.length <- length(simE[,1])
