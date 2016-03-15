@@ -163,7 +163,7 @@ $R = \text{recovered and/or removed}$
 
 * We suppose that each arrow has an associated rate, so here there is a rate $\mu_{SI}(t)$ at which individuals in $S$ transition to $I$, and $\mu_{IR}$ at which individuals in $I$ transition to $R$. 
 
-* To account for demography (births/deaths/immigration/emmigration) we allow the possibility of a source and sink compartment, which is not usually represented on the flow diagram. We write $\mu_{{\small\bullet} S}$ for a rate of births into $S$, and denote mortality rates by $\mu_{S{\small\bullet}}$, $\mu_{I{\small\bullet}}$, $\mu_{R{\small\bullet}}$.
+* To account for demography (births/deaths/immigration/emmigration) we allow the possibility of a source and sink compartment, which is not usually represented on the flow diagram. We write $\mu_{{\small{\bullet}}S}$ for a rate of births into $S$, and denote mortality rates by $\mu_{S{\small\bullet}}$, $\mu_{I{\small\bullet}}$, $\mu_{R{\small\bullet}}$.
 
 * The rates may be either constant or varying. In particular, for a simple SIR model, the recovery rate $\mu_{IR}$ is a constant but the infection rate has the time-varying form
 $$\mu_{SI}(t)=\beta \, I(t),$$
