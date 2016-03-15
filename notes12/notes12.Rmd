@@ -52,6 +52,7 @@ Licensed under the Creative Commons attribution-noncommercial license, http://cr
 Please share and remix noncommercially, mentioning its origin.  
 ![CC-BY_NC](cc-by-nc.png)
 
+These notes draw on material from [http://kingaa.github.io/sbied/stochsim/stochsim.html](http://kingaa.github.io/sbied/stochsim/stochsim.html)
 
 ---
 
