@@ -103,6 +103,9 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 6](hw/hw06.html), due in class on 2/23. [Responses](hw/summary06.html).
 
+* [Homework 7](hw/hw07.html), a single slide due midnight on 3/21, for a presentation in class on 3/22 or 3/24.
+
+
 ------------
 
 ## Midterm exam information

@@ -1,0 +1,20 @@
+---
+title: "Stats 531 (Winter 2016) <br>Midterm projects"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+------
+
+* Following the [class discussion](http://ionides.github.io/531w16/hw/summary06.html), projects with source code are posted anonymously on the class webpage.
+
+* I will contact everyone to give you the opportunity to have your name attached to your project, if you like, after the course is over and the class grades are assigned.
+
+* Here are the projects:
+
+1. [A Study on Crude Oil Price and CPI Value](https://ionides.github.io/531w16/midterm_project/project1/Stats_531_Midterm_Project.html)
+
+
