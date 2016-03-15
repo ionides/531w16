@@ -168,7 +168,7 @@ $R = \text{recovered and/or removed}$
 * The rates may be either constant or varying. In particular, for a simple SIR model, the recovery rate $\mu_{IR}$ is a constant but the infection rate has the time-varying form
 $$\mu_{SI}(t)=\beta \, I(t),$$
 with $\beta$ being the _contact rate_. Now, for the simplest SIR model, ignoring demography, we set
-$$ \mu_{{\small\bullet}S}=\mu_{S{\small\bullet}}=\mu_{I{\small\bullet}}=\mu_{R{\small\bullet}}=0.$$
+$$ \mu_{{\small{\bullet}}S}=\mu_{S{\small{\bullet}}}=\mu_{I{\small{\bullet}}}=\mu_{R{\small{\bullet}}}=0.$$
 
 * To develop a systemtic notation, it turns out to be convenient to keep track of the flows between compartments as well as the number of individuals in each compartment. Let
 $$N_{SI}(t)$$
