@@ -1,0 +1,107 @@
+---
+title: "Homework 8, due in class on Tues 3/29"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+--------
+
+-------
+
+<big><big><big>Objective</big></big></big>
+
+To provide practical experience working with POMP models. 
+
+<br>
+
+-------
+
+------
+
+## Installing the **pomp** package
+
+* Computation time is an unavoidable consideration when working with simulation-based inference, for all but small datasets and simple models. 
+
+* The *pomp* package therefore allows you to specify the most computationally intensive steps---usually, simulation of the stochastic dynamic system, and evaluation of the measurement density---as snippets of C code. 
+
+* Consequently, to use **pomp**, your R program must have access to a C compiler. In addition, *pomp* takes advantage of some Fortran code and therefore requires a Fortran compiler. 
+
+* Installing the necessary compilers should be fairly routine, but does involve an extra step beyond the usual installation of an R package, unless you are running the Linux operating system for which they are usually installed by default. Given how fundamental C and Fortran are to scientific computing, it is unfortunate that Mac and Windows do not provide them by default.
+
+* The following advice is an updated version of [http://kingaa.github.io/sbied/prep/preparation.html](http://kingaa.github.io/sbied/prep/preparation.html).
+
+1. Check your R version. For our purposes, make sure you have at least 3.2.0. You can run `getRversion()` to see what is currently installed.
+
+2. Install and/or update relevant R packages. The file [packages.R](pomp_prep/packages.R) contains a list of relevant R packages. This list does not include **pomp** itself, but all will be helpful if you want to re-run or modify the R code in the notes. Run the following, in R:
+```
+update.packages()
+source("http://ionides.github.io/531w16/hw/pomp_prep/packages.R",echo=TRUE)
+```
+
+3. Install and test the **pomp** package by running [pompTest.R](pomp_prep/pompTest.R)
+```
+source("http://ionides.github.io/531w16/hw/pomp_prep/pompTest.R",echo=TRUE)
+```
+If you get the output `PompTest successful!` then *pomp* is working on your system. If not, re-run this step after trying the following operating-system-dependent advice.
+
+-------
+
+####Linux and Unix: 
+
+* Usually, Linux and Unix distributions have the necessary compilers installed by default. Indeed, the simplest way to run **pomp** may be to use SSH to access a Linux server. We can discuss in class how to do this. You should be able to do the following:
+
+* Note for those without previous Linux experience: Some familiarity with Linux is a basic skill for modern applied statistics, since Linux is currently the dominant environment for scientific and high-performance computing. 
+
+* For example, [95% of the fastest 500 supercomputers run Linux](https://en.wikipedia.org/wiki/Linux_adoption#Supercomputers). The University of Michigan computing cluster, Flux, also runs Linux. 
+
+* You don't need to learn Linux just for this course, but if you view improving your Linux skills as a good investment, working in this environment is encouraged. One of many introductory tutorials online is [http://www.ee.surrey.ac.uk/Teaching/Unix](http://www.ee.surrey.ac.uk/Teaching/Unix).
+
+    1. Access `scs.itd.umich.edu`, via SSH or using the umich virtual private network [(VPN)](http://www.itcom.itd.umich.edu/vpn/). You can use `bayes.stat.lsa.umich.edu` if you have access to the Statistics department machines. You should have this access if you are a Statistics Masters or PhD student. I can get access for others, upon request. 
+
+    2. In R, run `install.package("pomp")` and select `22 (HTTP mirrors)`. For some technical reason, the default HTTPS CRAN mirrors don't seem to be working on either the scs or bayes machines.
+
+* If you run Linux on your own machine and have trouble with either script above, make sure you have the GNU compiler collection (GCC) installed. Linux distributions typically include this by default but it is not impossible that you have somehow avoided this.
+
+
+--------
+
+#### MacOSX:
+
+* So that you can compile C code and dynamically link it into an R session, you will need to make sure you have the Xcode app installed before running the second script above.  This is free and can be installed via the App Store or downloaded from [https://developer.apple.com/xcode/downloads/].
+
+* If you have trouble with the first command trying to install `pomp` from source, receiving the error,
+```
+make: gfortran-4.8: No such file or directory
+```
+then it is likely that you do not have the necessary version of gfortran installed.  Have a look at [these instructions](./pomp_prep/mac-fortran.html) and contact me if these don’t work for you.
+
+-------
+
+
+#### Windows:
+
+You will need the ability to compile C code and dynamically link it into an R session.  To do this, you’ll need to install the `Rtools` suite.  Download the latest frozen version ([http://cran.r-project.org/bin/windows/Rtools]) and install it.  Some problems have been reported with the unfrozen version (**Rtools33**) but none with the last frozen version (**Rtools32**). Please report if you have difficulties with the interaction between Rtools and **Rstudio**; the code should run on current releases of Rstudio.
+
+<br>
+
+------
+
+------
+
+## Exercises
+
+To be assigned later...
+
+<br>
+
+-------
+
+------

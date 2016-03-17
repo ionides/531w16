@@ -106,6 +106,8 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 7](hw/hw07.html), a single slide due midnight on 3/21, for a presentation in class on 3/22 or 3/24.
 
+* [Homework 8](hw/hw08.html), due on 3/29.
+
 
 ------------
 
