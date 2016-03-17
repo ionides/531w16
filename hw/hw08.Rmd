@@ -50,7 +50,7 @@ source("http://ionides.github.io/531w16/hw/pomp_prep/packages.R",echo=TRUE)
 ```
 source("http://ionides.github.io/531w16/hw/pomp_prep/pompTest.R",echo=TRUE)
 ```
-If you get the output `PompTest successful!` then *pomp* is working on your system. If not, re-run this step after trying the following operating-system-dependent advice.
+If you get the output `PompTest successful!` then **pomp** is working on your system. If not, re-run this step after trying the following operating-system-dependent advice.
 
 -------
 
@@ -77,7 +77,7 @@ If you get the output `PompTest successful!` then *pomp* is working on your syst
 
 * So that you can compile C code and dynamically link it into an R session, you will need to make sure you have the Xcode app installed before running the second script above.  This is free and can be installed via the App Store or downloaded from [https://developer.apple.com/xcode/downloads/].
 
-* If you have trouble with the first command trying to install `pomp` from source, receiving the error,
+* If you have trouble with the first command trying to install **pomp** from source, receiving the error,
 ```
 make: gfortran-4.8: No such file or directory
 ```
@@ -88,7 +88,7 @@ then it is likely that you do not have the necessary version of gfortran install
 
 #### Windows:
 
-You will need the ability to compile C code and dynamically link it into an R session.  To do this, you’ll need to install the `Rtools` suite.  Download the latest frozen version ([http://cran.r-project.org/bin/windows/Rtools]) and install it.  Some problems have been reported with the unfrozen version (**Rtools33**) but none with the last frozen version (**Rtools32**). Please report if you have difficulties with the interaction between Rtools and **Rstudio**; the code should run on current releases of Rstudio.
+You will need the ability to compile C code and dynamically link it into an R session.  To do this, you’ll need to install the **Rtools** suite.  Download the latest frozen version (http://cran.r-project.org/bin/windows/Rtools) and install it.  Some problems have been reported with the unfrozen version (**Rtools33**) but none with the last frozen version (**Rtools32**). Please report if you have difficulties with the interaction between **Rtools** and Rstudio; the code should run on current releases of Rstudio.
 
 <br>
 
