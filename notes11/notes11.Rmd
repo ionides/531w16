@@ -419,6 +419,8 @@ plot(x)
 
     + [**overloading**](https://en.wikipedia.org/wiki/Function_overloading) of functions or operators.
 
+    + [**inheritance**](https://en.wikipedia.org/wiki/Inheritance_%28object-oriented_programming%29) between classes, when one class extends another.
+
 * How does object-oriented programming work in R? How is this similar or different from any other environment in which you have seen object-oriented programming?
 
 * For current purposes, we don't need to be experts in object-oriented programming in R. However, we should know of the existence of the two main object-oriented systems in R,
@@ -506,6 +508,18 @@ y <- trajectory(ricker,params=p,times=200:1000)
 matplot(p["r",],y["N",,],pch=".",col='black',xlab='r',ylab='N',log='x')
 ```
 
+* This figure is called a [bifurcation diagram](https://en.wikipedia.org/wiki/Bifurcation_diagram) for the Ricker map. The Ricker map is another name for the Ricker equation: the Ricker equation defines a recursion, and these recursions are often called maps when mathematically studying their behavior. 
+
+    + How do you interpret this bifurcation diagram? 
+
+    + What does it mean when the single line for small values of $r$ splits into a double line, around $r=0.8$? 
+
+    + What does it mean when solid vertical lines appear, around $r=18$?
+
+    + A bifurcation diagram like this can only be computed for a deterministic map. Why? However, the bifurcation diagram for the deterministic skeleton can be useful to help understand a stochastic process. We'll see an example later in this chapter.
+
+    + Look at the R code for the bifurcation diagram. Notice that the first 200 iterations of the Ricker map are discarded, by setting `times=200:1000`. Why? This is a technique called **burn-in**, by analogy with an [industrial technique by the same name](https://en.wikipedia.org/wiki/Burn-in). Burn-in is a standard technique in Markov chain Monte Carlo, as described in the [Wikipedia article on the Metropolis-Hastings algorithm](https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm): "The Markov chain is started from an arbitrary initial value and the algorithm is run for many iterations until this initial state is forgotten. These samples, which are discarded, are known as burn-in." The concept of burn-in applies to any simulation study where one is interested in simulating the steady state of a dynamic system, ignoring the [transient behavior](https://en.wikipedia.org/wiki/Transient_response) due to the choice of starting values for the simulation.
+
 * More information on manipulating and extracting information from `pomp` objects can be viewed in the help pages (`methods?pomp`).
 
 * There are a number of other examples included with the package.
@@ -580,7 +594,7 @@ Do `class?pomp` to get documentation on the `pomp` class.
 Learn about the various things you can do once you have a `pomp` object by doing `methods?pomp` and following the links therein.
 Read an overview of the package as a whole with links to its main features by doing `package?pomp`.
 A complete index of the functions in **pomp** is returned by the command `library(help=pomp)`.
-Finally, the home page for the `pomp` project is \url{http://kingaa.github.io/pomp};
+Finally, the home page for the `pomp` project is (http://kingaa.github.io/pomp);
 there you have access to the complete source code, manuals, mailing lists, etc.
 
 ```{r parus-pomp1}
