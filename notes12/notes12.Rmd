@@ -182,9 +182,13 @@ counts individuals transitioning from $I$ to $R$. To include demography, we coul
 * For continuous population compartment models, the flow counting processes are non-decreasing and real valued.
 
 * The numbers of people in each compartment can be computed via these counting processes. Ignoring demography, we have:
-$$ S(t)= S(0) - N_{SI}(t)$$
-$$ I(t)= I(0) + N_{SI}(t) - N_{IR}(t)$$
-$$ R(t) = R(0) + N_{IR}(t)$$
+$$\begin{array}{lcl} 
+S(t)&=& S(0) - N_{SI}(t)
+\\
+I(t)&=& I(0) + N_{SI}(t) - N_{IR}(t)
+\\
+R(t) &=& R(0) + N_{IR}(t)
+\end{array}$$
 
 * These equations represent something like _conservation of mass_, or _what goes in must come out_. 
 
@@ -219,11 +223,36 @@ $$ dN_{IR}/dt = \mu_{IR}\, I(t).$$
 * Surprisingly many models have this Markov property. If all important variables are included in the state of the system, then the Markov property appears automatically.
 
 * The Markov property lets us specify a model by the transition probabilities on small intervals (together with the initial conditions). For the SIR model, we have
-$$P[N_{SI}(t+\delta)=N_{SI}(t)+1] = \mu_{SI}(t) \, S(t) \delta + o(\delta)$$
-$$P[N_{SI}(t+\delta)=N_{SI}(t)] = 1-\mu_{SI}(t) \, S(t) \delta + o(\delta)$$
-$$P[N_{IR}(t+\delta)=N_{IR}(t)+1] = \mu_{IR} \, I(t) \delta + o(\delta)$$
-$$P[N_{IR}(t+\delta)=N_{IR}(t)] = 1-\mu_{IR}(t) \, I(t) \delta + o(\delta)$$
 
+$$\begin{array}{lcl}
+\prob\big[N_{SI}(t+\delta)\equals N_{SI}(t)+1\big] &=& \mu_{SI}(t) \, S(t) \delta + o(\delta)
+\\
+\prob\big[N_{SI}(t+\delta)\equals N_{SI}(t)\big] &=& 1-\mu_{SI}(t) \, S(t) \delta + o(\delta)
+\\
+\prob\big[N_{IR}(t+\delta)\equals N_{IR}(t)+1\big] &=& \mu_{IR} \, I(t) \delta + o(\delta)
+\\
+\prob\big[N_{IR}(t+\delta)\equals N_{IR}(t)\big] &=& 1-\mu_{IR}(t) \, I(t) \delta + o(\delta)
+\end{array}$$
+
+* Here, we are using [little $o$ notation](https://en.wikipedia.org/wiki/Big_O_notation#Little-o_notation). We write 
+$$ h(\delta)=o(\delta)$$
+to mean 
+$$ \lim_{\delta\to 0} \frac{h(\delta)}{\delta} = 0.$$
+
+<br>
+
+-----
+
+-----
+
+### Question: What is the link between little $o$ notation and the derivative?
+
+* Explain why 
+$$f(x+\delta)=f(x)+ \delta g(x) + o(\delta)$$ 
+is the same statement as
+$$ \frac{df}{dx} = g(x).$$
+
+* What considerations might help you choose which of these notations to use?
 
 <br>
 
@@ -308,38 +337,48 @@ The main advantage of the continuous-time model $x(t)$ is then that it gives a s
 ## Euler's method for a discrete SIR model
 
 * Recall the simple continuous-time Markov chain interpretation of the SIR model without demography:
-$$P[N_{SI}(t+\delta)=N_{SI}(t)+1] = \mu_{SI}(t) \, S(t) \delta + o(\delta),$$
-$$P[N_{IR}(t+\delta)=N_{IR}(t)+1] = \mu_{IR} \, I(t) \delta + o(\delta).$$
+
+$$\begin{array}{lcl}
+\prob\big[N_{SI}(t+\delta)\equals N_{SI}(t)+1\big] &=& \mu_{SI}(t) \, S(t) \delta + o(\delta),
+\\
+\prob\big[N_{IR}(t+\delta)\equals N_{IR}(t)+1\big] &=& \mu_{IR} \, I(t) \delta + o(\delta).
+\end{array}$$
 
 * We look for a numerical solution with state variables $\tilde S(k\delta)$, $\tilde I(k\delta)$, $\tilde R(k\delta)$. 
 
 * The counting processes for the flows between compartments are $\tilde N_{SI}(t)$ and $\tilde N_{IR}(t)$. The counting processes are related to the numbers of individuals in the compartments by the same flow equations we had before:
-$$ \tilde S(k\delta)= S(0) - \tilde N_{SI}(k\delta)$$
-$$ \tilde I(k\delta)= I(0) + \tilde N_{SI}(k\delta) - \tilde N_{IR}(k\delta)$$
-$$ \tilde R(k\delta) = R(0) + \tilde N_{IR}(k\delta)$$
+$$\begin{array}{lcl} 
+\tilde S(k\delta)&=& S(0) - \tilde N_{SI}(k\delta)
+\\
+\tilde I(k\delta)&=& I(0) + \tilde N_{SI}(k\delta) - \tilde N_{IR}(k\delta)
+\\
+\tilde R(k\delta) &=& R(0) + \tilde N_{IR}(k\delta)
+\end{array}$$
 
 * Let's focus on a numerical solution to $N_{SI}(t)$, since the same methods can also be applied to $N_{IR}(t)$.
 
-* Here are three possibilities:
+* Here are three possibilities, defining a process at times $t=k\delta$ for all integer $k$ and some fixed $\delta>0$.
 
 <br>
 
-1. $\quad \tilde N_{SI}\big( \,(k+1)\delta\,\big)= \tilde N_{SI}\big( k\delta \big) + \mathrm{Poisson}\big(\tilde \mu_{SI}(t) \, \tilde S(t) \,\delta\big)$, <br>
+1. A Poisson approximation.
+$$\tilde N_{SI}(t+\delta)= \tilde N_{SI}(t) + \mathrm{Poisson}\big[\mu_{SI}\big(\tilde I(t)\big) \, \tilde S(t) \,\delta\big],$$
 where $\mathrm{Poisson}(\mu)$ is a Poisson random variable with mean $\mu$ and 
-$$\tilde \mu_{SI}(t) = \beta\, \tilde I(t).$$
+$$\mu_{SI}\big(\tilde I(t)\big) = \beta\, \tilde I(t).$$
 
 <br>
 
-2. $\quad \tilde N_{SI}\big( \,(k+1)\delta\,\big)= \tilde N_{SI}\big( k\delta \big) + \mathrm{Binomial}\big(\tilde S(t),\tilde \mu_{SI}(t) \, \delta\big)$, <br>
+2. A binomial approximation with transition probabilities approximated by rate times time.
+$$\tilde N_{SI}(t+\delta) = \tilde N_{SI}(t) + \mathrm{Binomial}\big[\tilde S(t),\mu_{SI}\big(\tilde I(t)\big) \, \delta\big),$$
 where $\mathrm{Binomial}(n,p)$ is a binomial random variable with mean $np$ and variance $np(1-p)$.
 
 <br>
 
-3. $\quad \tilde N_{SI}\big( \,(k+1)\delta\,\big)= \tilde N_{SI}\big( k\delta \big) + \mathrm{Binomial}\big(\tilde S(t),1-\exp\{-\tilde \mu_{SI}(t) \delta\}\big)$.
+3. A binomial approximation with exponential transition probabilities. 
+
+$$ \tilde N_{SI}(t+\delta)= \tilde N_{SI}(t) + \mathrm{Binomial}\big[\tilde S(t),1-\exp\big\{-\mu_{SI}\big(\tilde I(t)\big) \delta\big\}\big].$$
 
 <br>
-<br>
-
 
 * What are the advantages of these different schemes? Conceptually, it is simplest to think of (1.) or (2.). Numerically, it is usually preferable to implement (3.). 
 

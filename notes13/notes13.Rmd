@@ -1,0 +1,1045 @@
+---
+title: "13. Practical likelihood-based inference for POMP models"
+author: "Edward Ionides"
+date: "3/22/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=13"
+    ]
+bibliography: notes13.bib
+csl: ecology.csl
+
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+\newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\matH{\mathbb{H}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+
+
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+These notes draw on material from [http://kingaa.github.io/sbied/stochsim/stochsim.html](http://kingaa.github.io/sbied/stochsim/stochsim.html)
+
+---
+
+
+\newcommand\expect[1]{\mathbb{E}\left[{#1}\right]}
+\newcommand\var[1]{\mathrm{Var}\left[{#1}\right]}
+\newcommand\dist[2]{\mathrm{#1}\left(#2\right)}
+\newcommand\dlta{\Delta}
+
+--------------------------
+
+Produced with **R** version `r getRversion()` and **pomp** version `r packageVersion("pomp")`.
+
+--------------------------
+
+```{r knitr-opts,include=FALSE,purl=FALSE,cache=FALSE}
+prefix <- "notes12"
+library(knitr)
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache.extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+  )
+
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  stringsAsFactors=FALSE,
+  encoding="UTF-8"
+  )
+```
+
+```{r prelims,echo=F,cache=F}
+set.seed(594709947L)
+require(ggplot2)
+theme_set(theme_bw())
+require(plyr)
+require(reshape2)
+require(foreach)
+require(doMC)
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.69-1")
+```
+
+<big><big><big>Objectives</big></big></big>
+
+1. To explain the simplest **particle filter**, allowing Monte Carlo solution of the POMP filtering and prediction recursions and therefore providing computation of the likelihood.
+
+2. To provide examples of visualizing and exploring likelihood surfaces using the particle filter for computation of the likelihood.
+
+3. To consider how to apply the fundamental tools of likelihood-based inference in situations where the likelihood cannot be written down explicitly but can be evaluated and maximized via Monte Carlo methods.
+
+4. To gain some experience at carrying out likelihood-based inferences for dynamic models using simulation-based statistical methodology in the R package **pomp**.
+
+5. Understand how iterated filtering algorithms carry out repeated particle filtering operations, with randomly perturbed parameter values, in order to maximize the likelihood.
+
+6. Gain experience carrying out statistical investigations using iterated filtering in a relatively simple situation (fitting an SIR model to a boarding school flu outbreak).
+
+## Theory of the particle filter
+
+### Indirect specification of the statistical model via a simulation procedure
+
+* For simple statistical models, we may describe the model by explicitly writing the density function $f_{Y_{1:N}}(y_{1:N}\params\theta)$. 
+One may then ask how to simulate a random variable $Y_{1:N}\sim f_{Y_{1:N}}(y_{1:N}\params\theta)$.
+
+* For many dynamic models it is convenient to define the model via a procedure to simulate the random variable $Y_{1:N}$. 
+This implicitly defines the corresponding density $f_{Y_{1:N}}(y_{1:N}\params\theta)$. 
+For a complicated simulation procedure, it may be difficult or impossible to write down $f_{Y_{1:N}}(y_{1:N}\params\theta)$ exactly. 
+
+* It is important for us to bear in mind that the likelihood function exists even when we don't know what it is! We can still talk about the likelihood function, and develop numerical methods that take advantage of its statistical properties.
+
+<br>
+
+-----
+
+-----
+
+
+
+### Special case: a deterministic unobserved state process
+
+* Lets' begin with a special case where the unobserved state process is deterministic.
+That is, $X_{n}=x_n(\theta)$ is a known function of $\theta$ for each $n$.
+What is the likelihood?
+
+* Since the distribution of the observable random variable, $Y_n$, depends only on $X_n$ and $\theta$, and since, in particular $Y_{m}$ and $Y_{n}$ are independent given $X_{m}$ and $X_{n}$, we have 
+$$\lik(\theta) = \prod_{n} f_{Y_n|X_n}(y_n^*\given x_n(\theta)\params \theta)$$ 
+or 
+$$\loglik(\theta) = \log\lik(\theta) = \sum_{n} \log f_{Y_n|X_n}(y_n^*\given x_n(\theta)\params \theta).$$
+
+```{r det-example,echo=FALSE,results="hide",purl=FALSE}
+pompExample(bbs)
+x <- trajectory(bbs)
+y <- cbind(as.data.frame(bbs),x=x["cases",1,])
+mutate(y,xlab=sprintf("x[%d]",time),
+       ylab=sprintf("y[%d]",time)) -> y
+
+ggplot(data=y,
+       mapping=aes(x=time,xend=time))+
+  geom_point(aes(y=reports),color='black',alpha=0.5)+
+  geom_point(aes(y=x),color='red',alpha=0.5)+
+  geom_line(aes(y=reports),color='black',alpha=0.5)+
+  geom_line(aes(y=x),color='red',alpha=0.5)+
+  geom_text(aes(y=reports,label=ylab,vjust=ifelse(time>=10,2,-1)),parse=TRUE,color='black')+
+  geom_text(aes(y=x,label=xlab,vjust=ifelse(time>=10,-1,2)),parse=TRUE,color='red')+
+  geom_segment(aes(y=x,yend=reports),color='blue',linetype=2,alpha=0.3,
+               arrow=grid::arrow(length=grid::unit(0.02,"npc")))+
+  expand_limits(y=c(-20,320))+
+  labs(y="")
+```
+
+<br>
+
+---------
+
+--------
+
+## Likelihood for stochastic models by direct simulation
+
+* We can introduce the particle filter by first proposing a simpler method that usually doesn't work on anything but very short time series. 
+
+* **Warning: this section is an example of what NOT to do!**
+ 
+* We can imagine using [Monte Carlo integration](./monteCarlo.html#monte-carlo-integration) for computing the likelihood of a state space model,
+$$\lik(\theta)=\prob{y_{1:T}|\theta}=\sum_{x_1}\cdots\sum_{x_T}\!\prod_{t=1}^{T}\!\prob{y_t|x_t,\theta}\,\prob{x_t|x_{t-1},\theta}.$$
+
+* Specifically, if we have some probabilistic means of proposing trajectories for the unobserved state process, then we could just generate a large number of these and approximate $\lik(\theta)$ by its Monte Carlo estimate.
+
+* Then, we can generate $N$ trajectories of length $T$, $x_{t,k}$, $k=1\,\dots,N$, $t=1,\dots,T$.
+Let $w_k$ denote the probability of proposing trajectory $k$.
+For each trajectory, we compute the likelihood of that trajectory
+$$\lik{_k}(\theta)=\prod_{t=1}^{T} \prob{y_t|x_{t,k},\theta}\,\prob{x_{t,k}|x_{t-1,k},\theta}$$
+Then by the Monte Carlo theorem, we have 
+$$\lik(\theta) \approx \frac{1}{N}\,\sum_{k=1}^{N}\!\frac{\lik_k(\theta)}{w_k}.$$
+
+* How shall we choose our trajectories?
+
+* One idea would be to choose them so as to simplify the computation.
+If we choose them such that
+$$w_j=\prod_{n=1}^{N} f_{X_n|X_{n-1}}(x_{n,j}|x_{n-1,j},\theta),$$
+then we have
+$$\begin{eqnarray}
+\lik(\theta) 
+&\approx&
+ \frac{1}{J}\,\sum_{j=1}^{J} \frac{\lik_j(\theta)}{w_j} 
+\\
+&=& 
+\frac{1}{J}\,\sum_{j=1}^{J}\!\frac{\prod_{n=1}^{N} f_{Y_n|X_n}(y^*_n|x_{n,j}\params \theta)\,f_{X_n|X_{n-1}}(x_{n,j}|x_{n-1,j}\params \theta)}{\prod_{n=1}^{N} f_{X_n|X_{n-1}}(x_{n,j}|x_{n-1,j}\params \theta)} 
+\\
+&=& \frac{1}{J}\,\sum_{j=1}^{J}\!\prod_{n=1}^{N} f_{Y_n|X_n}(y^*_n|x_{n,j}\params \theta).
+\end{eqnarray}$$
+
+* This implies that if we generate trajectories by simulation, all we have to do is compute the likelihood of the data with given each trajectory and average.
+
+* Let's go back to the boarding school influenza outbreak to see what this would look like.
+
+* Let's reconstruct the toy SIR model we were working with.
+
+```{r sir-construct}
+bsflu <- read.table("bsflu_data.txt")
+
+sir_step <- Csnippet("
+  double dN_SI = rbinom(S,1-exp(-Beta*I/N*dt));
+  double dN_IR = rbinom(I,1-exp(-gamma*dt));
+  S -= dN_SI;
+  I += dN_SI - dN_IR;
+  R += dN_IR;
+  H += dN_IR;
+")
+
+sir_init <- Csnippet("
+  S = nearbyint(N)-1;
+  I = 1;
+  R = 0;
+  H = 0;
+")
+
+dmeas <- Csnippet("lik = dbinom(B,H,rho,give_log);")
+rmeas <- Csnippet("B = rbinom(H,rho);")
+
+pomp(bsflu,times="day",t0=0,
+     rprocess=euler.sim(sir_step,delta.t=1/5),
+     initializer=sir_init,rmeasure=rmeas,dmeasure=dmeas,
+     zeronames="H",statenames=c("H","S","I","R"),
+     paramnames=c("Beta","gamma","rho","N")) -> sir
+```
+
+* Let's generate a bunch of simulated trajectories at some particular point in parameter space.
+
+```{r bbs-mc-like-2,results='markup'}
+simulate(sir,params=c(Beta=2,gamma=1,rho=0.5,N=2600),
+         nsim=10000,states=TRUE) -> x
+matplot(time(sir),t(x["H",1:50,]),type='l',lty=1,
+        xlab="time",ylab="H",bty='l',col='blue')
+lines(time(sir),obs(sir,"B"),lwd=2,col='black')
+```
+
+* We can use the function `dmeasure` to evaluate the log likelihood of the data given the states, the model, and the parameters:
+
+```{r bbs-mc-like-3,results='markup',cache=T}
+ell <- dmeasure(sir,y=obs(sir),x=x,times=time(sir),log=TRUE,
+                params=c(Beta=2,gamma=1,rho=0.5,N=2600))
+dim(ell)
+```
+
+* According to the equation above, we should sum up the log likelihoods across time:
+
+```{r bbs-mc-like-4,results='markup'}
+ell <- apply(ell,1,sum); summary(exp(ell)); logmeanexp(ell,se=TRUE)
+```
+
+* The likelihood appears to be very low, but the error in the estimate is very high and therefore the estimated likelihood is very imprecise.
+
+* We are going to need very many simulations to get an estimate of the likelihood sufficiently precise to be of any use in parameter estimation or model selection.
+
+* What's the problem? Essentially, far too many of the trajectories don't pass near the data. Moreover, once a trajectory diverges from the data, it almost never comes back.
+
+* This is a consequence of the fact that we are proposing trajectories in a way that is completely unconditional on the data.
+
+* The problem will only get worse with longer data sets!
+
+## The particle filter
+
+* Fortunately, we can compute the likelihood for a POMP model by a much more efficient algorithm than direct Monte Carlo integration. We proceed by factorizing the likelihood in a different way.
+$$\lik(\theta)=f_{Y_{1:N}}{y^*_{1:N}\params \theta}
+=\prod_{n}\,f_{Y_N|Y_{1:N-1}}{y^*_n|y^*_{1:n-1}\params\theta} 
+=\prod_{n}\,\int_{x_{n}}\,f_{Y_n|X_n}{y^*_n|x_n\params\theta}\,f_{X_n|Y_{1:n-1}}{x_n|y^*_{1:n-1}\params\theta}\, dx_{n}.$$
+
+* Recall the prediction and filtering formula, using the Markov property to obtain
+$$f_{X_n|Y_{1:n-1}}{x_n|y^*_{1:n-1}\params \theta} 
+= \int_{x_{n-1}}\,f_{X_n|X_{n-1}}(x_n|x_{n-1}\params\theta)\, f_{X_{n-1}|Y_{1:n-1}}(x_{n-1}\given y^*_{1:n-1}\params \theta) \, dx_{n-1},$$
+and Bayes' theorem to get
+$$\begin{eqnarray}
+&&f_{X_n|Y_{1:n}}(x_n|y^*_{1:n}\params \theta)
+\\
+&&\quad = f_{X_n|Y_n,Y_{1:n-1}}(x_n|y^*_n,y^*_{1:n-1}\params \theta) 
+\\
+&&\quad =\frac{f_{Y_n|X_n}(y^*_{n}|x_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(x_{n}|y^*_{1:n-1}\params\theta)}{\int
+f_{Y_n|X_n}(y^*_{n}|\tilde x_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(\tilde x_{n}|y^*_{1:n-1}\params\theta)\, d\tilde x_n}.
+\end{eqnarray}$$
+
+* This suggests that we keep track of two key distributions.
+We'll refer to the distribution of $X_n | Y_{1:n-1}\equals y^*_{1:n-1}$ as the **prediction distribution** at time $t_n$ and
+the distribution of $X_{n} | Y_{1:n}\equals y^*_{1:n}$ as the **filtering distribution** at time $t_n$.
+
+* Let's use Monte Carlo techniques to estimate the integrals.
+
+1. Suppose $X_{n-1,j}^{F}$, $j=1,\dots,J$ is a set of $J$ points drawn from the filtering distribution at time $n-1$.
+
+2. We obtain a sample $X_{n,j}^{P}$ of points drawn from the prediction distribution at time $t$ by simply simulating the process model:
+$$X_{n,j}^{P} \sim \mathrm{process}(X_{n-1,j}^{F},\theta), \qquad j=1,\dots,J.$$
+
+3. Having obtained $x_{n,j}^{P}$, we obtain a sample of points from the filtering distribution at time $t_n$ by *resampling* from $\big\{X_{n,j}^{P},j\in 1:J\big\}$ with weights 
+$$w_{n,j}=f_{Y_n|X_n}{y^*_{n}|X^P_{n,j}\params\theta}.$$
+
+4. The Monte Carlo principle tells us that the conditional likelihood
+$$\begin{eqnarray}
+\lik_n(\theta) &=& f_{Y_n|Y_{1:n-1}}{y^*_n|y^*_{1:n-1}\params\theta}
+\\
+&=& 
+\int
+f_{Y_n|X_n}(y^*_{n}|x_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(x_{n}|y^*_{1:n-1}\params\theta)\, dx_n.
+\end{eqnarray}
+$$
+is approximated by
+$$\hat\lik_n(\theta)  \approx \frac{1}{N}\,\sum_j\, f_{Y_n|X_n}(y^*_{n}|X_{n,j}^{P}\params\theta).$$
+
+5. We can iterate this procedure through the data, one step at a time, alternately simulating and resampling, until we reach $n=N$.
+
+6. The full log likelihood then has approximation
+$$\begin{eqnarray}\loglik(\theta) 
+&=& \log{\lik(\theta)} 
+\\
+&=& \sum_n \log{\lik_n(\theta)}
+\\
+&\approx& \sum_n\log\hat\lik_n(\theta).
+$$
+
+* The above procedure is known as the **sequential Monte Carlo** (SMC) algorithm or the **particle filter**.
+
+* Good references for further reading include @kitagawa87, @arulampalam02 and the book edited by @doucet01.
+
+
+
+## Sequential Monte Carlo in **pomp**
+
+* Here, we'll get some practical experience with the particle filter, and the likelihood function, in the context of our influenza-outbreak case study.
+
+```{r sir-sim1}
+sims <- simulate(sir,params=c(Beta=2,gamma=1,rho=0.8,N=2600),nsim=20,
+                 as.data.frame=TRUE,include.data=TRUE)
+
+ggplot(sims,mapping=aes(x=time,y=B,group=sim,color=sim=="data"))+
+  geom_line()+guides(color=FALSE)
+```
+
+
+* In **pomp**, the basic particle filter is implemented in the command `pfilter`.
+We must choose the number of particles to use by setting the `Np` argument.
+
+```{r sir-pfilter-1,results='markup',cache=T}
+pf <- pfilter(sir,Np=5000,params=c(Beta=2,gamma=1,rho=0.8,N=2600))
+logLik(pf)
+```
+
+* We can run a few particle filters to get an estimate of the Monte Carlo variability:
+
+```{r sir-pfilter-2,results='markup',cache=T}
+pf <- replicate(10,pfilter(sir,Np=5000,params=c(Beta=2,gamma=1,rho=0.8,N=2600)))
+ll <- sapply(pf,logLik); ll
+logmeanexp(ll,se=TRUE)
+```
+
+* Note that we're careful here to counteract Jensen's inequality.
+The particle filter gives us an unbiased estimate of the likelihood, not of the log-likelihood.
+
+## The graph of the likelihood function: The likelihood surface
+
+* Intuitively, it can be helpful to think of the geometric surface defined by the likelihood function. 
+
+* If $\Theta$ is two-dimensional, then the surface $\ell(\theta)$ has features like a landscape. 
+
+    * Local maxima of $\ell(\theta)$ are peaks
+
+    * local minima are valleys
+
+    * peaks may be separated by a valley or may be joined by a ridge. If you go along the ridge, you may be able to go from one peak to the other without losing much elevation. Narrow ridges can be easy to fall off, and hard to get back on to.
+
+* In higher dimensions, one can still think of peaks and valleys and ridges. However, as the dimension increases it quickly becomes hard to imagine the surface.
+
+* To get an idea of what the likelihood surface looks like in the neighborhood of the default parameter set supplied by `sir`, we can construct a **likelihood slice**.
+
+* We'll make slices in the $\beta$ and $\gamma$ directions.
+Both slices will pass through the default parameter set.
+
+```{r sir-like-slice,cache=TRUE,results='hide'}
+sliceDesign(
+  c(Beta=2,gamma=1,rho=0.8,N=2600),
+  Beta=rep(seq(from=0.5,to=4,length=40),each=3),
+  gamma=rep(seq(from=0.5,to=2,length=40),each=3)) -> p
+
+require(foreach)
+require(doMC)
+registerDoMC(cores=5)        ## number of cores on this machine
+
+set.seed(998468235L,kind="L'Ecuyer")
+mcopts <- list(preschedule=FALSE,set.seed=TRUE)
+
+foreach (theta=iter(p,"row"),.combine=rbind,
+         .inorder=FALSE,.options.multicore=mcopts) %dopar% 
+ {
+   pfilter(sir,params=unlist(theta),Np=5000) -> pf
+   theta$loglik <- logLik(pf)
+   theta
+ } -> p
+```
+
+* You can see from the code what is meant by a likelihood slice.
+
+<br>
+
+--------
+
+-------
+
+### Exercise: Write down the definition of a likelihood slice in mathematical notation.
+
+### Exercise: Note that a likelihood slice is different from a likelihood profile
+
+* What is the difference between a likelihood slice and a profile from a computational perspective?
+
+* What is the difference between the statistical interpretation of a likelihood slice and a profile. For example, compare their roles in constructing confidence intervals and hypothesis tests.
+
+* What is the purpose of computing a likelihood slice? What is the purpose of computing a likelihood profile? 
+
+<br>
+
+---------
+
+---------
+
+
+* Note that the slice computation used the **foreach** package with the multicore backend (**doMC**) to parallelize these computations.
+
+* To ensure that we have high-quality random numbers in each parallel *R* session, we use a parallel random number generator (`kind="L'Ecuyer"`, `.options.multicore=list(set.seed=TRUE)`).
+
+```{r sir-like-slice-plot,cache=F,results="hide"}
+foreach (v=c("Beta","gamma")) %do% 
+{
+  x <- subset(p,slice==v)
+  plot(x[[v]],x$loglik,xlab=v,ylab="loglik")
+}
+```
+
+
+------------------------
+
+### Exercise: Likelihood slices
+
+Add likelihood slices along the $\rho$ direction.
+
+------------------------
+
+Slices offer a very limited perspective on the geometry of the likelihood surface.
+With just two parameters, we can evaluate the likelihood at a grid of points and visualize the surface directly.
+```{r sir-grid1}
+expand.grid(Beta=seq(from=1,to=4,length=50),
+            gamma=seq(from=0.7,to=3,length=50),
+            rho=0.8,
+            N=2600) -> p
+
+foreach (theta=iter(p,"row"),.combine=rbind,
+         .inorder=FALSE,.options.multicore=mcopts) %dopar% 
+ {
+   pfilter(sir,params=unlist(theta),Np=5000) -> pf
+   theta$loglik <- logLik(pf)
+   theta
+ } -> p
+
+```
+```{r sir-grid1-plot}
+pp <- mutate(p,loglik=ifelse(loglik>max(loglik)-100,loglik,NA))
+ggplot(data=pp,mapping=aes(x=Beta,y=gamma,z=loglik,fill=loglik))+
+  geom_tile(color=NA)+
+  geom_contour(color='black',binwidth=3)+
+  scale_fill_gradient()+
+  labs(x=expression(beta),y=expression(gamma))
+```
+
+------------------------
+
+### Exercise: 2D likelihood slice
+
+Compute a slice of the likelihood in the $\beta$-$N$ plane.
+
+------------------------
+
+
+```{r sir-grid2,eval=FALSE,include=FALSE,purl=FALSE,fig.show=FALSE}
+expand.grid(Beta=seq(from=1,to=3,length=50),
+            gamma=1,
+            rho=0.8,
+            N=seq(from=1600,to=3000,length=50)) -> p
+
+foreach (theta=iter(p,"row"),.combine=rbind,
+         .inorder=FALSE,.options.multicore=mcopts) %dopar% 
+ {
+   pfilter(sir,params=unlist(theta),Np=5000) -> pf
+   theta$loglik <- logLik(pf)
+   theta
+ } -> p
+
+```
+```{r sir-grid2-plot,eval=FALSE,include=FALSE,purl=FALSE}
+pp <- mutate(p,loglik=ifelse(loglik>max(loglik)-100,loglik,NA))
+ggplot(data=pp,mapping=aes(x=Beta,y=N,z=loglik,fill=loglik))+
+  geom_tile(color=NA)+
+  geom_contour(color='black',binwidth=3)+
+  scale_fill_gradient()+
+  labs(x=expression(beta),y=expression(N))
+```
+
+
+
+## Maximizing the likelihood using the particle filter
+
+* First, a few cautionary words about parameter estimation for dynamic models
+
+### Causal, mechanistic interpretation of parameter estimates
+
+* When we write down a mechanistic model for a system, we have some idea of what we intend parameters to mean. In epidemiology, for example, we interpret parameters as  a reporting rate, a contact rate between individuals, an immigration rate, a duration of immunity, etc. 
+
+* The data and the parameter estimation procedure do not know about our intended interpretation of the model. It can and does happen that some parameter estimates statistically consistent with the data may be scientifically absurd according to the scientific reasoning that went into building the model. 
+
+* This can arise as a consequence of weak identifiability. 
+
+* It can also be a warning that the data do not agree that our model represents reality in the way we had hoped. Perhaps more work is needed on model development.
+
+* Scientifically unreasonable parameter estimates can sometimes be avoided by fixing some parameters at known, reasonable values. However, this risks suppressing the warning that the data were trying to give about weaknesses in the model, or in the biological interpretation of it.
+
+* This issue will be discussed further when it arises in case studies.
+
+<br>
+
+-------
+
+------
+
+### Likelihood maximization for the boarding school flu example
+
+* We saw above that the default parameter set for the 'bsflu' pomp object is not particularly close to the MLE.
+
+* One way to find the MLE is to try optimizing the estimated likelihood, computed by the particle filter, directly.
+
+* There are many optimization algorithms to choose from, and many implemented in R.
+
+* Three issues arise immediately.
+
+1. The particle filter gives us a stochastic estimate of the likelihood.
+We can reduce this variability by making the number of particles, `Np`, larger. 
+However, we cannot make it go away.
+If we use a deterministic optimizer (i.e., one that assumes the objective function is evaluated deterministically), then we must control this variability somehow.
+For example, we can fix the seed of the pseudo-random number generator.
+A side effect will be that the objective function becomes jagged, marked by many small local knolls and pits.
+Alternatively, we can use a stochastic optimization algorithm, with which we will be only be able to obtain estimates of our MLE.
+This is the trade-off between a noisy and a rough objective function.
+
+2. Because the particle filter gives us just an estimate of the likelihood and no information about the derivative, we must choose an algorithm that is "derivative-free".
+There are many such, but we can expect less efficiency than would be possible with derivative information.
+Note that finite differencing is not an especially promising way of constructing derivatives. 
+The price would be a $n$-fold increase in cpu time, where $n$ is the dimension of the parameter space.
+Also, since the likelihood is only estimated, we would expect the derivative estimates to be noisy.
+
+3. Finally, the parameters are constrained to be positive, and $\rho < 1$.
+We must therefore select an optimizer that can solve this *constrained maximization problem*, or figure out some of way of turning it into an unconstrained maximization problem.
+For the latter purpose, one can transform the parameters onto a scale on which there are no constraints.
+
+First, let's try deterministic optimization of a rough function.
+We'll try using `optim`'s default method: Nelder-Mead, fixing the random-number generator seed to make the likelihood calculation deterministic.
+
+
+
+<br>
+
+-------
+
+
+--------------------------
+
+
+
+
+## An iterated filtering algorithm (IF2)
+
+* We use the IF2 algorithm of @ionides15. 
+
+* A particle filter is carried out with the parameter vector for each particle doing a random walk.
+
+* At the end of the time series, the collection of parameter vectors is recycled as starting parameters for a new particle filter with a smaller random walk variance.
+
+* Theoretically, this procedure converges toward the region of parameter space maximizing the maximum likelihood.
+
+* Empirically, we can test this claim on examples.
+
+### IF2 algorithm pseudocode
+
+__model input__:
+Simulators for $f_{X_0}(x_0;\theta)$ and $f_{X_n|X_{n-1}}(x_n| x_{n-1}; \theta)$;
+evaluator for $f_{Y_n|X_n}(y_n| x_n;\theta)$;
+data, $y^*_{1:N}$ 
+
+__algorithmic parameters__:
+Number of iterations, $M$;
+number of particles, $J$;
+initial parameter swarm, $\{\Theta^0_j, j=1,\dots,J\}$;
+perturbation density, $h_n(\theta|\varphi;\sigma)$;
+perturbation scale, $\sigma_{1{:}M}$ 
+
+__output__:
+Final parameter swarm, $\{\Theta^M_j, j=1,\dots,J\}$ 
+
+
+1. $\quad$ For $m$ in $1{:} M$
+2. $\quad\quad\quad$ $\Theta^{F,m}_{0,j}\sim h_0(\theta|\Theta^{m-1}_{j}; \sigma_m)$ for $j$ in $1{:} J$
+3. $\quad\quad\quad$ $X_{0,j}^{F,m}\sim f_{X_0}(x_0 ; \Theta^{F,m}_{0,j})$ for $j$ in $1{:} J$
+4. $\quad\quad\quad$ For $n$ in $1{:} N$
+5. $\quad\quad\quad\quad\quad$ $\Theta^{P,m}_{n,j}\sim h_n(\theta|\Theta^{F,m}_{n-1,j},\sigma_m)$ for $j$ in $1{:} J$
+6. $\quad\quad\quad\quad\quad$ $X_{n,j}^{P,m}\sim f_{X_n|X_{n-1}}(x_n | X^{F,m}_{n-1,j}; \Theta^{P,m}_j)$ for $j$ in $1{:} J$
+7. $\quad\quad\quad\quad\quad$ $w_{n,j}^m = f_{Y_n|X_n}(y^*_n| X_{n,j}^{P,m} ; \Theta^{P,m}_{n,j})$ for $j$ in $1{:} J$
+8. $\quad\quad\quad\quad\quad$ Draw $k_{1{:}J}$ with $P[k_j=i]=  w_{n,i}^m\Big/\sum_{u=1}^J w_{n,u}^m$
+9.  $\quad\quad\quad\quad\quad$ $\Theta^{F,m}_{n,j}=\Theta^{P,m}_{n,k_j}$ and $X^{F,m}_{n,j}=X^{P,m}_{n,k_j}$ for $j$ in $1{:} J$
+10. $\quad\quad\quad$ End For
+11. $\quad\quad\quad$ Set $\Theta^{m}_{j}=\Theta^{F,m}_{N,j}$ for $j$ in $1{:} J$
+12. $\quad$ End For
+
+__comments__:
+
+* The $N$ loop (lines 4 through 10) is a basic particle filter applied to a model with stochastic perturbations to the parameters.
+
+* The $M$ loop repeats this particle filter with decreasing perturbations.
+
+* The superscript $F$ in $\Theta^{F,m}_{n,j}$ and $X^{F,m}_{n,j}$ denote solutions to the _filtering_ problem, with the particles $j=1,\dots,J$ providing a Monte Carlo representation of the conditional distribution at time $n$ given data $y^*_{1:n}$ for filtering iteration $m$.
+
+* The superscript $P$ in $\Theta^{P,m}_{n,j}$ and $X^{P,m}_{n,j}$ denote solutions to the _prediction_ problem, with the particles $j=1,\dots,J$ providing a Monte Carlo representation of the conditional distribution at time $n$ given data $y^*_{1:n-1}$ for filtering iteration $m$.
+
+* The _weight_ $w^m_{n,j}$ gives the likelihood of the data at time $n$ for particle $j$ in filtering iteration $m$.
+
+### Choosing the algorithmic settings for IF2
+
+* The initial parameter swarm, $\{ \Theta^0_j, j=1,\dots,J\}$, usually consists of $J$ identical replications of some starting parameter vector.
+
+* $J$ is set to be sufficient for particle filtering. By the time of the last iteration ($m=M$) one should not have effective sample size close to 1. 
+
+* Perturbations are usually chosen to be Gaussian, with $\sigma_m$ being a scale factor for iteration $m$:
+$$h_n(\theta|\varphi;\sigma) \sim N[\varphi, \sigma^2_m V_n].$$
++ $V_n$ is usually taken to be diagonal,
+$$ V_n = \left( \begin{array}{ccccc}
+v_{1,n}^2 & 0 & 0 & \rightarrow & 0 \\
+0 & v_{2,n}^2 &  0 & \rightarrow & 0 \\
+0 & 0 & v_{3,n}^2 & \rightarrow & 0 \\
+\downarrow & & & \searrow & \downarrow \\
+0 & 0 & 0 & \rightarrow & v_{p,n}^2 \end{array}\right).$$
++ If $\theta_i$ is a parameter that affects the dynamics or observations throughout the timeseries, it is called a __regular parameter__, and it is often appropriate to specify
+$$ v_{i,n} = v_i,$$
++ If $\theta_j$ is a parameter that affects only the initial conditions of the dynamic model, it is called an __initial value parameter__ (IVP) and it is appropriate to specify
+$$ v_{j,n} = \left\{\begin{array}{ll} v_j & \mbox{if $n=0$} \\
+0 & \mbox{if $n>0$} \end{array}\right.$$
++ If $\theta_k$ is a break-point parameter that models how the system changes at time $t_q$ then $\theta_k$ is like an IVP at time $t_q$ and it is appropriate to specify
+$$ v_{j,n} = \left\{\begin{array}{ll} v_j & \mbox{if $n=q$} \\
+0 & \mbox{if $n\neq q$} \end{array}\right.$$
+
+* $\sigma_{1:M}$ is called a __cooling schedule__, following a thermodynamic analogy popularized by [simulated annealing](https://en.wikipedia.org/wiki/Simulated_annealing). As $\sigma_m$ becomes small, the system cools toward a "freezing point". If the algorithm is working sucessfully, the freezing point should be close to the lowest-energy state of the system, i.e., the MLE.
+
+
+* It is generally helpful for optimization to provide transformations of the parameters so that (on the estimation scale) they are real-valued and have uncertainty on the order of 1 unit. For example, one typically takes a logarithmic transformation of positive parameters and a logistic transformation of $[0,1]$ valued parameters.
++ On this scale, it is surprisingly often effective to take
+$$ v_i = 0.02$$
+for regular parameters (RPs) and 
+$$ v_j = 0.1$$
+for initial value parameters (IVPs).
+
+* We suppose that $\sigma_1=1$, since the scale of the parameters is addressed by the matrix $V_n$ . Early on in an investigation, one might take $M=100$ and $\sigma_M=0.1$. Later on, consideration of diagnostic plots may suggest refinements. 
+
+* It is surprising that useful general advice exists for these quantities that could in principle be highly model-specific.
+Here is one possible explanation: the precision of interest is often the second significant figure and there are often order 100 observations (10 monthly obsevations would be too few to fit a mechanistic model; 1000 would be unusual for an epidemiological system). 
+
+<br>
+
+-------
+
+-------
+
+## Applying IF2 to a boarding school influenza outbreak
+
+* We're going to reintroduce the boarding school flu example. This provides a reminder, but also lets us develop the model and the corresponding pomp object in a way that generalizes to other situations. It will be a template for the case studies that follow.
+
+* For a relatively simple epidemiological example of IF2, we consider fitting a stochastic SIR model to an influenza outbreak in a British boarding school [@anonymous78]. Reports consist of the number of children confined to bed for each of the 14 days of the outbreak. The total number of children at the school was 763, and a total of 512 children spent time away from class. Only one adult developed influenza-like illness, so adults are omitted from the data and model. First, we read in the boarding school flu (bsflu) data:
+```{r load_bbs}
+bsflu_data <- read.table("bsflu_data.txt")
+```
+
+* Our model is a variation on a basic SIR Markov chain, with state $X(t)=(S(t),I(t),R_1(t),R_2(t),R_3(t) )$ giving the number of individuals in the susceptible and infectious categories, and three stages of recovery. 
+
+* The recovery stages, $R_1$, $R_2$ and $R_3$, are all modeled to be non-contagious. 
+
+* $R_1$ consists of individuals who are bed-confined if they show symptoms. 
+
+* $R_2$ consists of individuals who are convalescent if they showed symptoms.
+
+* $R_3$ consists of recovered individuals who have returned to schoolwork if they were symtomatic.  
+
+* The observation on day $n$ of the observed epidemic (with $n=1$ being 22 January) consists of the numbers of children who are bed-confined and convalescent. 
+
+* These measurements are modeled as $Y_n=(B_n,C_n)$ with $B_n\sim\mathrm{Poisson}(\rho R_1(t_n))$ and $C_n\sim\mathrm{Poisson}(\rho R_2(t_n))$. 
+
+* Here, $\rho$ is a reporting rate corresponding to the chance of being symptomatic.
+
+* The index case for the epidemic was proposed to be a boy returning to Britain from Hong Kong, who was reported to have a transient febrile illness
+from 15 to 18 January. It would therefore be reasonable to initialize the epidemic with $I(t_0)=1$ at $t_0=-6$. This is a little tricky to reconcile with the rest of the data; for now, we avoid this issue by instead initializing with  $I(t_0)=1$ at $t_0=0$. All other individuals are modeled to be initially susceptible.
+
+* Our Markov transmission model is that each individual in $S$ transitions to $I$ at rate $\beta I(t)$; each individual in $I$ transitions at rate $\mu_I$ to $R_1$. Subsequently, the individual moves from $R_1$ to $R_2$ at  rate $\mu_{R_1}$, and finally from $R_2$ to $R_3$ at rate $\mu_{R_2}$. 
+
+* Therefore, $1/\mu_I$ is the mean infectious time prior to bed-confinement; $1/R_1$ is the mean duration of bed-confinement for symptomatic cases;  $1/R_2$ is the mean duration of convalescence for symptomatic cases. All rates have units $\mathrm{day}^{-1}$. 
+
+* This model has limitations and weaknesses. Writing down and fitting a model is a starting point for data analysis, not an end point. In particular, one should try model variations. For example, one could include a latency period for infections, or one could modify the model to give a better description of the bed-confinement and convalescence processes. Ten individuals received antibiotics for secondary infections, and they had longer bed-confinement and convalescence times. Partly for this reason, we will initially fit only the bed-confinement data, using $Y_n=B_n$ for our `dmeasure`. 
+
+* For the code, we represent the states ($S$, $I$, $R_1$, $R_2$) and the parameters ($\beta$, $\mu_I$, $\rho$, $\mu_{R_1}$, $\mu_{R_2}$) as follows:
+
+```{r bsflu_names}
+bsflu_statenames <- c("S","I","R1","R2")
+bsflu_paramnames <- c("Beta","mu_I","rho","mu_R1","mu_R2")
+```
+
+The observation names ($B$, $C$) are the names of the data variables:
+
+```{r bsflu_obsnames}
+(bsflu_obsnames <- colnames(bsflu_data)[1:2])
+```
+
+We do not need a representation of $R_3$ since the total population size is fixed at $P=763$ and hence $R_3(t)=P-S(t)-I(t)-R_1(t)-R_2(t)$. 
+Now, we write the model code:
+
+```{r csnippets_bsflu}
+bsflu_dmeasure <- "
+  lik = dpois(B,rho*R1+1e-6,give_log);
+"
+
+bsflu_rmeasure <- "
+  B = rpois(rho*R1+1e-6);
+  C = rpois(rho*R2);
+"
+
+bsflu_rprocess <- "
+  double t1 = rbinom(S,1-exp(-Beta*I*dt));
+  double t2 = rbinom(I,1-exp(-dt*mu_I));
+  double t3 = rbinom(R1,1-exp(-dt*mu_R1));
+  double t4 = rbinom(R2,1-exp(-dt*mu_R2));
+  S -= t1;
+  I += t1 - t2;
+  R1 += t2 - t3;
+  R2 += t3 - t4;
+"
+
+bsflu_fromEstimationScale <- "
+ TBeta = exp(Beta);
+ Tmu_I = exp(mu_I);
+ Trho = expit(rho);
+"
+
+bsflu_toEstimationScale <- "
+ TBeta = log(Beta);
+ Tmu_I = log(mu_I);
+ Trho = logit(rho);
+"
+
+bsflu_initializer <- "
+ S=762;
+ I=1;
+ R1=0;
+ R2=0;
+"
+```
+
+We can now build the new `bsflu` pomp object.
+
+```{r pomp_bsflu}
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.75-1")
+bsflu2 <- pomp(
+  data=bsflu_data,
+  times="day",
+  t0=0,
+  rprocess=euler.sim(
+    step.fun=Csnippet(bsflu_rprocess),
+    delta.t=1/12
+  ),
+  rmeasure=Csnippet(bsflu_rmeasure),
+  dmeasure=Csnippet(bsflu_dmeasure),
+  fromEstimationScale=Csnippet(bsflu_fromEstimationScale),
+  toEstimationScale=Csnippet(bsflu_toEstimationScale),
+  obsnames = bsflu_obsnames,
+  statenames=bsflu_statenames,
+  paramnames=bsflu_paramnames,
+  initializer=Csnippet(bsflu_initializer)
+)
+plot(bsflu2)
+```
+
+* To develop and debug code, it is nice to have a version that runs extra quickly, for which we set `run_level=1`.  Here, `Np` is the number of particles (i.e., sequential Monte Carlo sample size), and `Nmif` is the number of iterations of the optimization procedure carried out below. Empirically, `Np=5000` and `Nmif=200` are around the minimum required to get stable results with an error in the likelihood of order 1 log unit for this example; this is implemented by setting `run_level=2`. One can then ramp up to larger values for more refined computations, implemented here by `run_level=3`.
+
+```{r run_level}
+run_level <- 2
+switch(run_level,
+       {bsflu_Np=100; bsflu_Nmif=10; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
+       {bsflu_Np=20000; bsflu_Nmif=100; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
+       {bsflu_Np=60000; bsflu_Nmif=300; bsflu_Neval=10; bsflu_Nglobal=100; bsflu_Nlocal=20}
+)
+```
+
+
+### Running a particle filter
+
+Before engaging in iterated filtering, it is often a good idea to check that the basic particle filter is working since iterated filtering builds on this technique. Here, carrying out slightly circular reasoning, we are going to test `pfilter` on a previously computed point estimate read in from [bsflu_params.csv](bsflu_params.csv):
+
+```{r bsflu_params}
+bsflu_params <- data.matrix(read.table("mif_bsflu_params.csv",row.names=NULL,header=TRUE))
+bsflu_mle <- bsflu_params[which.max(bsflu_params[,"logLik"]),][bsflu_paramnames]
+```
+
+We are going to treat $\mu_{R_1}$ and  $\mu_{R_2}$ as known, fixed at the empirical mean of the bed-confinement and convalescence times for symptomatic cases:
+
+```{r fixed_params}
+bsflu_fixed_params <- c(mu_R1=1/(sum(bsflu_data$B)/512),mu_R2=1/(sum(bsflu_data$C)/512))
+```
+
+* It is convenient to do some parallelization to speed up the computations. Most machines are multi-core nowadays, and using this computational capacity involves only 
+
+    1. the following lines of code to let R know you plan to use multiple processors; 
+
+    2. using the parallel for loop provided by 'foreach'.
+
+```{r parallel-setup,cache=FALSE}
+require(doParallel)
+cores <- 20
+registerDoParallel(cores)
+mcopts <- list(set.seed=TRUE)
+
+set.seed(396658101,kind="L'Ecuyer")
+```
+
+* We proceed to carry out replicated particle filters at this tentative MLE:
+
+```{r pf}
+stew(file=sprintf("pf-%d.rda",run_level),{
+  t_pf <- system.time(
+    pf <- foreach(i=1:20,.packages='pomp',
+                  .options.multicore=mcopts) %dopar% try(
+                    pfilter(bsflu2,params=bsflu_mle,Np=bsflu_Np)
+                  )
+  )
+  
+},seed=1320290398,kind="L'Ecuyer")
+
+(L_pf <- logmeanexp(sapply(pf,logLik),se=TRUE))
+```
+
+* In  `r round(t_pf["elapsed"],1)` seconds, we obtain an unbiased likelihood estimate of `r round(L_pf[1],2)` with a Monte standard error of `r round(L_pf[2],2)`.
+
+
+### A local search of the likelihood surface
+
+* Let's carry out a local search using `mif2` around this previously identified MLE. For that, we need to set the `rw.sd` and `cooling.fraction.50` algorithmic parameters:
+
+```{r box_search_local}
+bsflu_rw.sd <- 0.02
+bsflu_cooling.fraction.50 <- 0.5
+
+stew(file=sprintf("local_search-%d.rda",run_level),{
+  
+  t_local <- system.time({
+    mifs_local <- foreach(i=1:bsflu_Nlocal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  {
+      mif2(
+        bsflu2,
+        start=bsflu_mle,
+        Np=bsflu_Np,
+        Nmif=bsflu_Nmif,
+        cooling.type="geometric",
+        cooling.fraction.50=bsflu_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd=rw.sd(
+          Beta=bsflu_rw.sd,
+          mu_I=bsflu_rw.sd,
+          rho=bsflu_rw.sd
+        )
+      )
+      
+    }
+  })
+  
+},seed=900242057,kind="L'Ecuyer")
+
+```
+
+* Although the filtering carried out by `mif2` in the final filtering iteration generates an approximation to the likelihood at the resulting point estimate, this is not usually good enough for reliable inference. Partly, this is because some parameter perturbations remain in the last filtering iteration. Partly, this is because `mif2` is usually carried out with a smaller number of particles than is necessary for a good likelihood evaluation---the errors in `mif2` average out over many iterations of the filtering. 
+
+* Therefore, we evaluate the likelihood, together with a standard error, using replicated particle filters at each point estimate:
+
+```{r lik_local_eval}
+stew(file=sprintf("lik_local-%d.rda",run_level),{
+    t_local_eval <- system.time({
+    liks_local <- foreach(i=1:bsflu_Nlocal,.packages='pomp',.combine=rbind) %dopar% {
+      evals <- replicate(bsflu_Neval, logLik(pfilter(bsflu2,params=coef(mifs_local[[i]]),Np=bsflu_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=900242057,kind="L'Ecuyer")
+
+results_local <- data.frame(logLik=liks_local[,1],logLik_se=liks_local[,2],t(sapply(mifs_local,coef)))
+summary(results_local$logLik,digits=5)
+```
+
+* This investigation took  `r round(t_local["elapsed"]/60,1)` minutes for the maximization and `r round(t_local_eval["elapsed"]/60,1)` minutes for the likelihood evaluation. These repeated stochastic maximizations can also show us the geometry of the likelihood surface in a neighborhood of this point estimate:
+
+```{r pairs_local}
+pairs(~logLik+Beta+mu_I+rho,data=subset(results_local,logLik>max(logLik)-50))
+```
+
+<br>
+
+------
+
+------
+
+## A global search of the likelihood surface using randomized starting values
+
+* When carrying out parameter estimation for dynamic systems, we need to specify beginning values for both the dynamic system (in the state space) and the parameters (in the parameter space). By convention, we use  _initial values_ for the initialization of the dynamic system and _starting values_ for initialization of the parameter search.
+
+* Practical parameter estimation involves trying many starting values for the parameters. One can specify a large box in parameter space that contains all parameter vectors which seem remotely sensible. If an estimation method gives stable conclusions with starting values drawn randomly from this box, this gives some confidence that an adequate global search has been carried out. 
+
+* For our flu model, a box containing reasonable parameter values might be
+
+```{r box}
+bsflu_box <- rbind(
+  Beta=c(0.001,0.01),
+  mu_I=c(0.5,2),
+  rho = c(0.5,1)
+)
+```
+
+
+* We are now ready to carry out likelihood maximizations from diverse starting points. To simplify the code, we can reset only the starting parameters from `mifs_global[[1]]` since the rest of the call to `mif2` can be read in from `mifs_global[[1]]`:
+
+```{r box_eval}
+stew(file=sprintf("box_eval-%d.rda",run_level),{
+  
+  t_global <- system.time({
+    mifs_global <- foreach(i=1:bsflu_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  mif2(
+      mifs_local[[1]],
+      start=c(apply(bsflu_box,1,function(x)runif(1,x[1],x[2])),bsflu_fixed_params)
+    )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+```
+
+* As noted above, the approximate likelihood evaluation generated by `mif2` in the final filtering iteration is not usually good enough for reliable inference.  Therefore, we evaluate the likelihood, together with a standard error, using replicated particle filters at each point estimate:
+
+```{r lik_global_eval}
+stew(file=sprintf("lik_global_eval-%d.rda",run_level),{
+  t_global_eval <- system.time({
+    liks_global <- foreach(i=1:bsflu_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(bsflu_Neval, logLik(pfilter(bsflu2,params=coef(mifs_global[[i]]),Np=bsflu_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+
+results_global <- data.frame(logLik=liks_global[,1],logLik_se=liks_global[,2],t(sapply(mifs_global,coef)))
+summary(results_global$logLik,digits=5)
+```
+
+* It is good practice to build up a file of successful optimization results for subsequent investigation:
+
+```{r save_params,eval=FALSE}
+if (run_level>2) 
+  write.table(rbind(results_local,results_global),
+              file="mif_bsflu_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+```
+
+* Evaluation of the best result of this search gives a likelihood of `r round(max(results_global$logLik),1)` with a standard error of `r round(results_global$logLik_se[which.max(results_global$logLik)],1)`. This took in `r round(t_global["elapsed"]/60,1)` minutes for the maximization and `r round(t_global_eval["elapsed"]/60,1)` minutes for the evaluation.  Plotting these diverse parameter estimates can help to give a feel for the global geometry of the likelihood surface 
+
+```{r pairs_global}
+pairs(~logLik+Beta+mu_I+rho,data=subset(results_global,logLik>max(logLik)-250))
+```
+
+* We see that optimization attempts from diverse remote starting points end up with comparable likelihoods, even when the parameter values are quite distinct. This gives us some confidence in our maximization procedure. 
+
+## Exercises
+
+### Exercise: Construct a profile likelihood
+
+* How strong is the evidence about the contact rate, $\beta$, given this model and data? Use `mif2` to construct a profile likelihood. Due to time constraints, you may be able to compute only a preliminary version.
+
+* It is also possible to profile over the basic reproduction number, $R_0=\beta P/\mu_I$. Is this more or less well determined that $\beta$ for this model and data?
+
+### Exercise: Check the model source code
+
+* Check the source code for the `bsflu` `pomp` object. Does the code implement the model described?
+
+* For various reasons, it can be surprisingly hard to make sure that the written equations and the code are perfectly matched. Here are some things to think about:
+
+1. Papers should be written to be readable to as broad a community as possible. Code must be written to run successfully. People do not want to clutter papers with numerical details which they hope and belief are scientifically irrelevant. What problems can arise due to this, and what solutions are available?
+
+2. Suppose that there is an error in the coding of `rprocess`. Suppose that plug-and-play statistical methodology is used to infer parameters.  A conscientious researcher carries out a simulation study, using `simulate` to generate some realizations from the fitted model and checking that the inference methodology can successfully recover the known parameters for this model, up to some statistical error. Will this procedure help to identify the error in `rprocess`? If not, how does one debug `rprocess`? What research practices help minimize the risk of errors in simulation code?
+
+### Exercise: Assessing and improving algorithmic parameters
+
+Develop your own heuristics to try to improve the performance of `mif2` in the previous example. Specifically, for a global optimization procedure carried out using random starting values in the specified box, let $\hat\Theta_\mathrm{max}$ be a random Monte Carlo estimate of the resulting MLE, and let $\hat\theta$ be the true (unknown) MLE. We can define the maximization error in the log likelihood to be
+$$e = \ell(\hat\theta) - E[\ell(\hat\Theta_\mathrm{max})].$$
+We cannot directly evaluate $e$, since there is also Monte Carlo error in our evaluation of $\ell(\theta)$, but we can compute it up to a known precision. Plan some code to estimates $e$ for a search procedure using a computational effort of $JM=2\times 10^7$, comparable to that used for each mif computation in the global search. Discuss the strengths and weaknesses of this quantification of optimization success. See if you can choose $J$ and $M$ subject to this constraint, together with choices of `rw.sd` and the cooling rate, `cooling.fraction.50`, to arrive at a quantifiably better procedure. Computationally, you may not be readily able to run your full procedure, but you could run a quicker version of it.
+
+### Exercise: Finding sharp peaks in the likelihood surface
+
+* Even in this small, 3 parameter, example, it takes a considerable amount of computation to find the global maximum (with values of $\beta$ around 0.004) starting from uniform draws in the specified box. The problem is that, on the scale on which "uniform" is defined, the peak around $\beta\approx 0.004$ is very narrow. Propose and test a more favorable way to draw starting parameters for the global search, with better scale invariance properties.
+
+
+### Exercise: Adding a latent class
+
+* Modify the model to include a latent period between becoming exposed and becoming infectious. See what effect this has on the maximized likelihood.
+
+----------------------
+
+## References
+
