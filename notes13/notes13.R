@@ -199,7 +199,7 @@ bsflu2 <- pomp(
 plot(bsflu2)
 
 ## ----run_level-----------------------------------------------------------
-run_level <- 2
+run_level <- 3
 switch(run_level,
        {bsflu_Np=100; bsflu_Nmif=10; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
        {bsflu_Np=20000; bsflu_Nmif=100; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 

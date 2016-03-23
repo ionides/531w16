@@ -195,9 +195,9 @@ f_{Y_{1:N}}({y_{1:N}^*}{\, ; \,}\theta)
 <h4>The rejection method for uniform random variables on arbitrary sets</h4>
 <ul>
 <li><p>Let a random variable <span class="math">\(X\)</span> take values in <span class="math">\({\mathbb{R}}^{{\mathrm{dim}(X)}}\)</span>.</p></li>
-<li><p>Suppose that <span class="math">\(X\)</span> is <strong>uniformly distributed</strong> over a region <span class="math">\(D\subset {\mathbb{R}}^{{{\mathrm{dim}(X)}}}\)</span>. This means that, for any <span class="math">\({A}\subset{D}\)</span>, <span class="math">\[{\mathbb{P}}[X\in{A]}=\frac{\mathrm{area}(A)}{\mathrm{area}(D)}.\]</span> We write <span class="math">\[X \sim \mathrm{uniform}(D).\]</span></p></li>
+<li><p>Suppose that <span class="math">\(X\)</span> is <strong>uniformly distributed</strong> over a region <span class="math">\(D\subset {\mathbb{R}}^{{\mathrm{dim}(X)}}\)</span>. This means that, for any <span class="math">\({A}\subset{D}\)</span>, <span class="math">\[{\mathbb{P}}[X\in{A]}=\frac{\mathrm{area}(A)}{\mathrm{area}(D)}.\]</span> We write <span class="math">\[X \sim \mathrm{uniform}(D).\]</span></p></li>
 <li><p>Let’s suppose that we wish to simulate <span class="math">\(X\!\sim\!\mathrm{uniform}(D)\)</span>.</p></li>
-<li><p>Suppose that we don’t know how to directly simulate a random draw from <span class="math">\(D\)</span>, but we know <span class="math">\(D\)</span> is a subset of some nicer region <span class="math">\(U\subset {\mathbb{R}}^{{{\mathrm{dim}(X)}}}\)</span>.</p></li>
+<li><p>Suppose that we don’t know how to directly simulate a random draw from <span class="math">\(D\)</span>, but we know <span class="math">\(D\)</span> is a subset of some nicer region <span class="math">\(U\subset {\mathbb{R}}^{{\mathrm{dim}(X)}}\)</span>.</p></li>
 <li><p>If we know how to generate <span class="math">\(Y\!\sim\!\mathrm{uniform}(U)\)</span>, then we can simply do so until <span class="math">\({Y}\in{D}\)</span>, at which point we take <span class="math">\(X=Y\)</span>.</p></li>
 <li><p>Since for any <span class="math">\(A\subset{D}\)</span>, <span class="math">\[\begin{eqnarray}
 {\mathbb{P}}[X\in A] &amp;=&amp; {\mathbb{P}}[Y\in A |Y\in D]

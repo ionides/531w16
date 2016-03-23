@@ -27,8 +27,8 @@ csl: ../ecology.csl
 \newcommand\equals{{=\,}}
 \newcommand\nmc{j}
 \newcommand\Nmc{J}
-\newcommand\dimX{{\mathrm{dim}(X)}}
-\newcommand\dimY{{\mathrm{dim}(Y)}}
+\newcommand\dimX{\mathrm{dim}(X)}
+\newcommand\dimY{\mathrm{dim}(Y)}
 
 -----------------------------------
 
@@ -268,7 +268,7 @@ $$\begin{eqnarray}
 
 #### The rejection method for uniform random variables on arbitrary sets
 
-* Let a random variable $X$ take values in $\R^\dimX$.
+* Let a random variable $X$ take values in $\R^{\dimX}$.
 
 * Suppose that $X$ is **uniformly distributed** over a region $D\subset \R^{\dimX}$.
 This means that, for any ${A}\subset{D}$, 
