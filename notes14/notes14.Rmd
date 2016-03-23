@@ -1,0 +1,201 @@
+---
+title: "14. POMP inference: other approaches complementing likelihood-based analysis"
+author: "Edward Ionides"
+date: "3/22/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=12"
+    ]
+bibliography: notes14.bib
+csl: ecology.csl
+
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+\newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\matH{\mathbb{H}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+
+
+
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Please share and remix noncommercially, mentioning its origin.  
+![CC-BY_NC](cc-by-nc.png)
+
+These notes draw on material from [http://kingaa.github.io/sbied/stochsim/stochsim.html](http://kingaa.github.io/sbied/stochsim/stochsim.html)
+
+---
+
+
+\newcommand\expect[1]{\mathbb{E}\left[{#1}\right]}
+\newcommand\var[1]{\mathrm{Var}\left[{#1}\right]}
+\newcommand\dist[2]{\mathrm{#1}\left(#2\right)}
+\newcommand\dlta{\Delta}
+
+--------------------------
+
+Produced with **R** version `r getRversion()` and **pomp** version `r packageVersion("pomp")`.
+
+--------------------------
+
+```{r knitr-opts,include=FALSE,purl=FALSE,cache=FALSE}
+prefix <- "notes12"
+library(knitr)
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache.extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+  )
+
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  stringsAsFactors=FALSE,
+  encoding="UTF-8"
+  )
+```
+
+```{r prelims,echo=F,cache=F}
+set.seed(594709947L)
+require(ggplot2)
+theme_set(theme_bw())
+require(plyr)
+require(reshape2)
+require(foreach)
+require(doMC)
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.69-1")
+```
+
+<big><big><big>Objectives</big></big></big>
+
+
+1. To introduce various inference techniques for POMP models as alternatives to likelihood-based inference. 
+
+2. To undestand how these alternative techniques can be used to complement the use of likelihood based inference, despite their loss of statistical efficiency and/or additional assumptions.
+
+3. To provide examples of how these analyses can be carried out using the **pomp** package.
+
+<br>
+
+--------
+
+-------
+
+## Introduction
+
+Many, many statistical methods have been proposed for inference on POMP models [@he10,@king15]. The volume of research indicates both the importance and the difficulty of the problem. Let's start by considering three criteria to categorize inference methods: the plug-and-play property; full-information or feature-based; frequentist or Bayesian.
+
+### Plug-and-play (also called simulation-based) methods
+
+* Inference methodology that calls 'rprocess' but not 'dprocess' is said to be ___plug-and-play__. All popular modern Monte Carlo methods fall into this category. 
+
+* Simulation-based is equivalent to plug-and-play. 
++ Historically, simulation-based meant simulating forward from initial conditions to the end of the time series. 
++ However, particle filtering methods instead consider each observation interval sequentially. They carry out multiple, carefully selected, simulations over each interval.
+
+* We permit plug-and-play methods to call 'dmeasure'. A method that uses only 'rprocess' and 'rmeasure' is called doubly plug-and-play.
+
+* Two __non-plug-and-play__ methods (EM algorithms and MCMC) have theoretical convergence problems for nonlinear POMP models. The failures of these two workhorses of statistical computation have prompted development of alternative methodology.
+
+### Full-information and feature-based methods
+
+* __Full-information__ methods are defined to be those based on the likelihood function for the full data (i.e., likelihood-based frequentist inference and Bayesian inference).
+
+* __Feature-based__ methods either consider a summary statistic (a function of the data) or work with an an alternative to the likelihood.
+
+* Asymptotically, full_information methods are statistically efficient and feature-based methods are not.
++ Loss of statistical efficiency could potentially be an acceptable tradeoff for advantages in computational efficiency.
++ However, good low-dimensional summary statistics can be hard to find. 
++ When using statistically inefficient methods, it can be hard to know how much information you are losing. 
++ Intuition and scientific reasoning can be inadequate tools to derive informative low-dimensional summary statistics [@shrestha11,@ionides11-statSci].
+
+### Bayesian and frequentist methods
+
+* Recently, plug-and-play Bayesian methods have been discovered:
++ particle Markov chain Monte Carlo (PMCMC) [@andrieu10].
++ approximate Bayesian computation (ABC) [@toni09].
+
+* Prior belief specification is both the strength and weakness of Bayesian methodology:
++ The likelihood surface for nonlinear POMP models often contains nonlinear ridges and variations in curvature. 
++ These situations bring into question the appropriateness of independent priors derived from expert opinion on marginal distributions of parameters.
++ They also are problematic for specification of "flat" or "uninformative" prior beliefs.
++ Expert opinion can be treated as data for non-Bayesian analysis. However, our primary task is to identify the information in the data under investigation, so it can be helpful to use methods that do not force us to make our conclusions dependent on quantification of prior beliefs.
+
+* A good general reference on likelihood and its role in scientific inference is @Pawitan2001.
+
+### Full-information, plug-and-play, frequentist methods
+
+* Iterated filtering methods [@ionides06,@ionides15] are the only currently available, full-information, plug-and-play, frequentist methods for POMP models.
+
+* Iterated filtering methods have been shown to solve likelihood-based inference problems for epidemiological situations which are computationally intractable for available Bayesian methodology [@ionides15].
+
+### Summary of POMP inference methodologies
+
+
+
+------------------------
+
+|  |                 | __Frequentist__        | __Bayesian__        |
+| --- | ----------------- | ------------------ | ------------- |
+| __Plug-and-play__ | __Full-information__  | iterated filtering | particle MCMC |
+| | __Feature-based__     | simulated moments  | ABC           |
+| |                 | synthetic likelihood  |                 |
+| | | | |
+| __Not-plug-and-play__ | __Full-information__  |EM algorithm       | MCMC |
+| |                  |Kalman filter      |
+| | __Feature-based__     |Yule-Walker        | extended Kalman filter |
+| |                   |extended Kalman filter |
+
+-----------------------------------------------
+
+1. Yule-Walker is the method of moments for ARMA, a linear Gaussian POMP.
+
+2. The Kalman filter gives the exact likelihood for a linear Gaussian POMP. The extended Kalman filter gives an approximation for nonlinear models that can be used for quasi-likelihood or quasi-Bayesian inference.

@@ -86,6 +86,8 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 12. [Dynamic models and their simulation by Euler’s method](notes12/notes12.html). [(R script)](notes12/notes12.R)
 
+13. [Practical likelihood-based inference for POMP models](notes13/notes13.html). [(R script)](notes13/notes13.R)
+
 --------
 
 ## Homework assignments
