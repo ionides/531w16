@@ -4,25 +4,22 @@ author: "Stats 531, Winter 2016"
 output:
   html_document:
     theme: flatly
-    toc: yes
+    toc: no
 ---
 
 \newcommand\prob{\mathbb{P}}
 \newcommand\E{\mathbb{E}}
 \newcommand\var{\mathrm{Var}}
 \newcommand\cov{\mathrm{Cov}}
+\newcommand\data[1]{#1^*}
 
 --------
 
--------
 
-<big><big><big>Objective</big></big></big>
+<big><big><big>Objectives</big></big></big>
 
-To provide practical experience working with POMP models. 
+To gain practical experience working with POMP models, we start with installing the **pomp** package and proceed to two introductory exercises.
 
-<br>
-
--------
 
 ------
 
@@ -94,14 +91,50 @@ You will need the ability to compile C code and dynamically link it into an R se
 
 ------
 
-------
 
 ## Exercises
 
-To be assigned later...
+Please submit to Canvas an Rmd file addressing the following questions. Your Rmd file can read in the *Parus major* data from the internet, e.g., by
+```
+dat <- read.csv("http://ionides.github.io/531w16/notes11/parus.csv")
+```
 
-<br>
+------------
 
--------
+**<big>Question 8.1</big>**. Reformulating the Ricker model.
 
-------
+The Ricker equation can be reparameterized so that the scaling of $P_n$ is explicit:
+$$P_{n+1} = r\,P_{n}\,\exp\left(-\frac{P_{n}}{k}\right).$$
+Modify the `pomp` object created in the notes to reflect this reparameterization. Also, Modify the measurement model so that the data $\data{y_n}$ is modeled as 
+$$Y_n |P_n \sim \mathrm{Negbin}(\phi\,P_n,\psi).$$
+Here, $\mathrm{Negbin}(\mu,\psi)$ is the negative binomial distribution with mean $\mu$ and  probability parameter $\psi$, and therefore variance $\mu/\psi$. This parameterization corresponds in R to `rbinom(...,mu,prob)`. See `?rnbinom` for documentation on the negative binomial distribution and [the R Extensions Manual section on distribution functions](http://cran.r-project.org/doc/manuals/r-release/R-exts.html#Distribution-functions) for information on how to access these in C. 
+
+Try simulating from a few choices of the parameters, and present one simulation from a set of parameters that shows oscillatory behavior.
+
+----------
+
+**<big>Question 8.2</big>**. Coding a new model.
+
+Construct a pomp object for the *Parus major* data and the stochastic Beverton-Holt model,
+$$P_{n+1} = \frac{a\,P_n}{1+b\,P_n}\,\varepsilon_n,$$
+where $a$ and $b$ are parameters and
+$$\varepsilon_t \sim \mathrm{Lognormal}(-\tfrac{1}{2}\sigma^2,\sigma^2).$$
+Assume the same measurement model as we used for the Ricker model. Try simulating from a few choices of the parameters. What are the similarities and differences between simulations you obtain from the Beverton-Holt model and those from the Ricker model? Present one simulation to support your comments.
+
+----------
+
+**<big>Question 8.3</big>**. How long did this homework take?
+
+This homework is conceptually quite simple, but involves overcoming various technical hurdles. The hurdles could be overcome quite quickly, or could turn into a longer battle.
+
+To make progress on statistical inference for POMP models, we have to solve these underlying computational issues.
+
+If you get stuck, ask for help from your peers and/or Dao and/or me. Please report how much time this homework ends up taking, to help me monitor how many difficulties are encountered.
+
+---------------
+
+
+
+
+
+

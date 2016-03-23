@@ -194,35 +194,51 @@ ggplot(data=y,
 * **Warning: this section is an example of what NOT to do!**
  
 * We can imagine using [Monte Carlo integration](./monteCarlo.html#monte-carlo-integration) for computing the likelihood of a state space model,
-$$\lik(\theta)=\prob{y_{1:T}|\theta}=\sum_{x_1}\cdots\sum_{x_T}\!\prod_{t=1}^{T}\!\prob{y_t|x_t,\theta}\,\prob{x_t|x_{t-1},\theta}.$$
+$$\begin{eqnarray}
+\lik(\theta)
+&=&
+f_{Y_{1:N}}(\data{y_{1:N}}\params\theta)
+\\
+&=&\int_{x_0}\cdots\int_{x_N}\! f_{X_0}(x_0\params\theta)\prod_{n=1}^{N}\!f_{Y_n|X_n}(\data{y_n}\given x_n\params \theta)\, f_{X_n|X_{n-1}}(x_n|x_{n-1}\params\theta)\, dx_0\dots dx_N.
+\end{eqnarray}$$
 
 * Specifically, if we have some probabilistic means of proposing trajectories for the unobserved state process, then we could just generate a large number of these and approximate $\lik(\theta)$ by its Monte Carlo estimate.
 
-* Then, we can generate $N$ trajectories of length $T$, $x_{t,k}$, $k=1\,\dots,N$, $t=1,\dots,T$.
-Let $w_k$ denote the probability of proposing trajectory $k$.
-For each trajectory, we compute the likelihood of that trajectory
-$$\lik{_k}(\theta)=\prod_{t=1}^{T} \prob{y_t|x_{t,k},\theta}\,\prob{x_{t,k}|x_{t-1,k},\theta}$$
-Then by the Monte Carlo theorem, we have 
-$$\lik(\theta) \approx \frac{1}{N}\,\sum_{k=1}^{N}\!\frac{\lik_k(\theta)}{w_k}.$$
+* Suppose we can generate $J$ trajectories of length $N$, 
+$$\big\{ X_{n,j}, \; j=1\,\dots,J,\;  n=1,\dots,N\big\},$$
+from a joint density $g_{X_{0:N}}(x_{0:N})$.
 
-* How shall we choose our trajectories?
+* Let $G_j$ denote the probability density for trajectory $j$ under the model used to generate the trajectory, i.e.,
+$$G_{j}= g_{X_0}(X_{0,j})\prod_{n=1}^N g_{X_n|X_{n-1}}(X_{n,j}\given X_{n-1,j}).$$
 
-* One idea would be to choose them so as to simplify the computation.
-If we choose them such that
-$$w_j=\prod_{n=1}^{N} f_{X_n|X_{n-1}}(x_{n,j}|x_{n-1,j},\theta),$$
-then we have
-$$\begin{eqnarray}
-\lik(\theta) 
-&\approx&
- \frac{1}{J}\,\sum_{j=1}^{J} \frac{\lik_j(\theta)}{w_j} 
+* Let $F_j$ denote the probability density for trajectory $j$ under our dynamic model, i.e., 
+$$F_{j}= f_{X_0}(X_{0,j}\params\theta)\prod_{n=1}^N f_{X_n|X_{n-1}}(X_{n,j}\given X_{n-1,j}\params\theta).$$
+
+* For each trajectory, we can compute the measurement likelihood of that trajectory, i.e., the measurement density 
+$$\begin{eqnarray} 
+&&f_{Y_{1:N}|X_{1:N}}(\data{y_{1:N}}\given X_{1:N,j}\params\theta)
 \\
-&=& 
-\frac{1}{J}\,\sum_{j=1}^{J}\!\frac{\prod_{n=1}^{N} f_{Y_n|X_n}(y^*_n|x_{n,j}\params \theta)\,f_{X_n|X_{n-1}}(x_{n,j}|x_{n-1,j}\params \theta)}{\prod_{n=1}^{N} f_{X_n|X_{n-1}}(x_{n,j}|x_{n-1,j}\params \theta)} 
-\\
-&=& \frac{1}{J}\,\sum_{j=1}^{J}\!\prod_{n=1}^{N} f_{Y_n|X_n}(y^*_n|x_{n,j}\params \theta).
+&&\quad =\prod_{n=1}^{N} f_{Y_n|X_n}(\data{y_n}\given X_{n,j}\params\theta).
 \end{eqnarray}$$
+Then the [Monte Carlo importance sampling theorem](monteCarlo.html#importance-sampling) gives us
+$$\lik(\theta) \approx \frac{1}{J}\,\sum_{j=1}^{J}\!
+f_{Y_{1:N}|X_{1:N}}(\data{y_{1:N}}\given X_{1:N,j}\params\theta)
+\frac{F_j}{G_j}.$$
 
-* This implies that if we generate trajectories by simulation, all we have to do is compute the likelihood of the data with given each trajectory and average.
+* How shall we choose our trajectories? What is a good choice of the importance sampling proposal density,  $g_{X_{0:N}}(x_{0:N})$?
+
+* A convenient choice is
+$$ g_{X_{0:N}}(x_{0:N}) = f_{X_{0:N}}(x_{0:N}\params\theta).$$
+
+* This choice of $g_{X_{0:N}}(x_{0:N})$ means the numerator and denominator cancel in the importance sampling weights.
+
+* As a consequence, for this choice of $g_{X_{0:N}}(x_{0:N})$ we never have to compute these weights.
+
+* This means, as long as we can simulate from the dynamic model, $f_{X_{0:N}}(x_{0:N}\params\theta)$, we never have to evaluate this density.
+
+* We get the **plug-and-play** property that our algorithm depends on `rprocess` but does not require `dprocess`.
+
+* We see that, if we generate trajectories by simulation, all we have to do to get a Monte Carlo estimate of the likelihood is evaluate the measurement density of the data at each trajectory and average.
 
 * Let's go back to the boarding school influenza outbreak to see what this would look like.
 
@@ -294,12 +310,18 @@ ell <- apply(ell,1,sum); summary(exp(ell)); logmeanexp(ell,se=TRUE)
 ## The particle filter
 
 * Fortunately, we can compute the likelihood for a POMP model by a much more efficient algorithm than direct Monte Carlo integration. We proceed by factorizing the likelihood in a different way.
-$$\lik(\theta)=f_{Y_{1:N}}{y^*_{1:N}\params \theta}
-=\prod_{n}\,f_{Y_N|Y_{1:N-1}}{y^*_n|y^*_{1:n-1}\params\theta} 
-=\prod_{n}\,\int_{x_{n}}\,f_{Y_n|X_n}{y^*_n|x_n\params\theta}\,f_{X_n|Y_{1:n-1}}{x_n|y^*_{1:n-1}\params\theta}\, dx_{n}.$$
+$$\begin{eqnarray}
+\lik(\theta)&=&f_{Y_{1:N}}(y^*_{1:N}\params \theta)
+\\
+&=&
+\prod_{n}\,f_{Y_N|Y_{1:N-1}}(y^*_n|y^*_{1:n-1}\params\theta) 
+\\
+&=&
+\prod_{n}\,\int f_{Y_n|X_n}(y^*_n|x_n\params\theta)\,f_{X_n|Y_{1:n-1}}(x_n|y^*_{1:n-1}\params\theta)\, dx_{n}.
+\end{eqnarray}$$
 
 * Recall the prediction and filtering formula, using the Markov property to obtain
-$$f_{X_n|Y_{1:n-1}}{x_n|y^*_{1:n-1}\params \theta} 
+$$f_{X_n|Y_{1:n-1}}(x_n|y^*_{1:n-1}\params \theta) 
 = \int_{x_{n-1}}\,f_{X_n|X_{n-1}}(x_n|x_{n-1}\params\theta)\, f_{X_{n-1}|Y_{1:n-1}}(x_{n-1}\given y^*_{1:n-1}\params \theta) \, dx_{n-1},$$
 and Bayes' theorem to get
 $$\begin{eqnarray}
@@ -308,14 +330,16 @@ $$\begin{eqnarray}
 &&\quad = f_{X_n|Y_n,Y_{1:n-1}}(x_n|y^*_n,y^*_{1:n-1}\params \theta) 
 \\
 &&\quad =\frac{f_{Y_n|X_n}(y^*_{n}|x_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(x_{n}|y^*_{1:n-1}\params\theta)}{\int
-f_{Y_n|X_n}(y^*_{n}|\tilde x_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(\tilde x_{n}|y^*_{1:n-1}\params\theta)\, d\tilde x_n}.
+f_{Y_n|X_n}(y^*_{n}|u_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(u_{n}|y^*_{1:n-1}\params\theta)\, d\tilde u_n}.
 \end{eqnarray}$$
 
 * This suggests that we keep track of two key distributions.
 We'll refer to the distribution of $X_n | Y_{1:n-1}\equals y^*_{1:n-1}$ as the **prediction distribution** at time $t_n$ and
 the distribution of $X_{n} | Y_{1:n}\equals y^*_{1:n}$ as the **filtering distribution** at time $t_n$.
 
-* Let's use Monte Carlo techniques to estimate the integrals.
+* Let's use Monte Carlo techniques to estimate the integrals in the prediction and filtering recursion equations.
+
+* Consider the following Monte Carlo scheme:
 
 1. Suppose $X_{n-1,j}^{F}$, $j=1,\dots,J$ is a set of $J$ points drawn from the filtering distribution at time $n-1$.
 
@@ -346,6 +370,7 @@ $$\begin{eqnarray}\loglik(\theta)
 &=& \sum_n \log{\lik_n(\theta)}
 \\
 &\approx& \sum_n\log\hat\lik_n(\theta).
+\end{eqnarray}
 $$
 
 * The above procedure is known as the **sequential Monte Carlo** (SMC) algorithm or the **particle filter**.
@@ -454,7 +479,9 @@ foreach (theta=iter(p,"row"),.combine=rbind,
 
 * Note that the slice computation used the **foreach** package with the multicore backend (**doMC**) to parallelize these computations.
 
-* To ensure that we have high-quality random numbers in each parallel *R* session, we use a parallel random number generator (`kind="L'Ecuyer"`, `.options.multicore=list(set.seed=TRUE)`).
+* To ensure that we have high-quality random numbers in each parallel *R* session, we use a parallel random number generator. Notice the specification `kind="L'Ecuyer"` when we set the seed for the random number generator, and the specification `.options.multicore=mcopts` for `foreach`, the parallel for loop
+
+* Now, we can plot the likelihood slices:
 
 ```{r sir-like-slice-plot,cache=F,results="hide"}
 foreach (v=c("Beta","gamma")) %do% 

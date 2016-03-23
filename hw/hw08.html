@@ -65,19 +65,10 @@ img {
 <h4 class="author"><em>Stats 531, Winter 2016</em></h4>
 </div>
 
-<div id="TOC">
-<ul>
-<li><a href="#installing-the-pomp-package">Installing the <strong>pomp</strong> package</a></li>
-<li><a href="#exercises">Exercises</a></li>
-</ul>
-</div>
 
 <hr />
-<hr />
-<p><big><big><big>Objective</big></big></big></p>
-<p>To provide practical experience working with POMP models.</p>
-<p><br></p>
-<hr />
+<p><big><big><big>Objectives</big></big></big></p>
+<p>To gain practical experience working with POMP models, we start with installing the <strong>pomp</strong> package and proceed to two introductory exercises.</p>
 <hr />
 <div id="installing-the-pomp-package" class="section level2">
 <h2>Installing the <strong>pomp</strong> package</h2>
@@ -128,14 +119,24 @@ source(&quot;http://ionides.github.io/531w16/hw/pomp_prep/packages.R&quot;,echo=
 <p>You will need the ability to compile C code and dynamically link it into an R session. To do this, you’ll need to install the <strong>Rtools</strong> suite. Download the latest frozen version (<a href="http://cran.r-project.org/bin/windows/Rtools" class="uri">http://cran.r-project.org/bin/windows/Rtools</a>) and install it. Some problems have been reported with the unfrozen version (<strong>Rtools33</strong>) but none with the last frozen version (<strong>Rtools32</strong>). Please report if you have difficulties with the interaction between <strong>Rtools</strong> and Rstudio; the code should run on current releases of Rstudio.</p>
 <p><br></p>
 <hr />
-<hr />
 </div>
 </div>
 <div id="exercises" class="section level2">
 <h2>Exercises</h2>
-<p>To be assigned later…</p>
-<p><br></p>
+<p>Please submit to Canvas an Rmd file addressing the following questions. Your Rmd file can read in the <em>Parus major</em> data from the internet, e.g., by</p>
+<pre><code>dat &lt;- read.csv(&quot;http://ionides.github.io/531w16/notes11/parus.csv&quot;)</code></pre>
 <hr />
+<p><strong><big>Question 8.1</big></strong>. Reformulating the Ricker model.</p>
+<p>The Ricker equation can be reparameterized so that the scaling of <span class="math">\(P_n\)</span> is explicit: <span class="math">\[P_{n+1} = r\,P_{n}\,\exp\left(-\frac{P_{n}}{k}\right).\]</span> Modify the <code>pomp</code> object created in the notes to reflect this reparameterization. Also, Modify the measurement model so that the data <span class="math">\({y_n^*}\)</span> is modeled as <span class="math">\[Y_n |P_n \sim \mathrm{Negbin}(\phi\,P_n,\psi).\]</span> Here, <span class="math">\(\mathrm{Negbin}(\mu,\psi)\)</span> is the negative binomial distribution with mean <span class="math">\(\mu\)</span> and probability parameter <span class="math">\(\psi\)</span>, and therefore variance <span class="math">\(\mu/\psi\)</span>. This parameterization corresponds in R to <code>rbinom(...,mu,prob)</code>. See <code>?rnbinom</code> for documentation on the negative binomial distribution and <a href="http://cran.r-project.org/doc/manuals/r-release/R-exts.html#Distribution-functions">the R Extensions Manual section on distribution functions</a> for information on how to access these in C.</p>
+<p>Try simulating from a few choices of the parameters, and present one simulation from a set of parameters that shows oscillatory behavior.</p>
+<hr />
+<p><strong><big>Question 8.2</big></strong>. Coding a new model.</p>
+<p>Construct a pomp object for the <em>Parus major</em> data and the stochastic Beverton-Holt model, <span class="math">\[P_{n+1} = \frac{a\,P_n}{1+b\,P_n}\,\varepsilon_n,\]</span> where <span class="math">\(a\)</span> and <span class="math">\(b\)</span> are parameters and <span class="math">\[\varepsilon_t \sim \mathrm{Lognormal}(-\tfrac{1}{2}\sigma^2,\sigma^2).\]</span> Assume the same measurement model as we used for the Ricker model. Try simulating from a few choices of the parameters. What are the similarities and differences between simulations you obtain from the Beverton-Holt model and those from the Ricker model? Present one simulation to support your comments.</p>
+<hr />
+<p><strong><big>Question 8.3</big></strong>. How long did this homework take?</p>
+<p>This homework is conceptually quite simple, but involves overcoming various technical hurdles. The hurdles could be overcome quite quickly, or could turn into a longer battle.</p>
+<p>To make progress on statistical inference for POMP models, we have to solve these underlying computational issues.</p>
+<p>If you get stuck, ask for help from your peers and/or Dao and/or me. Please report how much time this homework ends up taking, to help me monitor how many difficulties are encountered.</p>
 <hr />
 </div>
 
