@@ -1,0 +1,120 @@
+---
+title: "Stats 531 (Winter 2016) <br>Plagiarism and midterm project grades"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+------
+
+* Many midterm projects contain instances of direct copying from some external source without proper citation.
+
+* This is unacceptable. It is known as [plagiarism](https://en.wikipedia.org/wiki/Plagiarism). 
+
+* There were some variations on the theme.
+
+    + Sometimes, the external source appeared in the reference list, but the attribution of the sentence, sentences or paragraph was not given.
+
+    + Sometimes, the source was slightly paraphrased, but still recognizable and unattributed.
+
+    + Sometimes, the plagiarism appeared in the introduction only, sometimes also in the discussion of results and conclusions.
+
+* These variations may affect our view of how seriously the plagiarism should be treated.
+
+* However, we must accept that **all of these variations are forms of plagiarism**.
+
+* Here is how the [Rackham Academic and Professional Integrity Policy](http://www.rackham.umich.edu/current-students/policies/academic-policies/section11#1132) describes plagiarism
+
+> <big><b> 11.2.2 Plagiarism </b></big>
+>
+> Includes:
+>
+>    Representing the words, ideas, or work of others as one’s own in writing or presentations, and failing to give full and proper credit to the original source.
+>
+>    Failing to properly acknowledge and cite language from another source, including paraphrased text.
+>
+>    Failing to properly cite any ideas, images, technical work, creative content, or other material taken from published or unpublished sources in any medium, including online material or oral presentations, and including the author’s own previous work.
+
+* What are we to do about grading the midterm project? 
+
+* We must take this issue seriously, but not out of proportion to the size of the misconduct. 
+
+* The project was graded by 5 criteria:
+
+    1. Raising a question. 
+
+    2. Use of appropriate statistical methods.
+
+    3. Scholarship. 
+
+    4. Reaching a conclusion. 
+
+    5. Presentation of data analysis. 
+
+* I was harsh with taking off points for plagiarism, but only within the relevant grading categories.
+
+* Plagiarism resulted in few or no points for "scholarship" and for the section or sections of the project in which it occurred. 
+
+* The other grading categories were unaffected.
+
+* If you feel as though this policy is unfair, or has been implemented unfairly, you are welcome to question it. A good first step for Stats Masters students might be to discuss the issue with the Director of the Statistics Master Program, Prof. Zhu. 
+
+* Although plagiarism is taken very seriously in academia, it is a subtle topic. Here is a thought experiment from [On Being a Scientist: A Guide to Responsible Conduct in Research: Third edition (2009)](http://www.nap.edu/catalog.php?record_id=12192), by <i>The National Academies Press</i>. 
+
+> <big><b>Is it plagiarism?</b></big>
+>
+> Professor Lee is writing a proposal for a research grant, and the deadline for the proposal submission is two days from now. To complete the background section of the proposal, Lee copies a few isolated sentences of a journal paper written by another author. The copied sentences consist of brief, factual, one-sentence summaries of earlier articles closely related to the proposal, descriptions of basic concepts from textbooks, and definitions of standard mathematical notations. None of these ideas is due to the other author. Lee adds a one-sentence summary of the journal paper and cites it.
+> 
+> 1. Does the copying of a few isolated sentences in this case constitute plagiarism?
+> 
+> 2. By citing the journal paper, has Lee given proper credit to the other author?
+>
+> <big><b>Discussion points</b></big>
+> 
+> Would it help, in all situations and in all fields, to simply place quotation marks around the borrowed sentences and attach a footnote? Writing a literature review requires judgment in the selection and interpretation of previous work. Professor Lee should consider whether copying the one-sentence summaries takes unfair advantage of the other author’s efforts, and whether those summaries relate to the proposal in the same way as the paper. In addition, because the literature review in the journal paper could be erroneous or incomplete, Lee should strive to ensure that the proposal’s review of the literature is accurate. Finally, Lee should imagine what might happen if the author of the journal paper is asked to review Lee’s proposal.
+
+
+* Thinking about examples such as this can help clarify three useful things.
+
+1. What are the rules on plagiarism in modern academia?
+
+2. What, if any, are the persuasive reasons for thinking that academia and science operate better when unattributed direct copying is disallowed?
+
+3. What, if any, are the persuasive reasons for thinking that putting your ideas in your own words is usually a better academic decision that even a properly cited direct quotation? 
+
+
+<br>
+
+------------
+
+------------
+
+#### My suggestions
+
+* Minimize cut and paste into your scholarly work, whether it is for coursework or potential publication. 
+
+* If and when you do choose to cut and paste, put the quote immediately in quotation marks, so there is no chance you will later forget that this is not your own original work.
+
+* Even pasting from your own previous work is usually best avoided. Apart from even more subtle topic of [self-plagiarism](https://en.wikipedia.org/wiki/Plagiarism#Self-plagiarism), each document you write has a different goal, so you should be able to retarget what you said before in a way more appropriate to the current goal and audience. 
+
+* Follow the procedure:
+
+1. Read.
+
+2. Think.
+
+3. Write.
+
+* This procedure keeps a separation between reading and writing.
+
+
+
+
+
+----------
+
+----------
+
+

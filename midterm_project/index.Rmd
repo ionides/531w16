@@ -40,7 +40,7 @@ csl: ecology.csl
 
 10. [Interplay of Climate, Macroeconomic Conditions, and the Demand for Coffee on Coffee Futures Prices at the New York “C” Contract Market](https://ionides.github.io/531w16/midterm_project/project10/midtermproject.html)
 
-11. [Forecastinhg retail demand using stock keeping unit (SKU) data](https://ionides.github.io/531w16/midterm_project/project11/Mid_Term_project.htm)
+11. [Forecasting retail demand using stock keeping unit (SKU) data](https://ionides.github.io/531w16/midterm_project/project11/Mid_Term_project.htm)
 
 12. [Time Series Analysis in US Total Retail Revenue](https://ionides.github.io/531w16/midterm_project/project12/pro1.html)
 
