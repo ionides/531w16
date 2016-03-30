@@ -137,4 +137,6 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Plagiarism and midterm project grades](midterm_project/plagiarism.html)
 
+* [Postscript on plagiarism in the midterm project](midterm_project/postscript_on_plagiarism.html)
+
 ---------
