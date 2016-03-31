@@ -21,7 +21,7 @@ csl: ecology.csl
 
 * I had failed to notice this plagiarism, which involved cut and paste from my own notes rather than some other source.
 
-* Based on the discussion last class, we should add to this feedback that it is also necessary to give proper acknowledgement to the source. 
+* Based on the discussion last class, we should add to this feedback that it is also necessary to give proper acknowledgment to the source. 
 
 * The scientist was distracted from thinking about the statistical results in the project by having to identify and explain a problem with the scholarship. 
 

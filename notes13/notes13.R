@@ -83,7 +83,10 @@ sliceDesign(
 
 require(foreach)
 require(doMC)
-registerDoMC(cores=5)        ## number of cores on this machine
+
+registerDoMC(cores=5)        
+## number of cores 
+## usually the number of cores on your machine, or slightly smaller
 
 set.seed(998468235L,kind="L'Ecuyer")
 mcopts <- list(preschedule=FALSE,set.seed=TRUE)
@@ -215,11 +218,15 @@ bsflu_fixed_params <- c(mu_R1=1/(sum(bsflu_data$B)/512),mu_R2=1/(sum(bsflu_data$
 
 ## ----parallel-setup,cache=FALSE------------------------------------------
 require(doParallel)
-cores <- 20
+cores <- 20  # The number of cores on this machine 
 registerDoParallel(cores)
 mcopts <- list(set.seed=TRUE)
 
 set.seed(396658101,kind="L'Ecuyer")
+
+## ----alternative_parallel, eval=FALSE------------------------------------
+## require(doMC)
+## registerDoMC(cores=20)
 
 ## ----pf------------------------------------------------------------------
 stew(file=sprintf("pf-%d.rda",run_level),{
@@ -233,6 +240,11 @@ stew(file=sprintf("pf-%d.rda",run_level),{
 },seed=1320290398,kind="L'Ecuyer")
 
 (L_pf <- logmeanexp(sapply(pf,logLik),se=TRUE))
+
+## ----set_cache, eval=FALSE-----------------------------------------------
+## opts_chunk$set(
+##   cache=TRUE,
+##   )
 
 ## ----box_search_local----------------------------------------------------
 bsflu_rw.sd <- 0.02

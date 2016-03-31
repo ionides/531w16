@@ -85,7 +85,13 @@ then it is likely that you do not have the necessary version of gfortran install
 
 #### Windows:
 
-You will need the ability to compile C code and dynamically link it into an R session.  To do this, you’ll need to install the **Rtools** suite.  Download the latest frozen version (http://cran.r-project.org/bin/windows/Rtools) and install it.  Some problems have been reported with the unfrozen version (**Rtools33**) but none with the last frozen version (**Rtools32**). Please report if you have difficulties with the interaction between **Rtools** and Rstudio; the code should run on current releases of Rstudio.
+You will need the ability to compile C code and dynamically link it into an R session.  To do this, you’ll need to install the **Rtools** suite.  Download the latest frozen version (http://cran.r-project.org/bin/windows/Rtools) and install it. During installation of Rtools, click all the additional boxes--the default installation doesn't include everything you need.
+
+Some problems have been reported with the unfrozen version (**Rtools33**) but none with the last frozen version (**Rtools32**). 
+
+Please report if you have difficulties with the interaction between **Rtools** and Rstudio; the code should run on current releases of Rstudio.
+
+It may also be a good idea to upgrade your version of R. It has been reported that difficulties getting this working on Windows with R3.2.1 disappeared after installation of R3.2.4.
 
 <br>
 

@@ -309,7 +309,9 @@ ell <- apply(ell,1,sum); summary(exp(ell)); logmeanexp(ell,se=TRUE)
 
 ## The particle filter
 
-* Fortunately, we can compute the likelihood for a POMP model by a much more efficient algorithm than direct Monte Carlo integration. We proceed by factorizing the likelihood in a different way.
+* Fortunately, we can compute the likelihood for a POMP model by a much more efficient algorithm than direct Monte Carlo integration. 
+
+* We proceed by factorizing the likelihood in a different way:
 $$\begin{eqnarray}
 \lik(\theta)&=&f_{Y_{1:N}}(y^*_{1:N}\params \theta)
 \\
@@ -330,7 +332,7 @@ $$\begin{eqnarray}
 &&\quad = f_{X_n|Y_n,Y_{1:n-1}}(x_n|y^*_n,y^*_{1:n-1}\params \theta) 
 \\
 &&\quad =\frac{f_{Y_n|X_n}(y^*_{n}|x_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(x_{n}|y^*_{1:n-1}\params\theta)}{\int
-f_{Y_n|X_n}(y^*_{n}|u_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(u_{n}|y^*_{1:n-1}\params\theta)\, d\tilde u_n}.
+f_{Y_n|X_n}(y^*_{n}|u_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(u_{n}|y^*_{1:n-1}\params\theta)\, du_n}.
 \end{eqnarray}$$
 
 * This suggests that we keep track of two key distributions.
@@ -347,15 +349,15 @@ the distribution of $X_{n} | Y_{1:n}\equals y^*_{1:n}$ as the **filtering distri
 $$X_{n,j}^{P} \sim \mathrm{process}(X_{n-1,j}^{F},\theta), \qquad j=1,\dots,J.$$
 
 3. Having obtained $x_{n,j}^{P}$, we obtain a sample of points from the filtering distribution at time $t_n$ by *resampling* from $\big\{X_{n,j}^{P},j\in 1:J\big\}$ with weights 
-$$w_{n,j}=f_{Y_n|X_n}{y^*_{n}|X^P_{n,j}\params\theta}.$$
+$$w_{n,j}=f_{Y_n|X_n}(y^*_{n}|X^P_{n,j}\params\theta).$$
 
 4. The Monte Carlo principle tells us that the conditional likelihood
 $$\begin{eqnarray}
-\lik_n(\theta) &=& f_{Y_n|Y_{1:n-1}}{y^*_n|y^*_{1:n-1}\params\theta}
+\lik_n(\theta) &=& f_{Y_n|Y_{1:n-1}}(y^*_n|y^*_{1:n-1}\params\theta)
 \\
 &=& 
 \int
-f_{Y_n|X_n}(y^*_{n}|x_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(x_{n}|y^*_{1:n-1}\params\theta)\, dx_n.
+f_{Y_n|X_n}(y^*_{n}|x_{n}\params\theta)\,f_{X_n|Y_{1:n-1}}(x_{n}|y^*_{1:n-1}\params\theta)\, dx_n
 \end{eqnarray}
 $$
 is approximated by
@@ -408,8 +410,17 @@ ll <- sapply(pf,logLik); ll
 logmeanexp(ll,se=TRUE)
 ```
 
-* Note that we're careful here to counteract Jensen's inequality.
-The particle filter gives us an unbiased estimate of the likelihood, not of the log-likelihood.
+* A theoretical property of the particle filter is that it gives us an unbiased Monte Carlo estimate of the likelihood.
+
+* This theoretical property, combined with [Jensen's inequality](https://en.wikipedia.org/wiki/Jensen%27s_inequality) and the observation that $\log(x)$ is a concave function, ensures that the average of the log likelihoods from many particle filter replications will have negative bias as a Monte Carlo estimator of the log likelihood.
+
+* We've been careful to avoid this bias in the code above, by using `logmeanexp` to average the likelihood estimates on the natural scale not the logarithmic scale.
+
+<br>
+
+------
+
+------
 
 ## The graph of the likelihood function: The likelihood surface
 
@@ -438,7 +449,10 @@ sliceDesign(
 
 require(foreach)
 require(doMC)
-registerDoMC(cores=5)        ## number of cores on this machine
+
+registerDoMC(cores=5)        
+## number of cores 
+## usually the number of cores on your machine, or slightly smaller
 
 set.seed(998468235L,kind="L'Ecuyer")
 mcopts <- list(preschedule=FALSE,set.seed=TRUE)
@@ -880,12 +894,22 @@ bsflu_fixed_params <- c(mu_R1=1/(sum(bsflu_data$B)/512),mu_R2=1/(sum(bsflu_data$
 
 ```{r parallel-setup,cache=FALSE}
 require(doParallel)
-cores <- 20
+cores <- 20  # The number of cores on this machine 
 registerDoParallel(cores)
 mcopts <- list(set.seed=TRUE)
 
 set.seed(396658101,kind="L'Ecuyer")
 ```
+
+* Note that this code uses the `doParallel` library, whereas before we used `doMC`, as below. 
+
+```{r alternative_parallel, eval=FALSE}
+require(doMC)
+registerDoMC(cores=20) 
+```
+
+* `doParallel` and `doMC` are functionally equivalent for our current purposes, but give you two options if you hit technical problems accessing the multiple cores on your machine.
+
 
 * We proceed to carry out replicated particle filters at this tentative MLE:
 
@@ -905,8 +929,67 @@ stew(file=sprintf("pf-%d.rda",run_level),{
 
 * In  `r round(t_pf["elapsed"],1)` seconds, we obtain an unbiased likelihood estimate of `r round(L_pf[1],2)` with a Monte standard error of `r round(L_pf[2],2)`.
 
+### Caching computations in Rmarkdown
 
-### A local search of the likelihood surface
+* It is not unusual for computations in a POMP analysis to take hours to run on many cores.
+
+* The computations for a final version of a manuscript may take days.
+
+* Usually, we use some mechanism like the different values of `run_level` so that preliminary versions of the manuscript take less time to run.
+
+* However, when editing the text or working on a different part of the manuscript, we don't want to re-run long pieces of code.
+
+* Saving results so that the code is only re-run when necessary is called **caching**.
+
+* You may already be familiar with Rmarkdown's own version of caching. 
+
+* In the notes, we tell Rmarkdown to cache. For example, in (notes13.Rmd) the first R chunk, called `knitr-opts`, contains the following:
+
+```{r set_cache, eval=FALSE}
+opts_chunk$set(
+  cache=TRUE,
+  )
+```
+
+* Rmarkdown uses a library called `knitr` to process the Rmd file, so options for Rmarkdown are formally options for knitr.
+
+* Having set the option `cache=TRUE`, Rmarkdown caches every chunk, meaning that a chunk will only be re-run if code in that chunk is edited.
+
+* You can force Rmarkdown to recompute all the chunks by deleting the `cache` subdirectory.
+
+* What if changes elsewhere in the document affect the proper evaluation of your chunk, but you didn't edit any of the code in the chunk itself?
+
+    + Rmarkdown will get this wrong. **It will not recompute the chunk**.
+
+* A perfect caching system doesn't exist. **Always delete the entire cache and rebuild a fresh cache before finishing a manuscript.**
+
+* Rmarkdown caching is good for relatively small computations, such as producing figures or things that may take a minute or two and are annoying if you have to recompute them every time you make any edits to the text.
+
+* For longer computations, it is good to have full manual control. In **pomp**, this is provided by two related functions, `stew` and `bake`.
+
+#### `stew` and `bake`
+
+* Notice the function `stew` in the replicated particle filter code above.
+
+* Here, `stew` looks for a file called `pf-[run_level].rda`. 
+
+* If it finds this file, it simply loads the contents of this file.
+
+* If the file doesn't exist, it carries out the specified computation and saves it in a file of this name.
+
+* `bake` is similar to `stew. The difference is that `bake` uses `readRDS` and `saveRDS`, whereas `stew` uses `load` and `save`. 
+
+* either way, the computation will not be re-run unless you manually delete `pf-[run_level].rda`.
+
+* `stew` and `bake` reset the seed appropriately whether or not the computation is recomputed. Othewise, caching risks adverse consequences for reproducibility.
+
+<br>
+
+-------
+
+------
+
+## A local search of the likelihood surface
 
 * Let's carry out a local search using `mif2` around this previously identified MLE. For that, we need to set the `rw.sd` and `cooling.fraction.50` algorithmic parameters:
 
@@ -1033,13 +1116,23 @@ pairs(~logLik+Beta+mu_I+rho,data=subset(results_global,logLik>max(logLik)-250))
 
 * We see that optimization attempts from diverse remote starting points end up with comparable likelihoods, even when the parameter values are quite distinct. This gives us some confidence in our maximization procedure. 
 
-## Exercises
+<br>
+
+-----
+
+------
 
 ### Exercise: Construct a profile likelihood
 
 * How strong is the evidence about the contact rate, $\beta$, given this model and data? Use `mif2` to construct a profile likelihood. Due to time constraints, you may be able to compute only a preliminary version.
 
 * It is also possible to profile over the basic reproduction number, $R_0=\beta P/\mu_I$. Is this more or less well determined that $\beta$ for this model and data?
+
+<br>
+
+-----
+
+----
 
 ### Exercise: Check the model source code
 
@@ -1051,16 +1144,33 @@ pairs(~logLik+Beta+mu_I+rho,data=subset(results_global,logLik>max(logLik)-250))
 
 2. Suppose that there is an error in the coding of `rprocess`. Suppose that plug-and-play statistical methodology is used to infer parameters.  A conscientious researcher carries out a simulation study, using `simulate` to generate some realizations from the fitted model and checking that the inference methodology can successfully recover the known parameters for this model, up to some statistical error. Will this procedure help to identify the error in `rprocess`? If not, how does one debug `rprocess`? What research practices help minimize the risk of errors in simulation code?
 
+<br>
+
+------
+
+-----
+
 ### Exercise: Assessing and improving algorithmic parameters
 
 Develop your own heuristics to try to improve the performance of `mif2` in the previous example. Specifically, for a global optimization procedure carried out using random starting values in the specified box, let $\hat\Theta_\mathrm{max}$ be a random Monte Carlo estimate of the resulting MLE, and let $\hat\theta$ be the true (unknown) MLE. We can define the maximization error in the log likelihood to be
 $$e = \ell(\hat\theta) - E[\ell(\hat\Theta_\mathrm{max})].$$
 We cannot directly evaluate $e$, since there is also Monte Carlo error in our evaluation of $\ell(\theta)$, but we can compute it up to a known precision. Plan some code to estimates $e$ for a search procedure using a computational effort of $JM=2\times 10^7$, comparable to that used for each mif computation in the global search. Discuss the strengths and weaknesses of this quantification of optimization success. See if you can choose $J$ and $M$ subject to this constraint, together with choices of `rw.sd` and the cooling rate, `cooling.fraction.50`, to arrive at a quantifiably better procedure. Computationally, you may not be readily able to run your full procedure, but you could run a quicker version of it.
 
+<br>
+
+-----
+
+-----
+
 ### Exercise: Finding sharp peaks in the likelihood surface
 
 * Even in this small, 3 parameter, example, it takes a considerable amount of computation to find the global maximum (with values of $\beta$ around 0.004) starting from uniform draws in the specified box. The problem is that, on the scale on which "uniform" is defined, the peak around $\beta\approx 0.004$ is very narrow. Propose and test a more favorable way to draw starting parameters for the global search, with better scale invariance properties.
 
+<br>
+
+------
+
+------
 
 ### Exercise: Adding a latent class
 
