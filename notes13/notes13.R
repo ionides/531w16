@@ -99,7 +99,7 @@ foreach (theta=iter(p,"row"),.combine=rbind,
    theta
  } -> p
 
-## ----sir-like-slice-plot,cache=F,results="hide"--------------------------
+## ----sir-like-slice-plot,cache=TRUE,results="hide"-----------------------
 foreach (v=c("Beta","gamma")) %do% 
 {
   x <- subset(p,slice==v)
@@ -329,4 +329,12 @@ summary(results_global$logLik,digits=5)
 
 ## ----pairs_global--------------------------------------------------------
 pairs(~logLik+Beta+mu_I+rho,data=subset(results_global,logLik>max(logLik)-250))
+
+## ----class_mifs_global---------------------------------------------------
+class(mifs_global)
+class(mifs_global[[1]])
+class(c(mifs_global[[1]],mifs_global[[2]]))
+
+## ----mifs_global_plot----------------------------------------------------
+plot(mifs_global)
 

@@ -497,7 +497,7 @@ foreach (theta=iter(p,"row"),.combine=rbind,
 
 * Now, we can plot the likelihood slices:
 
-```{r sir-like-slice-plot,cache=F,results="hide"}
+```{r sir-like-slice-plot,cache=TRUE,results="hide"}
 foreach (v=c("Beta","gamma")) %do% 
 {
   x <- subset(p,slice==v)
@@ -1121,6 +1121,50 @@ pairs(~logLik+Beta+mu_I+rho,data=subset(results_global,logLik>max(logLik)-250))
 -----
 
 ------
+
+## Diagnosing success or failure of the maximization procedure
+
+* The `plot` method for an object of class `mif2d.pomp` presents some graphical convergence and filtering diagnostics for the maximization procedure.
+
+* It is often useful to look at superimposed convergence diagnostic plots for multiple Monte Carlo replications of the maximization procedure, perhaps with different starting values.
+
+* Concatenating objects of class `mif2d.pomp` gives a list of class `mif2List`. The `plot` method for a mif2List object gives us the superimposed convergence diagnostic plots.
+
+* Above, we built a list of mif2d.pomp objects for the global maximum likelihood search, fitting a model to the boarding school flu data. Let's first check the classes of the resulting objects.
+
+```{r class_mifs_global}
+class(mifs_global)
+class(mifs_global[[1]])
+class(c(mifs_global[[1]],mifs_global[[2]]))
+```
+
+* Now, we can look at the diagnostics.
+
+```{r mifs_global_plot}
+plot(mifs_global)
+```
+
+### Question: Interpret the diagnostics
+
+1. Do these plots suggest we have successfully maximized the likelihood, or not? Why?
+
+2. What would the convergence plots look like if we cooled too quickly? Or too slowly? Can you find evidence for either of these here? (The algorithmic parameter `cooling.fraction.50` is the fraction by which we decrease the random walk standard deviation in 50 filtering iterations.)
+
+3. Here, we've done 300 mif iterations. Should we have done more? Could we have saved ourselves computational effort by doing less, without compromising our analysis?
+
+4. Some parameter estimates show strong agreement between the different mif runs from different starting values. Others less so. How do you interpret this? Diversity in parameter estimates could be a signal of poor numerical maximization. It could signal a multi-modal likelhood surface. Or, it could simply correspond to a flat likelihood surface where the maximum is not precisely identifiable. Can we tell from the diagnostic plots which of these is going on here?
+
+5. Maximization via particle filtering requires that the particle filter is working effectively. One way to monitor this is to pay attention to the [effective sample size](https://en.wikipedia.org/wiki/Effective_sample_size) on the last filtering iteration. The effective sample size (ESS) is computed here as
+$$ \mathrm{ESS}_{n}= \frac{\left(\sum_{j=1}^J w_{n,j}\right)^2}{\sum_{j=1}^J w_{n,j}^2},$$
+where $\{w_{n,j}\}$ are the weights defined in step 3 of the [particle filter](#the-particle-filter).
+The ESS approximates the number of independent, equally weighted, samples from the filtering distribution that would be equally informative to the one weighted sample that we have obtained by the particle filter. Do you have any concerns about the number of particles?
+<br>
+
+-----
+
+------
+
+## Exercises
 
 ### Exercise: Construct a profile likelihood
 
