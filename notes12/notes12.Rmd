@@ -52,9 +52,7 @@ Licensed under the Creative Commons attribution-noncommercial license, http://cr
 Please share and remix noncommercially, mentioning its origin.  
 ![CC-BY_NC](cc-by-nc.png)
 
-These notes draw on material from [http://kingaa.github.io/sbied/stochsim/stochsim.html](http://kingaa.github.io/sbied/stochsim/stochsim.html)
-
----
+------------
 
 
 \newcommand\expect[1]{\mathbb{E}\left[{#1}\right]}
@@ -62,9 +60,8 @@ These notes draw on material from [http://kingaa.github.io/sbied/stochsim/stochs
 \newcommand\dist[2]{\mathrm{#1}\left(#2\right)}
 \newcommand\dlta{\Delta}
 
---------------------------
 
-Produced with **R** version `r getRversion()` and **pomp** version `r packageVersion("pomp")`.
+Produced with R version `r getRversion()` and **pomp** version `r packageVersion("pomp")`.
 
 --------------------------
 
@@ -628,8 +625,18 @@ You will have to give some thought to just how to model the relationship between
 How many parameters can reasonably be fixed?  How many must be estimated?
 Obtain some ballpark estimates of the parameters and simulate to see if you can plausibly explain the data as a realization of this model.
 
+<br>
+
+--------
+
 --------------------------
 
+<big><big><big>Acknowledgment</big></big></big>
+
+These notes were developed from a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
+
+
+----
 
 ## References
 

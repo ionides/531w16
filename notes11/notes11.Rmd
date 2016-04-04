@@ -151,7 +151,7 @@ $$\begin{array}{ll}
 
 * Data on infectious diseases are generally limited to diagnosed cases. Much of the transmission dynamics cannot be directly observed. 
 
-* Infectious disease epidemiology has motivated developments in statistical methodology and software for NL-POMP models. In particular, these class notes derive from a course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/).
+* Infectious disease epidemiology has motivated developments in statistical methodology and software for NL-POMP models, including [a previous course](http://kingaa.github.io/sbied/)  used as a source for these class notes.
    
 
 * Many other biological populations have similar nonlinearities: the population grows exponentially until limited by some constraint (which could be a food resource or a predator). When the resource is used up, or the predator becomes abundant, the population crashes. Then a new cycle begins.
@@ -768,6 +768,12 @@ $$\varepsilon_t \sim \mathrm{Lognormal}(-\tfrac{1}{2}\sigma^2,\sigma^2).$$
 -------
 
 ------
+
+<big><big><big>Acknowledgment</big></big></big>
+
+These notes were developed from a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
+
+----
 
 ## References
 

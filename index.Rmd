@@ -88,6 +88,9 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 13. [Practical likelihood-based inference for POMP models](notes13/notes13.html). [(R script)](notes13/notes13.R)
 
+14. [POMP inference: other approaches complementing likelihood-based analysis](notes14/notes14.html). 
+
+
 --------
 
 ## Homework assignments

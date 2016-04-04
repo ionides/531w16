@@ -1,7 +1,7 @@
 ---
 title: "14. POMP inference: other approaches complementing likelihood-based analysis"
 author: "Edward Ionides"
-date: "3/22/2016"
+date: "4/4/2016"
 output:
   html_document:
     theme: flatly
@@ -9,7 +9,7 @@ output:
     toc_depth: 2
     number_sections: true
     pandoc_args: [
-      "--number-offset=12"
+      "--number-offset=14"
     ]
 bibliography: notes14.bib
 csl: ecology.csl
@@ -45,26 +45,13 @@ csl: ecology.csl
 \newcommand\covmatY{\mathbb{V}}
 
 
-
 Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
 Please share and remix noncommercially, mentioning its origin.  
 ![CC-BY_NC](cc-by-nc.png)
 
-These notes draw on material from [http://kingaa.github.io/sbied/stochsim/stochsim.html](http://kingaa.github.io/sbied/stochsim/stochsim.html)
-
----
-
-
-\newcommand\expect[1]{\mathbb{E}\left[{#1}\right]}
-\newcommand\var[1]{\mathrm{Var}\left[{#1}\right]}
-\newcommand\dist[2]{\mathrm{#1}\left(#2\right)}
-\newcommand\dlta{\Delta}
 
 --------------------------
 
-Produced with **R** version `r getRversion()` and **pomp** version `r packageVersion("pomp")`.
-
---------------------------
 
 ```{r knitr-opts,include=FALSE,purl=FALSE,cache=FALSE}
 prefix <- "notes12"
@@ -117,11 +104,13 @@ stopifnot(packageVersion("pomp")>="0.69-1")
 <big><big><big>Objectives</big></big></big>
 
 
-1. To introduce various inference techniques for POMP models as alternatives to likelihood-based inference. 
+1. To introduce various inference techniques for nonlinear POMP models as alternatives to likelihood-based inference. 
 
 2. To undestand how these alternative techniques can be used to complement the use of likelihood based inference, despite their loss of statistical efficiency and/or additional assumptions.
 
-3. To provide examples of how these analyses can be carried out using the **pomp** package.
+3. To provide some introduction to how these analyses can be carried out using the **pomp** package.
+
+4.  **Just as for our treatment of ARMA models, and other linear Gaussian time series models, we're focusing on likelihood-based inference for nonlinear POMP models in this course. However, if you feel a need or desire to investigate alternatives, this chapter describes some options.**
 
 <br>
 
@@ -131,19 +120,37 @@ stopifnot(packageVersion("pomp")>="0.69-1")
 
 ## Introduction
 
-Many, many statistical methods have been proposed for inference on POMP models [@he10,@king15]. The volume of research indicates both the importance and the difficulty of the problem. Let's start by considering three criteria to categorize inference methods: the plug-and-play property; full-information or feature-based; frequentist or Bayesian.
+* Many, many statistical methods have been proposed for inference on POMP models. Relevant literature surveys are given in @he10 and @king15. 
 
-### Plug-and-play (also called simulation-based) methods
+* The volume of research indicates both the importance and the difficulty of the problem. 
 
-* Inference methodology that calls 'rprocess' but not 'dprocess' is said to be ___plug-and-play__. All popular modern Monte Carlo methods fall into this category. 
+* Let's start by considering three criteria to categorize inference methods: the plug-and-play property; full-information or feature-based; frequentist or Bayesian.
 
-* Simulation-based is equivalent to plug-and-play. 
-+ Historically, simulation-based meant simulating forward from initial conditions to the end of the time series. 
-+ However, particle filtering methods instead consider each observation interval sequentially. They carry out multiple, carefully selected, simulations over each interval.
+<br>
+
+-------
+
+-------
+
+## Plug-and-play methods 
+
+* Inference methodology that calls 'rprocess' but not 'dprocess' is said to be __plug-and-play__. All popular modern Monte Carlo methods for POMP models fall into this category. 
+
+* __Simulation-based__ is another name for to plug-and-play. 
+
+    + Historically, simulation-based meant simulating forward from initial conditions to the end of the time series. 
+
+    + However, particle filtering methods instead consider each observation interval sequentially. They carry out multiple, carefully selected, simulations over each interval.
 
 * We permit plug-and-play methods to call 'dmeasure'. A method that uses only 'rprocess' and 'rmeasure' is called doubly plug-and-play.
 
 * Two __non-plug-and-play__ methods (EM algorithms and MCMC) have theoretical convergence problems for nonlinear POMP models. The failures of these two workhorses of statistical computation have prompted development of alternative methodology.
+
+<br>
+
+-------
+
+-------
 
 ### Full-information and feature-based methods
 
@@ -151,33 +158,67 @@ Many, many statistical methods have been proposed for inference on POMP models [
 
 * __Feature-based__ methods either consider a summary statistic (a function of the data) or work with an an alternative to the likelihood.
 
-* Asymptotically, full_information methods are statistically efficient and feature-based methods are not.
-+ Loss of statistical efficiency could potentially be an acceptable tradeoff for advantages in computational efficiency.
-+ However, good low-dimensional summary statistics can be hard to find. 
-+ When using statistically inefficient methods, it can be hard to know how much information you are losing. 
-+ Intuition and scientific reasoning can be inadequate tools to derive informative low-dimensional summary statistics [@shrestha11,@ionides11-statSci].
+* Asymptotically, full-information methods are statistically efficient and feature-based methods are not.
 
-### Bayesian and frequentist methods
+    + Loss of statistical efficiency could potentially be an acceptable tradeoff for advantages in computational efficiency.
+
+    + However, good low-dimensional summary statistics can be hard to find. 
+
+    + When using statistically inefficient methods, it can be hard to know how much information you are losing. 
+
+    + Intuition and scientific reasoning can be inadequate tools to derive informative low-dimensional summary statistics [@shrestha11;@ionides11-statSci].
+
+* With full-information methods, it can be hard to work out which feature, or features, of the data have strong influence on the conclusions of the data analysis.
+
+* Fitting the model to some selected feature, or features, can help establish whether those aspects of the data are informative about parameters of interest, and whether these features are in agreement with the rest of the data.
+
+<br>
+
+-------
+
+-------
+
+## Bayesian and frequentist methods
 
 * Recently, plug-and-play Bayesian methods have been discovered:
-+ particle Markov chain Monte Carlo (PMCMC) [@andrieu10].
-+ approximate Bayesian computation (ABC) [@toni09].
+
+    + particle Markov chain Monte Carlo (PMCMC) [@andrieu10].
+
+    + approximate Bayesian computation (ABC) [@toni09].
 
 * Prior belief specification is both the strength and weakness of Bayesian methodology:
-+ The likelihood surface for nonlinear POMP models often contains nonlinear ridges and variations in curvature. 
-+ These situations bring into question the appropriateness of independent priors derived from expert opinion on marginal distributions of parameters.
-+ They also are problematic for specification of "flat" or "uninformative" prior beliefs.
-+ Expert opinion can be treated as data for non-Bayesian analysis. However, our primary task is to identify the information in the data under investigation, so it can be helpful to use methods that do not force us to make our conclusions dependent on quantification of prior beliefs.
 
-* A good general reference on likelihood and its role in scientific inference is @Pawitan2001.
+    + The likelihood surface for nonlinear POMP models often contains nonlinear ridges and variations in curvature. 
 
-### Full-information, plug-and-play, frequentist methods
+    + These situations bring into question the appropriateness of independent priors derived from expert opinion on marginal distributions of parameters.
 
-* Iterated filtering methods [@ionides06,@ionides15] are the only currently available, full-information, plug-and-play, frequentist methods for POMP models.
+    + They also are problematic for specification of "flat" or "uninformative" prior beliefs.
 
-* Iterated filtering methods have been shown to solve likelihood-based inference problems for epidemiological situations which are computationally intractable for available Bayesian methodology [@ionides15].
+    + Expert opinion "prior beliefs" can be also be introduced into non-Bayesian analysis, by treating it as additional data. However, our primary task is to identify the information in the data under investigation, so it can be helpful to use methods that do not force us to make our conclusions dependent on quantification of prior beliefs.
 
-### Summary of POMP inference methodologies
+* A good general reference on likelihood and its role in scientific inference is @pawitan01.
+
+<br>
+
+-------
+
+-------
+
+## Full-information plug-and-play frequentist methods
+
+* Iterated filtering methods [@ionides06;@ionides15] are the only currently available, full-information, plug-and-play, frequentist methods for POMP models.
+
+* Iterated filtering methods have been shown to solve likelihood-based inference problems for epidemiological situations which are computationally intractable for available Bayesian methodology. 
+
+* Some previous applications of iterated filtering are listed on its [Wikipedia article](https://en.wikipedia.org/wiki/Iterated_filtering).
+
+<br>
+
+-------
+
+-------
+
+## Summary of POMP inference methodologies
 
 
 
@@ -196,6 +237,41 @@ Many, many statistical methods have been proposed for inference on POMP models [
 
 -----------------------------------------------
 
-1. Yule-Walker is the method of moments for ARMA, a linear Gaussian POMP.
+* Yule-Walker is the method of moments for ARMA models. A Gaussian ARMA model can be represented as a linear Gaussian POMP.
 
-2. The Kalman filter gives the exact likelihood for a linear Gaussian POMP. The extended Kalman filter gives an approximation for nonlinear models that can be used for quasi-likelihood or quasi-Bayesian inference.
+* The Kalman filter gives the exact likelihood for a linear Gaussian POMP. The extended Kalman filter gives an approximation for nonlinear models that can be used for quasi-likelihood or quasi-Bayesian inference.
+
+<br>
+
+-------
+
+-------
+
+## POMP inference methodologies in **pomp**
+
+Methodology            | **pomp** function
+---------------------- | -------------------
+iterated filtering     | `mif2()`
+particle Markov chain Monte Carlo | `pmcmc()`
+approximate Bayesian computing    | `abc()`
+feature-based synthetic likelihood | `probe.match()`
+nonlinear forecasting | `nlf()`
+
+* We won't have time to demonstrate these methods. 
+
+* Methodology descriptions, and examples using **pomp**, can be found in [King et al, in press](http://kingaa.github.io/pomp/vignettes/pompjss.pdf).
+
+<br>
+
+-------
+
+------
+
+<big><big><big>Acknowledgment</big></big></big>
+
+These notes were developed from a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
+
+
+------
+
+## References

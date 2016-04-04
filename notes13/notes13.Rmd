@@ -50,10 +50,6 @@ Licensed under the Creative Commons attribution-noncommercial license, http://cr
 Please share and remix noncommercially, mentioning its origin.  
 ![CC-BY_NC](cc-by-nc.png)
 
-These notes draw on material from [http://kingaa.github.io/sbied/stochsim/stochsim.html](http://kingaa.github.io/sbied/stochsim/stochsim.html)
-
----
-
 
 \newcommand\expect[1]{\mathbb{E}\left[{#1}\right]}
 \newcommand\var[1]{\mathrm{Var}\left[{#1}\right]}
@@ -62,7 +58,7 @@ These notes draw on material from [http://kingaa.github.io/sbied/stochsim/stochs
 
 --------------------------
 
-Produced with **R** version `r getRversion()` and **pomp** version `r packageVersion("pomp")`.
+Produced with R version `r getRversion()` and **pomp** version `r packageVersion("pomp")`.
 
 --------------------------
 
@@ -1220,7 +1216,20 @@ We cannot directly evaluate $e$, since there is also Monte Carlo error in our ev
 
 * Modify the model to include a latent period between becoming exposed and becoming infectious. See what effect this has on the maximized likelihood.
 
-----------------------
+
+<br>
+
+-------
+
+------
+
+<big><big><big>Acknowledgment</big></big></big>
+
+These notes were developed from a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
+
+
+------
+
 
 ## References
 
