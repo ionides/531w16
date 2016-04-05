@@ -90,6 +90,9 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 14. [POMP inference: other approaches complementing likelihood-based analysis](notes14/notes14.html). 
 
+15. [Case study: POMP modeling to investigate financial volatility](notes15/notes15.html). 
+
+   
 
 --------
 
