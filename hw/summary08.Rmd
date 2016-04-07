@@ -1,0 +1,33 @@
+---
+title: "Time taken for homework 8"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: no
+---
+
+
+--------
+
+* There was a long right tail for time taken to complete HW8.
+
+<b>Time taken</b><br>
+1.5 <br>
+2 2 2 2 2 <br>
+2.5 2.5 <br>
+3 <br>
+4 4 4 4 <br> 
+4.5 <br>
+4-5 <br>
+5 5 5 5 <br>
+6-7 <br>
+8 <br>
+15 <br>
+15-20 <br>
+2 days (including installing Linux) <br>
+
+* It is okay if a homework is a more intense learning experience for some students than others. However, if the time taken dealing with computational issues start getting unreasonable, it may be appropriate to seek advice from classmates, the GSI, or myself. 
+
+-----------
+

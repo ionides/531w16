@@ -69,24 +69,29 @@ img {
 <hr />
 <div id="final-project-outline" class="section level4">
 <h4>Final project outline</h4>
-<p>Find a time series dataset of your choice. Carry out a time series analysis, taking advantage of what we have learned in this course. There are three main ways your final project can go beyond the scope of the midterm project:</p>
+<p>Find a time series dataset of your choice. Carry out a time series analysis, taking advantage of what we have learned in this course. It is expected that part of your project will involve a POMP analysis, taking advantage of the methods we have studied in the second half of this semester.</p>
+<p>Although the POMP framework gives plenty of opportunity to develop and analyze relevant models, it involves some potential challenges which we will attempt to anticipate:</p>
 <ol style="list-style-type: decimal">
-<li><p><a href="#mechanistic-modeling">Mechanistic modeling</a>. Develop and implement a mechanistic model to relate the data to equations describing the behavior of the system that make sense in the context of theoretical understanding of the system.</p></li>
-<li><p><a href="#multi-dimensional-time-series-and-panel-analysis">Multi-dimensional time series and panel analysis</a>, making sense of a collection of related time series.</p></li>
-<li><p><a href="#methodology-not-covered-in-class">Methodology not covered in class</a>. If you think it is appropriate for your interests, it is fine for you to choose any approach for your final project that goes substantially beyond the classical linear time series analysis we focused on for the first half of this semester. This could involve using methodologies not covered in class, but if you find yourself heading that route you may want to check in with me.</p></li>
+<li><p>A common goal of POMP analysis is to connect theory to data, but what if you don’t know a theory for the system on which you have data?</p>
+<ol style="list-style-type: lower-roman">
+<li><p>Sometimes, this can be addressed by choice of data. If possible, choose a dataset on a topic for which you know, or are willing to discover, some background theory.</p></li>
+<li><p>If you are fairly sure of the data you would like to analyze, but can’t find any relevant theory, I’ll be happy to help you work something out, in office hours or by email. If you want data from epidemiology or ecology, I can suggest options for you. For other interests, I may or may not have suggestions but can certainly help you look.</p></li>
+<li><p>An alternative way in which POMP models can arise is including time-varying parameters in a non-POMP model.</p></li>
+</ol></li>
+<li><p>Computational considerations may prevent you analyzing as large a model, or as long a dataset, as you would ideally do. That is fine. Present a smaller, computationally feasible analysis and discuss possible extensions to your analysis.</p></li>
 </ol>
-<p>Write a report, as an R markdown (Rmd) file. Submit the report by midnight on Thursday April 28 as a zip file containing an Rmd file and anything else necessary to allow the grader to render the Rmd file as an html document.</p>
+<p>To submit your project, write your report as an R markdown (Rmd) file. Submit the report by midnight on Thursday April 28 as a zip file containing an Rmd file and anything else necessary to allow the grader to render the Rmd file as an html document.</p>
 <hr />
 </div>
 <div id="choice-of-data" class="section level4">
 <h4>Choice of data</h4>
 <p>As for the midterm project, the time series should hopefully have at least 100 time points. You can have less, if your interests demand it. Shorter data needs additional care, since model diagnostics and asymptotic approximations become more delicate on small datasets. If your data are longer than, say, 1000 time points, you can subsample if you start having problems working with too much data.</p>
-<p>Good higher-dimensional time series, or time series which you know how to connect to mechanistic hypotheses, may be informative to analyze but are harder find online than what we needed for the midterm project. Therefore, I expect more of you to come asking for help identifying a suitable project. One approach to this is for you to spend some time looking online and thinking about what you might like to do, then send me an email with your current thoughts and we can meet in office hours or after class and discuss it further.</p>
+<p>Time series which you know how to connect to mechanistic hypotheses may be informative to analyze but are harder find online than what we needed for the midterm project. Therefore, I expect more of you to come asking for help identifying a suitable project. One approach to this is for you to spend some time looking online and thinking about what you might like to do, then send me an email with your current thoughts and we can meet in office hours or after class and discuss it further.</p>
 <hr />
 </div>
 <div id="expectations-for-the-report" class="section level4">
 <h4>Expectations for the report</h4>
-<p>The report will be graded on the same criteria as used for the midterm project.</p>
+<p>The report will be graded on the same criteria as used for the midterm project. The following descriptions are exactly the same as the midterm report, though we have talked plenty more since then about some <a href="http://www.rackham.umich.edu/current-students/policies/academic-policies/section11#112">basic Rackham standards</a> on “making references where appropriate”.</p>
 <ul>
 <li><p>Raising a question. You should explain some background to the data you chose, and give motivation for the reader to appreciate the purpose of your data analysis.</p></li>
 <li><p>Use of appropriate statistical methods.</p></li>
@@ -96,19 +101,11 @@ img {
 </ul>
 <hr />
 </div>
-<div id="mechanistic-modeling" class="section level4">
-<h4>Mechanistic modeling</h4>
-<p>Relating a mechanistic model to time series data will likely involve following the POMP model structure developed in class, and using the <strong>pomp</strong> package to investigate your data.</p>
-<hr />
-</div>
-<div id="multi-dimensional-time-series-and-panel-analysis" class="section level4">
-<h4>Multi-dimensional time series and panel analysis</h4>
-<p>A large collection of related time series is sometimes called a <strong>panel</strong>. Panel data are also called <strong>longitudinal</strong> data in Biostatistics. Small panels can be called <strong>vector-valued time series</strong> or <strong>multivariate time series</strong>. We will consider this kind of data in class.</p>
-<hr />
-</div>
 <div id="methodology-not-covered-in-class" class="section level4">
 <h4>Methodology not covered in class</h4>
-<p>This class has focused on ARMA and POMP models, two related approaches to time domain analysis of time series. Time series topics on which we will spend little or no time include frequency domain analysis of multivariate time series (Shumway and Stoffer, Chapter 7) and time-frequency domain analysis using wavelets (Shumway and Stoffer, Section 4.9). If you decide these approaches are particularly relevant for your data, you can use them for your project as an alternative or complementary approach to what we have covered in class. If you get stuck trying to learn these methods, or want to discuss them further, get in touch.</p>
+<p>This class has focused on ARMA and POMP models, two related approaches to time domain analysis of time series.</p>
+<p>Time series topics on which we will spend little or no time include frequency domain analysis of multivariate time series (Shumway and Stoffer, Chapter 7) and time-frequency domain analysis using wavelets (Shumway and Stoffer, Section 4.9).</p>
+<p>If you decide that alternative approaches are particularly relevant for your data, you can use them in your project as a complementary approach to what we have covered in class.</p>
 <hr />
 </div>
 

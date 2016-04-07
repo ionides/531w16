@@ -92,6 +92,9 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 15. [Case study: POMP modeling to investigate financial volatility](notes15/notes15.html). 
 
+16. [Using a Linux sever for POMP analysis](linux/linux.html).
+
+
    
 
 --------
@@ -114,7 +117,7 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Homework 7](hw/hw07.html), a single slide due midnight on 3/21, for a presentation in class on 3/22 or 3/24.
 
-* [Homework 8](hw/hw08.html), due on 3/29.
+* [Homework 8](hw/hw08.html), due on 3/29. [Reponses to time survey](hw/summary08.html).
 
 * [Homework 9](hw/hw09.html), due on 4/7.
 
@@ -148,5 +151,10 @@ Any material taken from any source, such as the internet, must be properly ackno
 * [Plagiarism and midterm project grades](midterm_project/plagiarism.html)
 
 * [Postscript on plagiarism in the midterm project](midterm_project/postscript_on_plagiarism.html)
+
+## Final project
+
+* [Information](final_project/final_project_info.html)
+
 
 ---------
