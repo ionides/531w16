@@ -30,7 +30,11 @@ output:
 
 * You only need minimal Linux experience to run R. One of many introductory tutorials online is [http://www.ee.surrey.ac.uk/Teaching/Unix](http://www.ee.surrey.ac.uk/Teaching/Unix).
 
-1. Log on to a Linux machine. You can access `scs.itd.umich.edu`, via SSH or using the umich virtual private network [(VPN)](http://www.itcom.itd.umich.edu/vpn/). You can use `bayes.stat.lsa.umich.edu` if you have access to the Statistics department machines. Bayes is actually a collection of Linux machines, and when you log in you are automatically placed on the machine which currently has the most availability. You should have access to Bayes if you are a Statistics Masters or PhD student. I can get access for others, upon request. 
+1. Log on to a Linux machine. You can access `scs.itd.umich.edu`, via SSH. From a Mac or Linux machine, you should be able to run the following from a terminal: 
+```
+ssh scs.itd.umich.edu
+```
+From a Windows machine, you can use the [UM-supported SSH software](http://www.itcs.umich.edu/ssh/). Off campus, you may need to use the umich virtual private network [(VPN)](http://www.itcom.itd.umich.edu/vpn/). You can log in to `bayes.stat.lsa.umich.edu` if you have access to the Statistics department machines. Bayes is actually a collection of Linux machines, and when you log in you are automatically placed on the machine which currently has the most availability. You should have access to Bayes if you are a Statistics Masters or PhD student. I can get access for others, upon request. 
 
 2. Typing 
 ```
