@@ -70,6 +70,8 @@ to install packages into?  (y/n) y
 
 4. Install the R package **knitr**.
 
+4. Moving files to and from the Linux server. If your personal machine is running Mac or Linux, you can use [scp](http://www.computerhope.com/unix/scp.htm) from a terminal. If your personal machine runs Windows, you can use [WinSCP](https://winscp.net/eng/index.php).
+
 5. Within R, you can convert an Rmd file to md by, for example,
 ```
 knit("notes15.Rmd")

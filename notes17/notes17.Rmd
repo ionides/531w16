@@ -119,12 +119,12 @@ $$\begin{eqnarray}
 f_{X_{n+p}|Y_{1:n}}(x_{n+p}|\data{y_{1:n}}\params\hat\theta)
 &=& 
 \int f_{X_n|Y_{1:n}}(x_n|\data{y_{1:n}}\params\hat\theta)
-f_{X_{n+p}|X_n}(x_{n+p}\given x_n\params\hat\theta) \, dx_{n+p}
+f_{X_{n+p}|X_n}(x_{n+p}\given x_n\params\hat\theta) \, dx_{n}
 \\
 &=&
 \int f_{X_n|Y_{1:n}}(x_n|\data{y_{1:n}}\params\hat\theta)
 \prod_{k=1}^p
-f_{X_{n+k}|X_{n+k-1}}(x_{n+k}\given x_{n+k-1}\params\hat\theta) \, dx_{n+1}\dots dx_{n+p}
+f_{X_{n+k}|X_{n+k-1}}(x_{n+k}\given x_{n+k-1}\params\hat\theta) \, dx_{n}\dots dx_{n+p-1}
 \end{eqnarray}$$
 
 * A closely related task is to forecast $Y_{n+p}$ rather than $X_{n+p}$. 

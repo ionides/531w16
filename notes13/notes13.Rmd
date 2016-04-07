@@ -190,12 +190,13 @@ ggplot(data=y,
 * **Warning: this section is an example of what NOT to do!**
  
 * We can imagine using [Monte Carlo integration](./monteCarlo.html#monte-carlo-integration) for computing the likelihood of a state space model,
+
 $$\begin{eqnarray}
 \lik(\theta)
 &=&
 f_{Y_{1:N}}(\data{y_{1:N}}\params\theta)
 \\
-&=&\int_{x_0}\cdots\int_{x_N}\! f_{X_0}(x_0\params\theta)\prod_{n=1}^{N}\!f_{Y_n|X_n}(\data{y_n}\given x_n\params \theta)\, f_{X_n|X_{n-1}}(x_n|x_{n-1}\params\theta)\, dx_0\dots dx_N.
+&=& \! \int_{x_{0:N}} \!\! f_{X_0}(x_0\params\theta)\prod_{n=1}^{N}\!f_{Y_n|X_n}(\data{y_n}\given x_n\params \theta)\, f_{X_n|X_{n-1}}(x_n|x_{n-1}\params\theta)\, dx_{0:N}.
 \end{eqnarray}$$
 
 * Specifically, if we have some probabilistic means of proposing trajectories for the unobserved state process, then we could just generate a large number of these and approximate $\lik(\theta)$ by its Monte Carlo estimate.
@@ -308,6 +309,7 @@ ell <- apply(ell,1,sum); summary(exp(ell)); logmeanexp(ell,se=TRUE)
 * Fortunately, we can compute the likelihood for a POMP model by a much more efficient algorithm than direct Monte Carlo integration. 
 
 * We proceed by factorizing the likelihood in a different way:
+
 $$\begin{eqnarray}
 \lik(\theta)&=&f_{Y_{1:N}}(y^*_{1:N}\params \theta)
 \\
@@ -318,10 +320,17 @@ $$\begin{eqnarray}
 \prod_{n}\,\int f_{Y_n|X_n}(y^*_n|x_n\params\theta)\,f_{X_n|Y_{1:n-1}}(x_n|y^*_{1:n-1}\params\theta)\, dx_{n}.
 \end{eqnarray}$$
 
-* Recall the prediction and filtering formula, using the Markov property to obtain
-$$f_{X_n|Y_{1:n-1}}(x_n|y^*_{1:n-1}\params \theta) 
-= \int_{x_{n-1}}\,f_{X_n|X_{n-1}}(x_n|x_{n-1}\params\theta)\, f_{X_{n-1}|Y_{1:n-1}}(x_{n-1}\given y^*_{1:n-1}\params \theta) \, dx_{n-1},$$
-and Bayes' theorem to get
+* The Markov property leads to the prediction formula:
+
+$$\begin{eqnarray}
+&&f_{X_n|Y_{1:n-1}}(x_n|y^*_{1:n-1}\params \theta) 
+\\
+&&\quad
+= \int_{x_{n-1}} \! f_{X_n|X_{n-1}}(x_n|x_{n-1}\params\theta)\, f_{X_{n-1}|Y_{1:n-1}}(x_{n-1}\given y^*_{1:n-1}\params \theta) \, dx_{n-1}.
+\end{eqnarray}$$
+
+* Bayes' theorem gives the filtering formula:
+
 $$\begin{eqnarray}
 &&f_{X_n|Y_{1:n}}(x_n|y^*_{1:n}\params \theta)
 \\
@@ -623,10 +632,6 @@ Also, since the likelihood is only estimated, we would expect the derivative est
 3. Finally, the parameters are constrained to be positive, and $\rho < 1$.
 We must therefore select an optimizer that can solve this *constrained maximization problem*, or figure out some of way of turning it into an unconstrained maximization problem.
 For the latter purpose, one can transform the parameters onto a scale on which there are no constraints.
-
-First, let's try deterministic optimization of a rough function.
-We'll try using `optim`'s default method: Nelder-Mead, fixing the random-number generator seed to make the likelihood calculation deterministic.
-
 
 
 <br>

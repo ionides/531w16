@@ -106,6 +106,7 @@ to install packages into?  (y/n) y</code></pre></li>
 <li><p>We just need to carry out the first stage of processing, which is to <code>knit</code> the .Rmd file to turn it into an .md file. The .md file is a markdown file which contains processed R output.</p></li>
 </ul></li>
 <li><p>Install the R package <strong>knitr</strong>.</p></li>
+<li><p>Moving files to and from the Linux server. If your personal machine is running Mac or Linux, you can use <a href="http://www.computerhope.com/unix/scp.htm">scp</a> from a terminal. If your personal machine runs Windows, you can use <a href="https://winscp.net/eng/index.php">WinSCP</a>.</p></li>
 <li><p>Within R, you can convert an Rmd file to md by, for example,</p>
 <pre><code>knit(&quot;notes15.Rmd&quot;)</code></pre></li>
 <li><p>This will produce a file <code>notes15.md</code> which (together with the subdirectory <code>figure</code> containing the figures) can be moved back to your personal machine, where you can run Rstudio to convert .md to .html. If you also move back the cache subdirectory and any other files of cached output, you can make further edits on your personal machine without having to re-run computationally intensive results.</p></li>
