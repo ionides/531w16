@@ -1,0 +1,30 @@
+---
+title: "Homework 10, due Thursday 4/14"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: no
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\data[1]{#1^*}
+
+--------
+
+
+This homework assignment is to start planning your final project. 
+
+You are asked to select a dataset and outline a potential analysis. This may mean, for example, writing down a model that may be used as a central component of the analysis.
+
+There is no obligation for your final project to follow the proposal that you make in this homework.
+
+Your proposal will not be graded. This is just an opportunity for you to get some feedback before you get down to the full data analysis and report writing.
+
+Submit to Canvas a pdf with a plot of your data, a sentence or so to say where the data come from, and a paragraph or two outlining what you intend to do.
+
+-----------
+
