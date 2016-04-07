@@ -38,7 +38,21 @@ R
 ```
 at a terminal prompt starts R.
 
-2. Install **pomp**. In R, run `install.package("pomp")`. When prompted to choose a mirror site, select `22 (HTTP mirrors)`. For some technical reason, the default HTTPS CRAN mirrors don't seem to be working on either the scs or bayes machines.
+2. Install **pomp**. In R, run `install.packages("pomp")`. 
+
+    * When prompted to choose a mirror site, select `22 (HTTP mirrors)`. For some technical reason, the default HTTPS CRAN mirrors don't seem to be working on either the scs or bayes machines.
+
+    * You may have to create a personal R library as follows:
+```
+> install.packages("pomp")
+Warning in install.packages("pomp") :
+  'lib = "/usr/lib64/R/library"' is not writable
+Would you like to use a personal library instead?  (y/n) y
+Would you like to create a personal library
+~/R/x86_64-unknown-linux-gnu-library/3.2.3
+to install packages into?  (y/n) y
+```
+
 
 3. For converting Rmarkdown to HTML, there is a technical consideration. 
 

@@ -84,7 +84,18 @@ img {
 <li><p>Typing</p>
 <pre><code>R</code></pre>
 <p>at a terminal prompt starts R.</p></li>
-<li><p>Install <strong>pomp</strong>. In R, run <code>install.package(&quot;pomp&quot;)</code>. When prompted to choose a mirror site, select <code>22 (HTTP mirrors)</code>. For some technical reason, the default HTTPS CRAN mirrors don’t seem to be working on either the scs or bayes machines.</p></li>
+<li><p>Install <strong>pomp</strong>. In R, run <code>install.packages(&quot;pomp&quot;)</code>.</p>
+<ul>
+<li><p>When prompted to choose a mirror site, select <code>22 (HTTP mirrors)</code>. For some technical reason, the default HTTPS CRAN mirrors don’t seem to be working on either the scs or bayes machines.</p></li>
+<li><p>You may have to create a personal R library as follows:</p>
+<pre><code>&gt; install.packages(&quot;pomp&quot;)
+Warning in install.packages(&quot;pomp&quot;) :
+  'lib = &quot;/usr/lib64/R/library&quot;' is not writable
+Would you like to use a personal library instead?  (y/n) y
+Would you like to create a personal library
+~/R/x86_64-unknown-linux-gnu-library/3.2.3
+to install packages into?  (y/n) y</code></pre></li>
+</ul></li>
 <li><p>For converting Rmarkdown to HTML, there is a technical consideration.</p>
 <ul>
 <li><p>The package <strong>rmarkdown</strong> uses a program called <a href="https://en.wikipedia.org/wiki/Pandoc">pandoc</a>.</p></li>
