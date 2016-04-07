@@ -1,0 +1,78 @@
+---
+title: "Using a Linux sever for POMP analysis"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: no
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\data[1]{#1^*}
+
+--------
+
+
+<big><big>Objectives</big></big>
+
+* To run a likelihood-based analysis for a nonlinear POMP model using **pomp** on a Linux server. 
+
+* To discuss the possibility of running the analysis on the University of Michigan Flux cluster, a collection of Linux servers.
+
+------
+
+## Running Rmd files on a Linux server
+
+* This material is optional. However, it may be useful for your final project. More broadly, doing statistical computing on Linux is useful training for modern statisticians who also aspire to be data scientists, working with complex models and/or big data.
+
+* You only need minimal Linux experience to run R. One of many introductory tutorials online is [http://www.ee.surrey.ac.uk/Teaching/Unix](http://www.ee.surrey.ac.uk/Teaching/Unix).
+
+1. Log on to a Linux machine. You can access `scs.itd.umich.edu`, via SSH or using the umich virtual private network [(VPN)](http://www.itcom.itd.umich.edu/vpn/). You can use `bayes.stat.lsa.umich.edu` if you have access to the Statistics department machines. Bayes is actually a collection of Linux machines, and when you log in you are automatically placed on the machine which currently has the most availability. You should have access to Bayes if you are a Statistics Masters or PhD student. I can get access for others, upon request. 
+
+2. Typing 
+```
+R
+```
+at a terminal prompt starts R.
+
+2. Install **pomp**. In R, run `install.package("pomp")`. When prompted to choose a mirror site, select `22 (HTTP mirrors)`. For some technical reason, the default HTTPS CRAN mirrors don't seem to be working on either the scs or bayes machines.
+
+3. For converting Rmarkdown to HTML, there is a technical consideration. 
+
+    * The package **rmarkdown** uses a program called [pandoc](https://en.wikipedia.org/wiki/Pandoc). 
+
+    * The easiest way to install the necessary version of pandoc is by installing Rstudio. 
+
+    * However, Linux servers often do not have Rstudio installed. 
+
+    * The simplest way to deal with this issue is to bypass it. Think of the Linux server as the place you will do computations and cache the results. Move these results back to your personal machine for text editing. 
+
+    * According to this workflow, we don't need pandoc on the Linux server.
+
+    * We just need to carry out the first stage of processing, which is to `knit` the .Rmd file to turn it into an .md file. The .md file is a markdown file which contains processed R output.
+
+4. Install the R package **knitr**.
+
+5. Within R, you can convert an Rmd file to md by, for example,
+```
+knit("notes15.Rmd")
+```
+
+6. This will produce a file `notes15.md` which (together with the subdirectory `figure` containing the figures) can be moved back to your personal machine, where you can run Rstudio to convert .md to .html. If you also move back the cache subdirectory and any other files of cached output, you can make further edits on your personal machine without having to re-run computationally intensive results.
+
+<br>
+
+-------
+
+-------
+
+## Running Rmd files on the Flux cluster
+
+* The Statistics department has access to 200 cores on the University of Michigan Flux cluster. This cluster of Linux machines is a more powerful computational environment than the Bayes servers.
+
+* Using the Flux cluster has an extra step compared to a Linux server: we have to learn how to submit jobs. This is not necessary material for Stats 531, but it is a powerful computationaly approach. We can talk about it more in class, if there is interest. Otherwise, let me or Dao know if you want to try this out and want more information and assistance.
+
+-----------
