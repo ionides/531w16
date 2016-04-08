@@ -1,0 +1,57 @@
+---
+title: "Final project suggestions"
+author: "Stats 531, Winter 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+
+-----------
+
+* A standard approach for a final project is to take some previously published data, do your own time series analysis, and write it up by putting it in the context of the previously published analysis.
+
+* You can reproduce part of a previously published analysis, being careful to explain the relationship between what you have done and what was done previously. You should also think of some things to try that are not the same as what was done previously.
+
+* This site is in development. More suggestions will follow, and feedback is welcome.
+
+------------------
+
+#### Nicholson's blowflies
+
+<b>Question</b>: What models explain the fluctuations in an experimental population of blowflies? What can you conclude about blowfly ecology?
+
+<b>Data</b>: [blowfly4.csv](blowfly4.csv).
+
+<b>Reference</b>:  Wood, S. (2010), "Statistical inference for noisy nonlinear ecological dynamic systems",  [Nature 466:1102–1104](http://www.nature.com/nature/journal/v466/n7310/abs/nature09319.html)
+
+------------
+
+#### Financial volatility
+
+<b>Question</b>: What models explain financial volatility? What can you conclude from these models about the behavior of financial markets?
+
+<b>Data</b>: Time series for any financial instrument, for example from [finance.yahoo.com](http://finance.yahoo.com/q/hp?s=GOOG).
+
+<b>References</b>: One could analyze various [stochastic volatility models](https://en.wikipedia.org/wiki/Stochastic_volatility) in the POMP framework. One possibility is the one we studied in class: Breto, C.,  "On idiosyncratic stochasticity of financial leverage effects", [Statistics & Probability Letters 91:20-26](http://dx.doi.org/10.1016/j.spl.2014.04.003). 
+
+---------------
+
+#### Epidemiology
+
+<b>Question</b>: Given incidence data for an infectious disease, what models fit the data? Usually, one considers susceptible-infected-recovered models (such as developed in the course notes) and variations on them. What can we learn from time series analysis about transmission of the disease? 
+
+<b>Cholera</b>. <b>Data</b>: [dacca-cholera.csv](dacca-cholera.csv). <b>Reference</b>: King, A. A., Ionides, E. L., Pascual, M. and Bouma, M. J. (2008). Inapparent infections and cholera dynamics. [Nature 454:877-880](http://dx.doi.org/10.1038/nature07084).
+
+<b>Polio</b>. <b>Data</b>: [polio_wisconsin.csv](polio_wisconsin.csv). <b>Reference</b>: Martinez-Bakker M., King, A.A. and Rohani, P. (2015), "Unraveling the Transmission Ecology of Polio", [PLoS Biology 13: e1002172](http://dx.doi.org/10.1371/journal.pbio.1002172).
+
+<b>Measles</b>. <b>Data</b>: <b>References</b>:
+
+<b>Other infectious disease data</b>.
+
+----------------------
