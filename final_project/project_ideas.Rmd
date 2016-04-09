@@ -20,40 +20,122 @@ output:
 
 * You can reproduce part of a previously published analysis, being careful to explain the relationship between what you have done and what was done previously. You should also think of some things to try that are not the same as what was done previously.
 
-* This site is in development. More suggestions will follow, and feedback is welcome.
+* Depending on your choice of project, you may be in any of the following situations:
+
+    1. A **pomp** representation already exists for the POMP model you want to use.
+
+    2. Your task involves POMP models that are variations on an existing **pomp** representation.
+
+    3. Your analysis involves a POMP model which leads you to develop your own **pomp** representation.
+
+* If you develop a **pomp** representation of a POMP model for a new dataset, test it and demonstrate it, that is already a full project.
+
+* The more your model derives from previous work, the further you are expected to go in carrying out a thorough data analysis.
+
 
 ------------------
 
-#### Nicholson's blowflies
+----------------
 
-<b>Question</b>: What models explain the fluctuations in an experimental population of blowflies? What can you conclude about blowfly ecology?
+### Ecology
 
-<b>Data</b>: [blowfly4.csv](blowfly4.csv).
+Dryad [(http://datadryad.org/)](http://datadryad.org/) is a place to look for publicly archived data, together with a published source. Dryad is currently particularly good for ecological data. Ecological time series data for many systems are collected annually and therefore often fall short of our hope to get 100 data points to analyze. That is just something you have to live with if you want to study ecological data. As one example,
 
-<b>Reference</b>:  Wood, S. (2010), "Statistical inference for noisy nonlinear ecological dynamic systems",  [Nature 466:1102–1104](http://www.nature.com/nature/journal/v466/n7310/abs/nature09319.html)
+<b>Parasitoid-host dynamics</b>. 
+
+* <b>Reference</b>: Karban R, de Valpine P (2010) Population dynamics of an Arctiid caterpillar-tachinid parasitoid system using state-space models. [Journal of Animal Ecology 79:650–661](http://dx.doi.org/10.1111/j.1365-2656.2010.01664.x).
+
+* <b>Description</b>: This paper has open-access data and proposes some state space models based on the Gompertz and Ricker models. The data could be re-analyzed using the techniques we've studied in class.
+    
+* <b>Data</b>: from Dryad, Karban R, de Valpine P (2010) Data from: Population dynamics of an Arctiid caterpillar-tachinid parasitoid system using state-space models. [Dryad Digital Repository](http://dx.doi.org/10.5061/dryad.sg45t)
+
 
 ------------
 
-#### Financial volatility
+<b>More parasitoid-host dynamics</b>. 
 
-<b>Question</b>: What models explain financial volatility? What can you conclude from these models about the behavior of financial markets?
+* <b>Reference</b>: Meisner MH, Harmon JP, Ives AR (2014) Temperature effects on long-term population dynamics in a parasitoid-host system. [Ecological Monographs 84:457-476](http://dx.doi.org/10.1890/13-1933.1).
+
+* <b>Description</b>: This paper has open-access data, proposes some state space models, and fits them using a linearized Kalman filter (called the extended Kalman filter). The data could be re-analyzed using the techniques we've studied in class.
+    
+* <b>Data</b>: from Ives AR, Meisner MH, Harmon JP (2014) Temperature effects on long-term population dynamics in a parasitoid-host system. [Dryad Digital Repository](http://dx.doi.org/10.5061/dryad.h73b0).
+
+
+--------------
+
+<b>Nicholson's blowflies</b>
+
+* <b>Question</b>: What models explain the fluctuations in an experimental population of blowflies? What can you conclude about blowfly ecology?
+
+* <b>Data</b>: [blowfly4.csv](blowfly4.csv).
+
+* <b>Reference</b>:  Wood, S. (2010), "Statistical inference for noisy nonlinear ecological dynamic systems",  [Nature 466:1102–1104](http://www.nature.com/nature/journal/v466/n7310/abs/nature09319.html).
+
+* <b>pomp object</b>: Available in **pomp** via `pompExample(blowflies)`. From the **pomp** source code, you can get the code that constructs this pomp object so you can modify it as necessary.
+
+
+-----------
+
+------------
+
+### Financial volatility
+
+<b>A general question</b>: What models explain financial volatility? What can you conclude from these models about the behavior of financial markets?
 
 <b>Data</b>: Time series for any financial instrument, for example from [finance.yahoo.com](http://finance.yahoo.com/q/hp?s=GOOG).
 
+
 <b>References</b>: One could analyze various [stochastic volatility models](https://en.wikipedia.org/wiki/Stochastic_volatility) in the POMP framework. One possibility is the one we studied in class: Breto, C.,  "On idiosyncratic stochasticity of financial leverage effects", [Statistics & Probability Letters 91:20-26](http://dx.doi.org/10.1016/j.spl.2014.04.003). 
+
+<b>pomp object</b>: One particular stochastic volatility model was covered in the notes. It would be interesting to code up other stochastic volatility models in **pomp**.
 
 ---------------
 
-#### Epidemiology
+--------------
 
-<b>Question</b>: Given incidence data for an infectious disease, what models fit the data? Usually, one considers susceptible-infected-recovered models (such as developed in the course notes) and variations on them. What can we learn from time series analysis about transmission of the disease? 
+### Epidemiology
 
-<b>Cholera</b>. <b>Data</b>: [dacca-cholera.csv](dacca-cholera.csv). <b>Reference</b>: King, A. A., Ionides, E. L., Pascual, M. and Bouma, M. J. (2008). Inapparent infections and cholera dynamics. [Nature 454:877-880](http://dx.doi.org/10.1038/nature07084).
+<b>A general question</b>: Given incidence data for an infectious disease, what models fit the data? Usually, one considers susceptible-infected-recovered (SIR) models, such as developed in the course notes, and variations on them. What can we learn from time series analysis about transmission of the disease? 
 
-<b>Polio</b>. <b>Data</b>: [polio_wisconsin.csv](polio_wisconsin.csv). <b>Reference</b>: Martinez-Bakker M., King, A.A. and Rohani, P. (2015), "Unraveling the Transmission Ecology of Polio", [PLoS Biology 13: e1002172](http://dx.doi.org/10.1371/journal.pbio.1002172).
+----------
 
-<b>Measles</b>. <b>Data</b>: <b>References</b>:
+
+<b>Cholera</b>. 
+
+* <b>Data</b>: [dacca-cholera.csv](dacca-cholera.csv). 
+
+* <b>Reference</b>: King, A. A., Ionides, E. L., Pascual, M. and Bouma, M. J. (2008). Inapparent infections and cholera dynamics. [Nature 454:877-880](http://dx.doi.org/10.1038/nature07084).
+
+* <b>pomp object</b>: Available in **pomp** via `pompExample(dacca)`. From the **pomp** source code, you can get the code that constructs this pomp object so you can modify it as necessary.
+
+------------
+
+<b>Polio</b>. 
+
+* <b>Data</b>: [polio_wisconsin.csv](polio_wisconsin.csv). 
+
+* <b>Reference</b>: Martinez-Bakker M., King, A.A. and Rohani, P. (2015), "Unraveling the Transmission Ecology of Polio", [PLoS Biology 13: e1002172](http://dx.doi.org/10.1371/journal.pbio.1002172).
+
+* <b>pomp object</b>: See [http://kingaa.github.io/sbied/polio/polio.html](http://kingaa.github.io/sbied/polio/polio.html).
+
+
+------------
+
+<b>Measles</b>. 
+
+* Historical data on measles in UK for 20 cities, including demographic data, are: [20measles.csv](20measles.csv), [20births.csv](20births.csv), [20pop.csv](20pop.csv).
+
+* <b>Reference</b>: He, D., E. L. Ionides and A. A. King (2010). Plug-and-play inference for disease dynamics: measles in large and small towns as a case study. [Journal of the Royal Society Interface 7:271-283](http://dx.doi.org/10.1098/rsif.2009.0151).
+
+* <b>pomp object</b>: See [http://kingaa.github.io/sbied/measles/measles.html](http://kingaa.github.io/sbied/measles/measles.html).
+
+-----------------
 
 <b>Other infectious disease data</b>.
 
+* [Project Tycho](http://www.tycho.pitt.edu) is an open resource for infectious disease time series data. Currently, the most thoroughly standardized ["level 1 data"](http://www.tycho.pitt.edu/data/level1.php) are available only for USA, for smallpox, polio, measles, mumps, rubella, hepatitis A, and whooping cough. Many other datasets are available for other disesases and locations.
+
+* <b>pomp objects</b>: Modifications of the basic SIR model can draw on the above **pomp** representations for other SIR-type systems.
+
 ----------------------
+
