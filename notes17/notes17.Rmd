@@ -141,6 +141,84 @@ f_{X_{n+k}|X_{n+k-1}}(x_{n+k}\given x_{n+k-1}\params\hat\theta) \, dx_{n}\dots d
 
 ------
 
+## Some comments on "fitted values" for time series
+
+* In regression analysis, fitted values often play an important role in model diagnostics. It is often useful to plot residuals against fitted values, or to see how much of the variation in the data is explained by the fitted values.
+
+* For time series models, the "fitted values" are usually defined to be the 1-step prediction mean. This corresponds to exactly the regression fitted value for an AR model. However, because these fitted values depend on nearby data points (unlike in most regression models) their interpretation needs additional care.
+
+* For example, consider the daily S&P 500 index that we saw earlier in [Section 3.5](http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model) and [Chapter 15](http://ionides.github.io/531w16/notes15/notes15.html).
+
+* In practice, we would usually start by transforming the data to the daily investment return, by taking differences of logs. To make the current point, let's instead fit an ARMA(1,1) model to the logarithm of the index, for the most recent 1000 days.
+
+```{r sp500}
+sp500_table <- read.table("sp500.csv",sep=",",header=TRUE)
+Nt <- 1000
+sp500 <- sp500_table$Close[Nt:1] # data are in reverse order in sp500.csv
+sp500_date <- strptime(sp500_table$Date[Nt:1],"%Y-%m-%d")
+sp500_time <-  as.numeric(format(sp500_date, format="%Y")) + as.numeric(format(sp500_date, format="%j"))/365
+sp500_arma <- arima(log(sp500),order=c(1,0,1))
+sp500_arma_fitted <- log(sp500)-resid(sp500_arma)
+plot(sp500_time,sp500,log="y",type="l",xlab="Date")
+lines(sp500_time,exp(sp500_arma_fitted),col="red")
+```
+
+* Naively, the fitted values might seem to be doing a remarkable job of explaining changes in the stock market! What is going on?
+
+* Let's look closely at the fitted values:
+
+```{r sp500_close}
+plot(sp500_time,sp500,log="y",type="l",xlim=range(tail(sp500_time,100)),xlab="Date")
+lines(sp500_time,exp(sp500_arma_fitted),col="red")
+```
+
+* We see that the fitted values lag one day behind. 
+
+* The explanation is that the fitted model is essentially a random walk,
+$$ Y_{n+1} = Y_n + \epsilon_{n+1} $$
+
+
+```{r sp500_arma_fit}
+sp500_arma
+```
+
+* The one-step prediction is therefore
+$$ y^P_{n+1} = \data{y_n}.$$
+
+* This is just telling us: a reasonable prediction of the S&P 500 index tomorrow is its value today. That is not particularly interesting!
+
+* However, let's look at the correlation between the data and the fitted values:
+
+```{r sp500_cor}
+cor(sp500,sp500_arma_fitted)
+```
+
+* In many linear regression analysis situations, a correlation of $`r round(cor(sp500,sp500_arma_fitted),3)`$ between the data and the fitted values would be taken as strong evidence that you've found a good predictive model!
+
+* Here, we can see this is a fallacy. However, it is more generally true that this sort of correlation can be dangerous to interpret as a measure of modeling success.
+
+* It is better to ask: Does the fitted model do substantially better than a naive model?
+Here, we can compare the standard deviation of the prediction error from the AR(1) model with that from the simple rule of predicting tomorrow's index by today's value.
+
+```{r sp500_compare}
+sd(log(sp500)[2:length(sp500)]-lag(log(sp500))[1:(length(sp500)-1)])
+sd(resid(sp500_arma))
+
+```
+
+* We see, as basic financial knowldge would lead us to suspect in this situation, that the fitted model is not substantially better than the trivial forecast. 
+
+* If we computed the correlation between data and fitted values after differencing, we would obtain a correlation close to zero. We can see, in this case, that this would be a better reflection of the predictability of the system. 
+
+* In other cases, when there is no theoretical principle to guide us to take difference of logs, we can follow the general principle of presenting the improvement in predictability for our favorite model relative to a sensible, simple benchmark model.
+
+* This is similar to the ARMA benchmark likelihoods we use to assess the success of nonlinear POMP models.
+
+<br>
+
+------
+
+------
 
 ## Case study: An emerging infectious disease outbreak
 

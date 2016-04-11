@@ -93,6 +93,11 @@ knit("notes15.Rmd")
 
 * The Statistics department has access to 200 cores on the University of Michigan Flux cluster. This cluster of Linux machines is a more powerful computational environment than the Bayes servers.
 
-* Using the Flux cluster has an extra step compared to a Linux server: we have to learn how to submit jobs. This is not necessary material for Stats 531, but it is a powerful computationaly approach. We can talk about it more in class, if there is interest. Otherwise, let me or Dao know if you want to try this out and want more information and assistance.
+* Using the Flux cluster has an extra step compared to a Linux server: we have to learn how to submit jobs. This is not necessary material for Stats 531, but it is a powerful computationaly approach. 
+
+* There is an online tutorial, ["Flux in 10 easy steps"](http://arc-ts.umich.edu/flux/using-flux/flux-in-10-easy-steps) which may be useful if you want to try this out. Let me or Dao know if you need more information and assistance.
+
+
+
 
 -----------
