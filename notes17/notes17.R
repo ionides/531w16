@@ -39,6 +39,32 @@ require(magrittr)
 require(pomp)
 stopifnot(packageVersion("pomp")>="0.69-1")
 
+## ----sp500---------------------------------------------------------------
+sp500_table <- read.table("sp500.csv",sep=",",header=TRUE)
+Nt <- 1000
+sp500 <- sp500_table$Close[Nt:1] # data are in reverse order in sp500.csv
+sp500_date <- strptime(sp500_table$Date[Nt:1],"%Y-%m-%d")
+sp500_time <-  as.numeric(format(sp500_date, format="%Y")) + as.numeric(format(sp500_date, format="%j"))/365
+sp500_arma <- arima(log(sp500),order=c(1,0,1))
+sp500_arma_fitted <- log(sp500)-resid(sp500_arma)
+plot(sp500_time,sp500,log="y",type="l",xlab="Date")
+lines(sp500_time,exp(sp500_arma_fitted),col="red")
+
+## ----sp500_close---------------------------------------------------------
+plot(sp500_time,sp500,log="y",type="l",xlim=range(tail(sp500_time,100)),xlab="Date")
+lines(sp500_time,exp(sp500_arma_fitted),col="red")
+
+## ----sp500_arma_fit------------------------------------------------------
+sp500_arma
+
+## ----sp500_cor-----------------------------------------------------------
+cor(sp500,sp500_arma_fitted)
+
+## ----sp500_compare-------------------------------------------------------
+sd(log(sp500)[2:length(sp500)]-lag(log(sp500))[1:(length(sp500)-1)])
+sd(resid(sp500_arma))
+
+
 ## ----get-data------------------------------------------------------------
 base_url <- "http://kingaa.github.io/sbied/"
 read.csv(paste0(base_url,"data/ebola_data.csv"),stringsAsFactors=FALSE,

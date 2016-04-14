@@ -96,7 +96,8 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 17. [Forecasting and fitted values, with a case study of Ebola](notes17/notes17.html). [(R script)](notes17/notes17.R)
 
-   
+18. [Time series models with covariates, and a case study of polio](notes18/notes18.html). [(R script)](notes18/notes18.R)
+
 
 --------
 

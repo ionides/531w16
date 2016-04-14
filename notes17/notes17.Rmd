@@ -45,7 +45,7 @@ csl: ecology.csl
 
 Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
 Please share and remix noncommercially, mentioning its origin.  
-![CC-BY_NC](http://kinglab.eeb.lsa.umich.edu/graphics/cc-by-nc.png)
+![CC-BY_NC](cc-by-nc.png)
 
 ```{r opts,include=FALSE}
 library(knitr)
@@ -95,7 +95,8 @@ Produced with R version `r getRversion()` and **pomp** version `r packageVersion
 
 --------------------------
 
-## Objectives
+<big><big><big>Objectives</big></big></big>
+
 
 1. To discuss forecasting and fitted values, both as ways to assess model fit and as potentially the major goal of time series analysis.
 
@@ -372,7 +373,7 @@ skel <- Csnippet('
 
 ###  Measurement model: overdispersed count data
 
-$C_t | H_t$ is negative binomial with $\expect{C_t|H_t} = \rho\,H_t$ and $\var{C_t|H_t} = \rho\,H_t\,(1+k\,\rho\,H_t)$.
+$C_t | H_t$ is negative binomial with $\E[C_t|H_t] = \rho\,H_t$ and $\var[C_t|H_t] = \rho\,H_t\,(1+k\,\rho\,H_t)$.
 
 ```{r measmodel}
 dObs <- Csnippet('
@@ -476,7 +477,7 @@ ebolaModel("Liberia") -> lbr
 ## Parameter estimates for Ebola
 
 @King2015 estimated parameters for this model for each country.
-A large Latin hypercube design was used to initiate a large number of iterated filtering runs.
+A large [Latin hypercube design](https://en.wikipedia.org/wiki/Latin_hypercube_sampling) was used to initiate a large number of iterated filtering runs.
 Profile likelihoods were computed for each country against the parameters $k$ (the measurement model overdispersion) and $R_0$ (the basic reproductive ratio).
 Full details are given [on the datadryad.org site](http://dx.doi.org/10.5061/dryad.r5f30).
 The following loads the results of these calculations.
@@ -623,17 +624,33 @@ Discuss the implications of your findings.
 
 ## Forecasting Ebola
 
-Up to now, we've primarily focused on using POMP models to answer scientific questions.
-Of course, we can also use them to make forecasts.
-The key issues are to do with quantifying the forecast uncertainty.
+* Up to now, we've primarily focused on using POMP models to answer scientific questions.
+
+* We can also use them to make forecasts.
+
+* The key issues are to do with quantifying the forecast uncertainty.
 This arises from four sources:
 
-1. measurement error
-1. process noise
-1. parametric uncertainty
-1. structural uncertainty
+    1. measurement error
 
-Here, we'll explore how we can account for the first three of these in making forecasts for the Sierra Leone outbreak.
+    1. process noise
+
+    1. parametric uncertainty
+
+    1. structural uncertainty
+
+* Here, we'll explore how we can account for the first three of these in making forecasts for the Sierra Leone outbreak.
+
+* We follow an [empirical Bayes](https://en.wikipedia.org/wiki/Empirical_Bayes_method) approach:
+
+    1. We set up a collection of parameter vectors in a neighborhood of the maximum likelihood estimate containing the region of high likelihood.
+
+    2. We carry out a particle filter at each parameter vector, which gives us estimates of both the likelihood and the filter distribution at that parameter value.
+
+    3. We simulate forward from each filter distribution, up to the desired forecast horizon, to give the prediction distribution for each parameter vector.
+
+    4. We sample from these prediction distributions with probability proportional to the estimated likelihood of the parameter vector.
+
 
 ```{r forecasts}
 require(pomp)
