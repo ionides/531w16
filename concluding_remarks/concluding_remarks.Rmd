@@ -1,0 +1,70 @@
+---
+title: "Concluding remarks<br>Stats 531 Winter 2016"
+author: "Edward Ionides"
+date: "3/14/2016"
+output:
+  html_document:
+    theme: flatly
+    toc: no
+    toc_depth: 2
+    number_sections: false
+csl: ecology.csl
+---
+
+### What we have achieved in this course?
+
+* The first half of this course covered linear time series analysis, emphasizing likelihood-based techniques for Gaussian ARIMA models.
+
+   + The models and methods we learned in the first half of the semester have been the foundation of time series analysis for 40 years.
+
+* The second half of this course, emphasizing nonlinear POMP models, was something new.
+
+    + <span style="color:blue"> **This may be the first Masters level course ever, anywhere, that has taught skills in practical, applied, likelihood-based time series analysis for partially observed nonlinear stochastic dynamic systems.**</span>
+
+    + The novelty added extra challenges to material that is already demanding.
+
+    + Imagine how much easier the course will be next time it is taught, with all the problems we hit already resolved.
+
+
+* Many real-world systems are imperfectly observed and have dynamics that are nonlinear or non-Gaussian, to greater or lesser extents. 
+
+* Only recently has it become practical to build these nonlinearities into statistical modeling and data analysis.
+
+* One can anticipate that, in the future, time series analysis using nonlinear POMP models will become increasingly widespread. The **pomp** package will no doubt be superseded by something better, but the principles of specifying a POMP model will remain.
+
+* Statistically efficient methods for nonlinear time series models will continue to be computationally demanding. People will continue to want to develop and fit larger models, to bigger datasets, up to the limits of available computation resources.
+
+
+<br>
+
+-------
+
+--------
+
+### Broader relevance of the skills we've acquired
+
+* Rmarkdown and multicore computing are powerful tools that facilitate practical data analysis for complex models and computationally intensive inference procedures. Time series analysis provides just one example of the utility of this approach.
+
+* The experiences we've had carrying out likelihood-based inference this semester are relevant to statistical analysis of many models for which the likelihood can be computed or approximated by Monte Carlo methods, not just for time series.
+
+<br>
+
+-----
+
+-----
+
+<br>
+
+### <span style="color:blue">Congratulations on your achievements this semester.</span>
+
+<br>
+
+### <span style="color:blue">Let's celebrate!</span>
+
+</big>
+
+<br>
+
+-------
+
+-------

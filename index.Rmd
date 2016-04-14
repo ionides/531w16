@@ -98,6 +98,7 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 18. [Time series models with covariates, and a case study of polio](notes18/notes18.html). [(R script)](notes18/notes18.R)
 
+19. [Concluding remarks](concluding_remarks/concluding_remarks.html)
 
 --------
 
