@@ -178,7 +178,7 @@ f_{Y_{n}|X_n}(y_{n}\given x_n\params\theta),
 \end{array}$$
 for $n=1:N$
 
-* The possibility of a general dependence on $n$ includes the possibility that there is some covariate time series $\{z_{0:N}\}$ such that
+* The possibility of a general dependence on $n$ includes the possibility that there is some covariate time series $z_{0:N}$ such that
 $$\begin{array}{lcl}
 f_{X_{0}}(x_0\params\theta)&=& f_{X_{0}}(x_0\params\theta,z_0)
 \\
@@ -498,7 +498,7 @@ polio_Nsim <-        c(50,100, 500)
 
 -----
 
-### Likelihood evaluation at an estimated MLE
+## Likelihood evaluation at an estimated MLE
 
 * Let's carry out a likelihood evaluation at the reported MLE.  
 
@@ -538,7 +538,7 @@ This setup has minor differences in notation, model construction and code compar
 
 ------
 
-### Simulation to investigate the fitted model: Local persistence
+## Simulation to investigate the fitted model: Local persistence
 
 The scientific purpose of fitting a model typically involves analyzing properties of the fitted model, often investigated using simulation. Following @martinez-bakker15, we are interested in how often months with no reported cases ($Y_n=0$) correspond to months without any local asymptomatic cases, defined for our continuous state model as $I^B_n+I^O_n<1/2$. For Wisconsin, using our model at the estimated MLE, we compute as follows:
 
