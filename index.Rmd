@@ -92,7 +92,7 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 15. [Case study: POMP modeling to investigate financial volatility](notes15/notes15.html). [(R script)](notes15/notes15.R)
 
-16. [Using a Linux sever for POMP analysis](linux/linux.html).
+16. [Using a Linux sever for POMP analysis](linux/linux.html). [Using the UM Flux Linux cluster](flux/flux.html).
 
 17. [Forecasting and fitted values, with a case study of Ebola](notes17/notes17.html). [(R script)](notes17/notes17.R)
 

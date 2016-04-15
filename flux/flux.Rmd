@@ -1,0 +1,67 @@
+---
+title: "Flux allocation for Stats 531"
+author: "Edward Ionides"
+output:
+  html_document:
+    theme: flatly
+    toc: no
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\data[1]{#1^*}
+
+--------
+
+* The folks at Flux have kindly set up a class Flux allocation for Stats 531.
+
+* Using Flux is entirely optional. If you're new to Flux, but prepared to work in a Unix environment, then the online tutorial ["Flux in 10 easy steps"](http://arc-ts.umich.edu/flux/using-flux/flux-in-10-easy-steps) may indeed be not too difficult to follow, and a worthwhile investment of time.
+
+* Flux has excellent support staff, if you have questions, but you're welcome to start by asking them to Dao or myself.
+
+* Technical instructions about the Stats 531 Flux allocation follow:
+
+* A 100 core allocation has been created for stats531w16_flux. 
+
+* These cores are available now and will remain active for 1 month, through the end of the day on 5/14/2016. 
+
+* Everyone on the Canvas email list for Stats 531 has been added as authorized users.
+
+* For students to use this allocation, they should include the following lines into their PBS scripts:
+```
+#PBS -A stats531w16_flux
+#PBS -l qos=flux
+#PBS -q flux
+```
+
+* The available resources can be checked quickly with the `freealloc` command on Flux:  
+```
+freealloc stats531w16_flux
+0 of 100 cores in use, 100 cores available
+0 KB of 400 GB memory in use, 400 GB memory available
+```   
+ 
+* An example of doParallel use is in the example files in /scratch/data/examples/R/doParallel. Type the commands
+```
+$ mkdir example
+$ cd example
+$ cp /scratch/data/examples/R/doParallel/*  ./
+```
+to make local copies of the following files:
+```
+doParallel_example.pbs
+doParallel_example.R
+doParallel_example.Rout
+test_R_doParallel.o19081388
+```
+
+* You have to make a few modifications to run your code.
+
+    + In the PBS submit script,  there are instructions in the comments at the head of the file.  You need to fill in your e-mail address and Flux account name before submitting it.
+
+    + In the R program itself, there is an example of a parallel foreach operation. This should be replaceable by the foreach code we've been using for POMP analysis.
+
+
+-----------
