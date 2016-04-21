@@ -1,0 +1,394 @@
+---
+title: "Homework 9 Solution"
+author: "Adapted from Rui Zhang"
+output:
+  html_document:
+    theme: flatly
+    toc: no
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+---
+
+We start with loading the data and reproduce the results in the notes13.
+
+```{r load_notes13,warning=FALSE,message=FALSE}
+options(
+  keep.source=TRUE,
+  stringsAsFactors=FALSE,
+  encoding="UTF-8"
+  )
+set.seed(594709947L)
+require(ggplot2)
+theme_set(theme_bw())
+require(plyr)
+require(reshape2)
+require(magrittr)
+require(foreach)
+require(doMC)
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.69-1")
+bsflu_data <- read.table("bsflu_data.txt")
+bsflu_statenames <- c("S","I","R1","R2")
+bsflu_paramnames <- c("Beta","mu_I","rho","mu_R1","mu_R2")
+bsflu_obsnames <- colnames(bsflu_data)[1:2]
+bsflu_dmeasure <- "
+  lik = dpois(B,rho*R1+1e-6,give_log);
+"
+
+bsflu_rmeasure <- "
+  B = rpois(rho*R1+1e-6);
+  C = rpois(rho*R2);
+"
+
+bsflu_rprocess <- "
+  double t1 = rbinom(S,1-exp(-Beta*I*dt));
+  double t2 = rbinom(I,1-exp(-dt*mu_I));
+  double t3 = rbinom(R1,1-exp(-dt*mu_R1));
+  double t4 = rbinom(R2,1-exp(-dt*mu_R2));
+  S -= t1;
+  I += t1 - t2;
+  R1 += t2 - t3;
+  R2 += t3 - t4;
+"
+
+bsflu_fromEstimationScale <- "
+ TBeta = exp(Beta);
+ Tmu_I = exp(mu_I);
+ Trho = expit(rho);
+"
+
+bsflu_toEstimationScale <- "
+ TBeta = log(Beta);
+ Tmu_I = log(mu_I);
+ Trho = logit(rho);
+"
+
+bsflu_initializer <- "
+ S=762;
+ I=1;
+ R1=0;
+ R2=0;
+"
+
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.75-1")
+bsflu2 <- pomp(
+  data=bsflu_data,
+  times="day",
+  t0=0,
+  rprocess=euler.sim(
+    step.fun=Csnippet(bsflu_rprocess),
+    delta.t=1/12
+  ),
+  rmeasure=Csnippet(bsflu_rmeasure),
+  dmeasure=Csnippet(bsflu_dmeasure),
+  fromEstimationScale=Csnippet(bsflu_fromEstimationScale),
+  toEstimationScale=Csnippet(bsflu_toEstimationScale),
+  obsnames = bsflu_obsnames,
+  statenames=bsflu_statenames,
+  paramnames=bsflu_paramnames,
+  initializer=Csnippet(bsflu_initializer)
+)
+
+run_level <- 3
+switch(run_level,
+       {bsflu_Np=100; bsflu_Nmif=10; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
+       {bsflu_Np=20000; bsflu_Nmif=100; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
+       {bsflu_Np=60000; bsflu_Nmif=300; bsflu_Neval=10; bsflu_Nglobal=100; bsflu_Nlocal=20}
+)
+
+bsflu_params <- data.matrix(read.table("mif_bsflu_params.csv",row.names=NULL,header=TRUE))
+bsflu_mle <- bsflu_params[which.max(bsflu_params[,"logLik"]),][bsflu_paramnames]
+bsflu_fixed_params <- c(mu_R1=1/(sum(bsflu_data$B)/512),mu_R2=1/(sum(bsflu_data$C)/512))
+
+
+require(doParallel)
+cores <- 20  # The number of cores on this machine 
+registerDoParallel(cores)
+mcopts <- list(set.seed=TRUE)
+
+set.seed(396658101,kind="L'Ecuyer")
+bsflu_box <- rbind(
+  Beta=c(0.001,0.01),
+  mu_I=c(0.5,2),
+  rho = c(0.5,1)
+)
+
+bsflu_rw.sd <- 0.02
+bsflu_cooling.fraction.50 <- 0.5
+stew(file=sprintf("box_eval-%d.rda",run_level),{
+  
+  t_global <- system.time({
+    mifs_global <- foreach(i=1:bsflu_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar% 
+      mif2(     
+      bsflu2,
+      start=c(apply(bsflu_box,1,function(x)runif(1,x[1],x[2])),bsflu_fixed_params),
+      Np=bsflu_Np,
+      Nmif=bsflu_Nmif,
+      cooling.type="geometric",
+      cooling.fraction.50=bsflu_cooling.fraction.50,
+      transform=TRUE,
+      rw.sd=rw.sd(
+        Beta=bsflu_rw.sd,
+        mu_I=bsflu_rw.sd,
+        rho=bsflu_rw.sd
+      )
+    )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+
+stew(file=sprintf("lik_global_eval-%d.rda",run_level),{
+  t_global_eval <- system.time({
+    liks_global <- foreach(i=1:bsflu_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(bsflu_Neval, logLik(pfilter(bsflu2,params=coef(mifs_global[[i]]),Np=bsflu_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+
+results_global <- data.frame(logLik=liks_global[,1],logLik_se=liks_global[,2],t(sapply(mifs_global,coef)))
+summary(results_global$logLik,digits=5)
+t_global
+plot(mifs_global)
+```
+
+----------
+
+**<big>Question 9.1</big>**. Assessing and improving algorithmic parameters.
+
+From the diagnostic plots in Section 13.11, we can see the effective sample sizes are basically large (except the time point with less than 500 effective sample size) and all the parameters are converged after 200 MIF iteration.
+
+In the following code, we will change the number of particles (`Np`) to 50000 the number of the MIF iteration (`Nmif`) to 280. Moreover, we will change `bsflu_cooling.fraction.50` to 0.6. Our hypothesis is that these changes can reduce the computation time and give us converged and better optimal solutions with acceptable effective sample sizes.
+
+```{r 9.1}
+
+run_level <- 4
+switch(run_level,
+{bsflu_Np=100; bsflu_Nmif=10; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
+{bsflu_Np=20000; bsflu_Nmif=100; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
+{bsflu_Np=60000; bsflu_Nmif=300; bsflu_Neval=10; bsflu_Nglobal=100; bsflu_Nlocal=20},
+{bsflu_Np=50000; bsflu_Nmif=280; bsflu_Neval=10; bsflu_Nglobal=100; bsflu_Nlocal=20}
+)
+bsflu_cooling.fraction.50 <- 0.6
+
+stew(file=sprintf("Mif-9.1-%d.rda",run_level),{
+  
+  t_global.2 <- system.time({
+    mifs_global.2 <- foreach(i=1:bsflu_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar% 
+      mif2(
+        mifs_global[[1]],
+        start=c(apply(bsflu_box,1,function(x)runif(1,x[1],x[2])),bsflu_fixed_params),
+        Np=bsflu_Np,
+        Nmif=bsflu_Nmif,
+        cooling.fraction.50=bsflu_cooling.fraction.50        
+      )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+##----eval llh--------
+
+stew(file=sprintf("lik-9.1-%d.rda",run_level),{
+  t_global_eval.2 <- system.time({
+    liks_global.2 <- foreach(i=1:bsflu_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(bsflu_Neval, logLik(pfilter(bsflu2,params=coef(mifs_global.2[[i]]),Np=bsflu_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+t_global.2
+
+results_global.2 <- data.frame(logLik=liks_global.2[,1],logLik_se=liks_global.2[,2],t(sapply(mifs_global.2,coef)))
+summary(results_global.2$logLik,digits=5)
+plot(mifs_global.2)
+```
+
+* We can see, this change reduce the time since less computations are needed. However, it found a better maximal likelihood -71.007. Moreover, comparing the median and the mean of the likelihood, these modifications generally also give us better MLEs.
+
+* The effective sample sizes are large and basically the same as before, so it is still acceptable. 
+
+* $\beta$ and $\rho$ are converged in most of the particles. There are only few particles in which $\mu_I$ is not converged.
+
+-----------
+
+**<big>Question 9.2</big>**.  Finding sharp peaks in the likelihood surface.
+
+The drawing method with scale invariant properties is:
+First,taking logarithm of the orginal domain. Secondly, drawing sample uniformly from it. Thirdly, taking exponetiation of the sample.
+
+In `R`, we can implement with command `exp(runif(1,log(a),log(b)))`, where (a,b) is the orginal domain.
+
+Following is the code the implements this drawing method (only for $\beta$).
+
+```{r alter drawing}
+run_level <- 3
+switch(run_level,
+{bsflu_Np=100; bsflu_Nmif=10; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
+{bsflu_Np=20000; bsflu_Nmif=100; bsflu_Neval=10; bsflu_Nglobal=10; bsflu_Nlocal=10}, 
+{bsflu_Np=60000; bsflu_Nmif=300; bsflu_Neval=10; bsflu_Nglobal=100; bsflu_Nlocal=20},
+{bsflu_Np=70000; bsflu_Nmif=200; bsflu_Neval=10; bsflu_Nglobal=100; bsflu_Nlocal=20}
+)
+
+
+
+stew(file=sprintf("box_eval_log new-%d.rda",run_level),{
+  
+  t_global.3 <- system.time({
+    mifs_global.3 <- foreach(i=1:bsflu_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar% 
+      mif2(
+        mifs_global[[1]],
+        start=c(Beta=exp(runif(1,log(bsflu_box[1,1]),log(bsflu_box[1,2])))
+                ,apply(bsflu_box[2:3,],1,function(x) runif(1,x[1],x[2])),bsflu_fixed_params),
+        Np=bsflu_Np,
+        Nmif=bsflu_Nmif
+      )
+  })
+},seed=931129,kind="L'Ecuyer")
+
+
+stew(file=sprintf("lik_global_eval_log new-%d.rda",run_level),{
+  t_global_eval.3 <- system.time({
+    liks_global.3 <- foreach(i=1:bsflu_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(bsflu_Neval, logLik(pfilter(bsflu2,params=coef(mifs_global.3[[i]]),Np=bsflu_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=920804,kind="L'Ecuyer")
+
+results_global.3 <- data.frame(logLik=liks_global.3[,1],logLik_se=liks_global.3[,2],t(sapply(mifs_global.3,coef)))
+summary(results_global.3$logLik,digits=5)
+```
+
+Comparing this result with the one from the notes13, we can see this method actually does not help much in finding sharp peaks, although it has scale invariant property.
+
+To illustrate this, we can see the following histograms of 5000 samples with this two drawing methods.
+
+```{r hist}
+par(mfrow=c(1,2))
+hist(runif(5000,0.001,0.1),ylim=c(0,2600),xlab=expression(beta),
+     main="Uniformly drawing \n from orginal scale")
+hist(exp(runif(5000,log(0.001),log(0.1))),xlab=expression(beta),
+     ylim=c(0,2600),
+     main="Uniformly drawing \n from log scale")
+```
+
+As we can see the drawing around the peak ($\beta \approx 0.004$) does not increase.
+
+----------------
+
+**<big>Question 9.3</big>**.  Construct a profile likelihood.
+
+First, we construct a parameter box for computing the profile likelihood of $\beta$. 
+
+```{r construct_para_box}
+It=50
+nprof=50
+profile.box <- profileDesign(  
+  Beta=exp(seq(log(0.001),log(0.01),length.out=It)),
+  lower=c(mu_I=0.5,rho=0.5),
+  upper=c(mu_I=2,rho=1),
+  nprof=nprof
+)
+```
+
+Then, from each start point, we use `mif2` to find the maximal likelihood and the correponding MLE. Since we need to find the profile likelihood of $\beta$, we need to fix it during the iterated filtering. Therefore, only $\mu_I$ and $\rho$ have random walk stand deviation (`rw.sd`).
+
+```{r mif1}
+stew(file=sprintf("profile beta-%d.rda",It),{
+  
+  t_global.4 <- system.time({
+      prof.llh<- foreach(i=1:(It*nprof),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+        # Find MLE
+        mif2(
+          mifs_global[[1]],
+          start=c(unlist(profile.box[i,]),bsflu_fixed_params),
+          Np=5000,Nmif=100,
+          rw.sd=rw.sd(
+            mu_I=bsflu_rw.sd,
+            rho=bsflu_rw.sd
+          )
+        )->mifs_global.4
+        # evaluate llh
+        evals = replicate(10, logLik(pfilter(mifs_global.4,Np=10000)))
+        ll=logmeanexp(evals, se=TRUE)        
+        
+        data.frame(as.list(coef(mifs_global.4)),
+                   loglik = ll[1],
+                   loglik.se = ll[2])
+      }
+  })
+},seed=931129,kind="L'Ecuyer")
+```
+
+At each value of $\beta$, we pick the MLEs which gives us the maximal 10 likelihood and do the iterated filtering again.
+
+```{r mif2}
+
+## filiter again on the maxima
+
+prof.llh %>% 
+  ddply(~Beta,subset,rank(-loglik)<=10) %>%
+  subset(select=bsflu_paramnames) -> pars
+
+
+## mif2 again
+stew(file=sprintf("profile beta-2-%d.rda",It),{
+  
+  t_global.5 <- system.time({
+    prof.llh<- foreach(i=1:(nrow(pars)),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+      # Find MLE
+      mif2(
+        mifs_global[[1]],
+        start=unlist(pars[i,]),
+        Np=5000,Nmif=50,
+        rw.sd=rw.sd(
+          mu_I=bsflu_rw.sd,
+          rho=bsflu_rw.sd
+        )
+      )->mifs_global.5
+      # evaluate llh 
+      pf= replicate(10,pfilter(mifs_global.5,Np=5000))
+      evals=sapply(pf,logLik)
+      ll=logmeanexp(evals, se=TRUE)  
+      nfail=sapply(pf,getElement,"nfail")
+      
+      data.frame(as.list(coef(mifs_global.5)),
+                 loglik = ll[1],
+                 loglik.se = ll[2],
+                 nfail.max=max(nfail))
+    }
+  })
+},seed=931129,kind="L'Ecuyer")
+```
+
+Finally, for each value of $\beta$, we use the MLE of the largest likelihood to construct the profile likelihood. Loess method is used to draw an approximate curve of it. An approximate 95% confidence interval of $\beta$ is $\{\beta: max[\ell^{profile}(\beta)]-\ell^{profile}(\beta)<1.92\}$
+
+
+```{r plot_profile}
+prof.llh %<>%
+  subset(nfail.max==0) %>%
+  mutate(Beta=exp(signif(log(Beta),5))) %>%
+  ddply(~Beta,subset,rank(-loglik)<=1)
+
+a=max(prof.llh$loglik)
+b=a-1.92
+CI=which(prof.llh$loglik>=b)
+c=prof.llh$Beta[min(CI)]
+d=prof.llh$Beta[max(CI)]
+
+
+prof.llh %>%
+  ggplot(aes(x=Beta,y=loglik))+
+  geom_point()+
+  geom_smooth(method="loess")+
+  geom_hline(aes(yintercept=a),linetype="dashed")+
+  geom_hline(aes(yintercept=b),linetype="dashed")+
+  geom_vline(aes(xintercept=c),linetype="dashed")+
+  geom_vline(aes(xintercept=d),linetype="dashed")
+
+
+c(lower=c,upper=d)
+
+```
+As we can see, the 95% confidence interval of $\beta$ is (0.043,0.052), which shows that $\beta$ is statistically significant.
+

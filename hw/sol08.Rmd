@@ -1,0 +1,112 @@
+---
+title: "Homework 8 Solution"
+author: "Adapted from Yura Kim"
+date: "April 11, 2016"
+output: html_document
+---
+
+## Question 8.1
+
+```{r}
+require(pomp)
+require(ggplot2)
+dat <- read.csv("http://ionides.github.io/531w16/notes11/parus.csv")
+set.seed(2016)
+parus<-pomp(dat,times="year",t0=1959)
+plot(parus)
+```
+
+```{r}
+skel<-Csnippet("DN=r*N*exp(-N/k);")
+parus<-pomp(parus,skeleton=skel,skeleton.type='map',paramnames=c("r","k"),statenames=c("N"))
+```
+
+```{r}
+traj<-trajectory(parus,params=c(N.0=1,r=12,k=1),as.data.frame=TRUE)
+ggplot(data=traj,aes(x=time,y=N))+geom_line()
+```
+
+```{r}
+stochStep <- Csnippet("
+  e = rnorm(0,sigma);
+  N = r*N*exp(-N/k+e);
+")
+pomp(parus,rprocess=discrete.time.sim(step.fun=stochStep,delta.t=1),
+     paramnames=c("r","k","sigma"),statenames=c("N","e")) -> parus
+```
+
+```{r}
+sim <- simulate(parus,params=c(N.0=1,e.0=0,r=12,k=1,sigma=0.5),
+                as.data.frame=TRUE,states=TRUE)
+plot(N~time,data=sim,type='o')
+lines(N~time,data=traj,type='l',col='red')
+```
+
+```{r}
+rmeas <- Csnippet("pop = rnbinom(phi*N*psi/(1-psi),psi);")
+dmeas <- Csnippet("lik = dnbinom(pop,phi*N*psi/(1-psi),psi,give_log);")
+```
+
+```{r}
+pomp(parus,rmeasure=rmeas,dmeasure=dmeas,statenames=c("N"),paramnames=c("phi","psi")) -> parus
+coef(parus) <- c(N.0=100,e.0=0,r=6,k=100,sigma=0.01,phi=1,psi=0.06)
+```
+
+```{r}
+sims <- simulate(parus,nsim=3,as.data.frame=TRUE,include.data=TRUE)
+ggplot(data=sims,mapping=aes(x=time,y=pop))+geom_line()+
+  facet_wrap(~sim)
+```
+
+$\phi=1$ is used so that the mean of $Y_n$ equals to $P_n$. Moreover, the mean and variance of the dataset are used to determine $\psi$ (setting it to 0.06~mean(pop)/var(pop)). Set $r=6$, $k=100$, and $\sigma=0.01$. It seems like $r$ and $k$ determine the overall level of the pop.
+
+## Question 8.2
+
+```{r}
+skel<-Csnippet("DN=a*N/(1+b*N);")
+parus<-pomp(parus,skeleton=skel,skeleton.type='map',paramnames=c("a","b"),statenames=c("N"))
+```
+
+```{r}
+traj<-trajectory(parus,params=c(N.0=1,a=4,b=2),as.data.frame=TRUE)
+ggplot(data=traj,aes(x=time,y=N))+geom_line()
+```
+
+```{r}
+stochStep <- Csnippet("
+  e = rlnorm((-1)*sigma*sigma/2,sigma);
+  N = a*N*e/(1+b*N);
+")
+pomp(parus,rprocess=discrete.time.sim(step.fun=stochStep,delta.t=1),
+     paramnames=c("a","b","sigma"),statenames=c("N","e")) -> parus
+```
+
+```{r}
+sim <- simulate(parus,params=c(N.0=1,e.0=1,a=4,b=2,sigma=0.2),
+                as.data.frame=TRUE,states=TRUE)
+plot(N~time,data=sim,type='o')
+lines(N~time,data=traj,type='l',col='red')
+```
+
+```{r}
+rmeas <- Csnippet("pop = rnbinom(phi*N*psi/(1-psi),psi);")
+dmeas <- Csnippet("lik = dnbinom(pop,phi*N*psi/(1-psi),psi,give_log);")
+```
+
+```{r}
+pomp(parus,rmeasure=rmeas,dmeasure=dmeas,statenames=c("N"),paramnames=c("phi","psi")) -> parus
+coef(parus) <- c(N.0=100,e.0=1,a=400,b=2,sigma=0.2,phi=1,psi=0.06)
+```
+
+```{r}
+sims <- simulate(parus,nsim=3,as.data.frame=TRUE,include.data=TRUE)
+ggplot(data=sims,mapping=aes(x=time,y=pop))+geom_line()+
+  facet_wrap(~sim)
+```
+
+Similarity with Ricker model: There is parameters $a$ and $b$ that could be used to determine the overall level of the population. With some choices of the parameters, the simulation results that have similar mean and variance with the dataset could be obtained.
+
+Difference: When $\epsilon_n=1$ for all $n$, deterministic skeleton of $P_n$ does not show oscillatory behavior for any $a$ and $b$ for Beverton-Holt model. When $a$ and $b$ both positive, $P_n$ only grows (a plot showing this behavior is shown above).   
+
+## Question 8.3
+
