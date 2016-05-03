@@ -1,0 +1,716 @@
+---
+title: "Exploratin of Pertussis Transmission Dynamics and Vaccination Effect Period in Michigan"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Introduction
+Pertussis, also known as whooping cough, is a highly contagious respiratory disease. It is caused by the bacterium Bordetella pertussis.Pertussis is spread through the air by infectious droplets and is highly contagious (http://www.immunize.org/catg.d/p4212.pdf). We want to build a proper variation of the classic SIR model to understand the transmission dynamics of pertussis.
+
+Prevention of pertussis is mainly by vaccination with the pertussis vaccine. Initial immunization is recommended between six and eight weeks of age, with four doses to be given in the first two years of life. The vaccine becomes less effective over time, with additional doses often recommended for older children and adults (https://en.wikipedia.org/wiki/Pertussis). So we also want to know it takes how long for the vaccination immunity to wane. 
+
+## Data
+My data was downloaded from http://www.tycho.pitt.edu/explore.php, recording the pertussis cases in Michigan each week from 2008 - 2011.
+
+```{r warning=FALSE}
+dat<-read.csv("PERTUSSIS_Cases_MICHIGAN_20160414150524.csv",skip=4790,header=FALSE)
+colnames(dat) <-c("Year","Week","Case")
+head(dat)
+Date <- as.Date(paste(dat$Year , dat$Week,1 ,sep = "-"),format="%Y-%W-%w")
+time <- as.numeric(Date - as.Date(paste(dat$Year, 1, 1, sep="-"),format = "%Y-%m-%d")) +1
+
+#time is of the unit year
+for (i in 1: nrow(dat)){
+  if(as.numeric(dat$Year[i]) == 2008 | as.numeric(dat$Year[i]) == 2012){time[i] = time[i]/366 + as.numeric(dat$Year[i])}
+  else{time[i] = time[i]/365 + as.numeric(dat$Year[i])}
+}
+
+sapply(dat,class)
+#Covert the Case number from factor to numeric
+as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
+pertussis_data <- data.frame(time, Case = as.numeric.factor(dat$Case))
+plot(Date,pertussis_data$Case,type="l")
+nrow(pertussis_data)
+which(is.na(pertussis_data$Case))
+
+```
+
+There're a total of 205 weekly data time points, with only one missing value. If I want to prevent the infulence of the missing value, I can choose the first 176 data points.
+
+## The First Model
+My model is a variation on the basic SIR model, with states $X(t) = (S_1(t), V(t), S_2(t), E(t), I(t), R(t))$.
+![model representation](model1_graph.png)
+
+$S_1$ is the number of susceptible individuals who are naive to exposure.
+
+$V$ is the number of individuals who have been vaccinated.
+
+$S_2$ is the numbre of susceptible individuals who have previously been vaccinated but are no longer immune to the dicease.
+
+$E$ is the number of individuals who are exposed to the dicease.
+
+$I$ is the number of individuals who are infectious.
+
+$R$ is the number of the individuals who are recovered from the dicease.
+
+The following is the system of deterministic differential equations: 
+
+$\frac{dS_1}{dt} = (1-p) \nu N - \lambda(t) S_1 -\mu S_1$
+
+$\frac{dV}{dt} = p \nu N - \alpha V - \mu V$
+
+$\frac{dS_2}{dt} = \alpha V - \mu S_2 - \lambda(t) S_2$
+
+$\frac{dE}{dt} = \lambda(t) (S_1 + S_2) - \mu E - \sigma E$
+
+$\frac{dI}{dt} = \sigma E - \mu I - n \gamma I$
+
+$\frac{dR}{dt} = \gamma I - \mu R$
+
+#The role of birth and death
+The pertussis data was collected during 2008 - 2012. The population in Michigan changes over time in this period. So we also take birth rate and death rate into consideration. From http://www.mdch.state.mi.us/pha/osr/natality/tab1.1.asp, I get the birth rate $\nu =12.1$ (per 1000 people in 2008) in Michigan, and http://www.mdch.state.mi.us/pha/osr/deaths/USMIcrudedxrt.asp shows the death rate $\mu=8.8$(per 1000 people in 2008) in Michigan. 
+
+#Seasonality of transmission
+Our Markov transmission model is that each individual in $S_1$ or $S_2$ transitions to $E$ at rate $\lambda(t)$. Note the opening and closing of school affects transmission between children. At the school time we assume transition rate $\lambda(t) = \beta (1+a) I/N$; at the school holidays, $\lambda(t) = \beta (1-a) I/N$. 
+
+#Covariate
+Here I use covariate variables: $N$ (population in Michigan), $\nu$ (birth rate), $\mu$ (death rate) and $b$ (seasonality in indicator, during school time $b=1$, during school holiday, $b = -1$).
+```{r}
+b <- vector("numeric",nrow(dat))
+
+for(i in 1:nrow(dat)){
+  if(dat$Week[i] == 51 | dat$Week[i] == 52 | dat$Week[i] == 14 | (dat$Week[i] > 27 & dat$Week[i] < 32)) { b[i] = 1 }
+  else{ b[i] = -1}
+}
+```
+
+I simply use "block" covariate according to statistics from the above websites. For example, birth rate keeps the same in each year, and changes for different years. Of course, it's more recommended to smooth the population, birth rate, death rate in 2008 - 2012 by B-spline, and use the prediction at weekly data points to form the covariate table.
+```{r}
+N <- rep(0, nrow(dat))
+for(i in 1:nrow(dat)){
+  if(as.numeric(dat$Year[i]) == 2008) {N[i] = 9947000}
+  else if(as.numeric(dat$Year[i]) == 2009){ N[i] = 9902000}
+  else if(as.numeric(dat$Year[i]) == 2010){ N[i] = 9878000}
+  else if(as.numeric(dat$Year[i]) == 2011){ N[i] = 9876000}
+  else { N[i] = 9885000}
+}
+
+nu <- rep(0, nrow(dat))
+for(i in 1:nrow(dat)){
+  if(as.numeric(dat$Year[i]) == 2008) {nu[i] = 0.0121}
+  else if(as.numeric(dat$Year[i]) == 2009){ nu[i] = 0.0118}
+  else if(as.numeric(dat$Year[i]) == 2010){ nu[i] = 0.0116}
+  else if(as.numeric(dat$Year[i]) == 2011){ nu[i] = 0.0116}
+  else { nu[i] = 0.0114}
+}
+
+mu <- rep(0, nrow(dat))
+for(i in 1:nrow(dat)){
+  if(as.numeric(dat$Year[i]) == 2008) {mu[i] = 0.0088}
+  else if(as.numeric(dat$Year[i]) == 2009){ mu[i] = 0.0087}
+  else if(as.numeric(dat$Year[i]) == 2010){ mu[i] = 0.0089}
+  else if(as.numeric(dat$Year[i]) == 2011){ mu[i] = 0.0091}
+  else { mu[i] = 0.0091}
+}
+
+covartable <- data.frame(
+  time = pertussis_data$time,
+  N = N,
+  b = b,
+  nu = nu,
+  mu = mu
+)
+```
+
+```{r eval=FALSE}
+require("pomp")
+pertussis_K <- 6
+pertussis_tcovar <- pertussis_data$time
+pertussis_bspline_basis <- periodic.bspline.basis(pertussis_tcovar,nbasis=pertussis_K,degree=3,period=1)
+colnames(pertussis_bspline_basis)<- paste("xi",1:polio_K,sep="")
+covartable <- data.frame(
+  time=pertussis_tcovar,
+  pertussis_bspline_basis,
+  N=predict(smooth.spline(x=2008:2012,y=N[40*(1:5)]),
+            x=pertussis_tcovar)$y,
+  b=b,
+  nu= predict(smooth.spline(x=2008:2012,y=nu[40*(1:5)]),
+            x=pertussis_tcovar)$y,
+  mu= predict(smooth.spline(x=2008:2012,y=mu[40*(1:5)]),
+            x=pertussis_tcovar)$y,
+)
+```
+
+#Vaccination coverage, incubation period, infectious period
+The parameters $p$, $\sigma$, $\gamma$ have realistic meaning. 
+
+$p$ describes the vaccination coverage rate.From http://www.cdc.gov/mmwr/preview/mmwrhtml/mm6433a1.htm#Tab1, we know p = 0.777 in Michigan during 2010-2014, and we just directly use this for our data during 2008 - 2012.
+
+Each individual in $E$ transitions to $I$ at rate $\sigma$, that is to say, $\frac{1}{\sigma}$ is the average latent period.The time between exposure and the development of symptoms is on average 9–10 days (range 6–20 days),rarely as long as 42 days (https://en.wikipedia.org/wiki/Pertussis). So I simply set $\frac{1}{\sigma}$ as 10 days (i.e 10/365 year).
+
+The coughing may last for 10 or more weeks, hence the phrase "100-day cough". So I set $\frac{1}{\gamma}$ as 100 days (i.e $100/365 year$). Note these numbers are just fixed with background information and rough estimate.
+
+```{r}
+#Here state VS2 is just used to know how many vaccinated individuals lose their immunity each week
+pertussis1_statenames <- c("S1","V","S2","E","I","R","H","VS2") 
+pertussis1_paramnames <- c( "p","Beta","alpha","sigma","gamma","rho","a","k")
+pertussis1_fixed_params <- c(p = 0.777,sigma = 365/10, gamma = 365/100)
+#The observed data is Case
+pertussis1_obsnames <- colnames(pertussis_data)[2] 
+```
+
+#Measurement model: overdispersed count data
+$Case_t | H_t$  is negative binomial with $E(Case_t | H_t) = \rho* H_t$, and $Var(Case_t | H_t) = \rho*H_t *(1+k*\rho*H_t)$. Here $H_t$ corresponds to the number of individuals entering the infectious set $I$, and $\rho$ represents the report rate.
+
+```{r}
+pertussis1_dmeasure <- "
+  double f = dnbinom_mu(nearbyint(Case),1.0/k,rho*H,1);
+  lik = (give_log) ? f : exp(f);
+"
+pertussis1_rmeasure <- "
+  Case = rnbinom_mu(1.0/k,rho*H);
+"
+```
+
+#Process model simulator
+We consider the Euler’s method for a discrete SIR model to approcimate those ordinary defferential equations. We especially use binomial approximation with exponential transition prob, since it's numerically preferable to implement (http://ionides.github.io/531w16/notes12/notes12.html#eulers-method-for-a-discrete-sir-model).
+```{r}
+pertussis1_rprocess <- "
+  double N_VS2 = rbinom(V,1-exp(-alpha*dt));
+  double N_S1E = rbinom(S1, 1-exp(-Beta*(1+b*a)*I/N*dt));
+  double N_S2E = rbinom(S2, 1-exp(-Beta*(1+b*a)*I/N*dt));
+  double N_EI = rbinom(E, 1-exp(-sigma*dt));
+  double N_IR = rbinom(I, 1-exp(-gamma*dt));
+  double N_S1 = rbinom(S1, 1-exp(-mu*dt));
+  double N_V = rbinom(V, 1-exp(-mu*dt));
+  double N_S2 = rbinom(S2, 1-exp(-mu*dt));
+  double N_E = rbinom(E, 1-exp(-mu*dt));
+  double N_I = rbinom(I, 1-exp(-mu*dt));
+  double N_R = rbinom(R, 1-exp(-mu*dt));
+
+  int N_NV = N*nu*p*dt; 
+  int N_NS1 = N*nu*(1-p)*dt;
+  
+  S1 += N_NS1 - N_S1E - N_S1 ;
+  V += N_NV - N_VS2 - N_V ;
+  S2 +=  N_VS2 - N_S2E - N_S2 ;
+  E += N_S1E + N_S2E - N_EI - N_E ;
+  if(E<0) E = 0;
+  I += N_EI  - N_IR - N_I ;
+  if(I<0) I = 0;
+  R += N_IR - N_R ;
+  if(R<0) R = 0;
+  H += N_EI;
+  VS2 += N_VS2;
+"
+```
+
+#Parameter transformation
+It is generally helpful for optimization to provide transformations of the parameters so that (on the estimation scale) they are real-valued and have uncertainty on the order of 1 unit. For example, one typically takes a logarithmic transformation of positive parameters and a logistic transformation of [0,1] valued parameters (http://ionides.github.io/531w16/notes13/notes13.html).
+
+Here I set the report rate $\rho$, and overdispersed parameter $k$ always within [0,1]. And $\alpha$ should also be always in the range [0,1], because if $\alpha >1$, the average duration of vaccination effect is less than 1 year.
+```{r}
+pertussis1_fromEstimationScale <- "
+ Talpha = expit(alpha);
+ TBeta = exp(Beta);
+ Trho = expit(rho);
+ Ta = exp(a);
+ Tk = expit(k);
+"
+
+pertussis1_toEstimationScale <- "
+ TBeta = log(Beta);
+ Talpha = logit(alpha);
+ Trho = logit(rho);
+ Ta = log(a);
+ Tk = logit(k);
+"
+```
+
+#Initial Values
+There are basically three methods to set the initial state values. Firstly, the simplest way is to randomly set the initial state value based on intuition; Secondly, view these as the initial value parameters and use the simulator process to estimate the ivp; Thirdly, if we think the initial states are reached after a long time convergence, we can try to find the stationary distribution and set initial values.
+Here I tried the iterated filtering algorithm at run level for several times to get an idea about the sensible initial values.
+
+```{r message=FALSE}
+pertussis1_initializer <- "
+ S1 = 4000000;
+ V = 4900000;
+ S2 = 1000000;
+ E = 10;
+ I = 20;
+ R = 55;
+ H = 0;
+ VS2 =0;
+"
+```
+
+```{r warning=FALSE, message=FALSE}
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.75-1")
+pertussis1 <- pomp(
+  data = pertussis_data[1:176,],
+  times="time",
+  t0=pertussis_data$time[1]-7/365.25,
+  rprocess=euler.sim(
+    step.fun=Csnippet(pertussis1_rprocess),
+    delta.t=1/365.25
+  ),
+  rmeasure=Csnippet(pertussis1_rmeasure),
+  dmeasure=Csnippet(pertussis1_dmeasure),
+  covar=covartable,
+  tcovar="time",
+  
+  obsnames = pertussis1_obsnames,
+  statenames = pertussis1_statenames,
+  paramnames = pertussis1_paramnames,
+  zeronames = c("H","VS2"),
+  covarnames = c("b","nu","mu","N"),
+  initializer = Csnippet(pertussis1_initializer),
+  fromEstimationScale=Csnippet(pertussis1_fromEstimationScale),
+  toEstimationScale=Csnippet(pertussis1_toEstimationScale)
+)
+plot(pertussis1)
+```
+
+#Computation Levels
+Empirically, Np=5000 and Nmif=200 are around the minimum required to get stable results with an error in the likelihood of order 1 log unit for this example; this is implemented by setting run_level=2. (http://ionides.github.io/531w16/notes13/notes13.html)
+
+Limited by the time and computational resources, here I only do the experiment at run level 2.
+```{r message=FALSE}
+run_level <- 2
+switch(run_level,
+       {pertussis_Np=100; pertussis_Nmif=10; pertussis_Neval=10; pertussis_Nglobal=10; pertussis_Nlocal=10}, 
+       {pertussis_Np=5000; pertussis_Nmif=200; pertussis_Neval=10; pertussis_Nglobal=10; pertussis_Nlocal=10}, 
+       {pertussis_Np=40000; pertussis_Nmif=150; pertussis_Neval=10; pertussis_Nglobal=20; pertussis_Nlocal=20}
+)
+
+require(doParallel)
+cores <- 5  # The number of cores on this machine 
+registerDoParallel(cores)
+mcopts <- list(set.seed=TRUE)
+
+set.seed(396658101,kind="L'Ecuyer")
+```
+
+#Globals search of the likelihood surface
+
+To understand the transmission dynamic of pertussis, here I try to estimate those parameters in my model by global search.
+
+These parameters all have realistic meaning. $\beta$ indicates transmission rate, $\frac{1}{\alpha}$ is the average length of the vaccination effective period. $\rho$ denotes the report rate of pertussis cases, and $k$ corresponds to the overdispersed problem. So the search box are set romotely sensible based on the background information of epidemiology.
+
+Especially note here I want to draw starting parameters for the global search, which is less dependent on the scale. So First,taking logarithm of the orginal domain. Secondly, drawing sample uniformly from it. Thirdly, taking exponetiation of the sample.(http://ionides.github.io/531w16/hw/sol09.html)
+
+```{r}
+pertussis1_box <- rbind(
+  Beta = c(log(1), log(15)),
+  alpha =c(log(0.05), log(0.25)),
+  rho = c(log(0.5),log(1)),
+  a = c(log(0.1),log(0.2)),
+  k = c(log(0.01),log(1))
+)
+```
+
+Here we set $v_j = 0.02$ for regular parameter estimation, and the cooling fraction is set to be 0.5 (http://ionides.github.io/531w16/notes13/notes13.html). Actually, we can try experiments with different setting for these two parameters to say which performs better for parameter estimation covergence.
+
+```{r}
+pertussis_rw.sd <- 0.02
+pertussis_cooling.fraction.50 <- 0.5
+```
+
+```{r}
+stew(file=sprintf("box_eval1-%d.rda",run_level),{
+  
+  t_global <- system.time({
+    mifs_global1 <- foreach(i=1:pertussis_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  mif2(
+     pertussis1,
+     start=c(apply(pertussis1_box,1,function(x)exp(runif(1,x[1],x[2]))), pertussis1_fixed_params), 
+     Np=pertussis_Np,
+     Nmif=pertussis_Nmif,
+     cooling.type="geometric",
+     cooling.fraction.50=pertussis_cooling.fraction.50,
+     transform=TRUE,
+     rw.sd=rw.sd(
+          Beta=pertussis_rw.sd,
+          alpha=pertussis_rw.sd,
+          rho=pertussis_rw.sd,
+          a = pertussis_rw.sd,
+          k = pertussis_rw.sd
+      )
+
+    )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+
+plot(mifs_global1)
+```
+
+Based on the inadequate computation, only with $Np=5000$, $Nmif = 200$, the result of convergence is not bad. The effective sample size is always above 100, the nfail is always 0.
+
+We note most state values change over time consistently, such as $E(t)$, $I(t)$, $R(t)$ and $H(t)$. But the trend of $V(t)$ and $S2(t)$ show some variation for different filter. On one hand, the scale of $V$ and $S2$ are much bigger, so it's normal to observe some variation; on the other hand, such large variation may be the consequence of the improper initial value setting of $S2$ and $V$, or because of the improper model.  
+
+The estimated paramters roughly converge well, except for the seasonality effect factor $a$. But we should notice the scale in this plot for $a$ is small, finally $a$ converges in the range (0.05, 0.1).
+
+ 
+```{r warning=FALSE, message=FALSE}
+stew(file=sprintf("lik_global_eval1-%d.rda",run_level),{
+  t_global_eval1 <- system.time({
+    liks_global1 <- foreach(i=1:pertussis_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals1<- replicate(pertussis_Neval, logLik(pfilter(pertussis1,params=coef(mifs_global1[[i]]),Np=pertussis_Np)))
+      logmeanexp(evals1, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+
+results_global1 <- data.frame(logLik=liks_global1[,1],logLik_se=liks_global1[,2],t(sapply(mifs_global1,coef)))
+
+summary(results_global1$logLik,digits=5)
+
+if (run_level>2) 
+  write.table(rbind(results_global1),
+              file="mif_bsflu_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+
+idx <- which.max(results_global1$logLik)
+pertussis1_mle <- unlist(results_global1[idx,])
+pertussis1_mle
+```
+
+#Diagnostics for the first model
+
+Based on the maximum likelihood parameters we have computed by now, we reach the "best" model in the frame of figure 1. To understand how well this model performs, we want to know how close it's fitted with the true data. So we focus on the simulation by this model. We can use many statistics to compare the simulation and true data.
+```{r warning=FALSE,message=FALSE}
+require("ggplot2")
+library(plyr)
+library(reshape2)
+library(magrittr)
+options(stringsAsFactors=FALSE)
+simulate(pertussis1,params=c(pertussis1_mle, pertussis1_fixed_params),nsim=5,as.data.frame=TRUE,include.data=TRUE)%>% 
+     mutate(is.data=ifelse(sim=="data","yes","no")) %>%
+ggplot(mapping=aes(x=time,y=Case,group=sim,color=is.data,alpha=is.data))+
+  geom_line()+guides(color=FALSE,alpha=FALSE)+scale_color_manual(values=c(no=gray(0.6),yes='red'))+
+  scale_alpha_manual(values=c(no=0.5,yes=1))
+```
+
+It seems that the simulation increases overtime a bit more slowly than the true data. Let’s try to quantify this. First, we’ll write a function that estimates the exponential growth rate by linear regression. Then, we’ll apply it to the data and to 500 simulations.
+
+```{r warning=FALSE}
+growth.rate <- function (y) {
+  cases <- y["Case",]
+  fit <- lm(log1p(cases)~seq_along(cases))
+  unname(coef(fit)[2])
+}
+probe(pertussis1,params=c(pertussis1_mle, pertussis1_fixed_params), probes=list(r=growth.rate),nsim=500) %>% plot()
+```
+
+It turns out that the true data has growth rate only a bit larger than (or just equal to) growth rate of the simulated number of cases. But we should also find that the growth rate for different simulations are quite different. The histogram distributed symmetric and nearly uniform, withou peak where many simulations share similar growth rate. So even for the specific set of parameter values (pertussis1_mle), the simulated data can be quite different between each other.
+
+Also, the simulations appear to be more highly variable around the trend than do the data.
+
+```{r warning=FALSE}
+growth.rate.plus <- function (y) {
+  cases <- y["Case",]
+  fit <- lm(log1p(cases)~seq_along(cases))
+  c(r=unname(coef(fit)[2]),sd=sd(residuals(fit)))
+}
+probe(pertussis1,params=c(pertussis1_mle, pertussis1_fixed_params),probes=list(growth.rate.plus),
+      nsim=500) %>% plot()
+```
+
+We could observe the standard deviation of residuals for simulated data is basically larger than that of the true data.
+
+Let’s also look more carefully at the distribution of values about the trend using the 1st and 3rd quantiles. Also, it looks like the data are less jagged than the simulations. We can quantify this using the autocorrelation function (ACF).(http://ionides.github.io/531w16/notes17/notes17.html)
+```{r warning=FALSE}
+log1p.detrend <- function (y) {
+  cases <- y["Case",]
+  y["Case",] <- as.numeric(residuals(lm(log1p(cases)~seq_along(cases))))
+  y
+}
+
+probe(pertussis1,params=c(pertussis1_mle, pertussis1_fixed_params),probes=list(
+  growth.rate.plus,
+  probe.quantile(var="Case",prob=c(0.25,0.75)),
+  probe.acf(var="Case",lags=c(1,2,3),type="correlation",
+            transform=log1p.detrend)
+),nsim=500) %>% plot()
+```
+
+Our simulated data are really less jagged than the true data, note the simulated data have less acf.1 and acf.2.
+
+
+#Unreasonable vaccine waning rate
+Up to now we do experiments and diagnostic at the parameter estimation with maximum likelihood. We shold also notice that we have found the "best" $\alpha = 0.0007$, which is so small and means that the vaccinated immunity nearly does not wane in people's life. However, we have the background knowledge that the vaccine of pertussis becomes less effective over time, with additional doses often recommended for older children and adults.(https://en.wikipedia.org/wiki/Pertussis). So we doubt the computed $\alpha$. 
+
+##The Second Model
+Although the above model coverges well, it's unreasonable to find out such small vaccination waning rate. So this model must have not adequately revealed the transmission dynamic of pertussis. To improve the model performance and get more sensible parameter estimation, here we build a more complicated model inspired by the paper http://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000647. My second model has states $X(t) = (S_1(t), V(t), S_2(t), E_1(t), I_1(t), R(t), E_2(t), I_2(t))$.
+![model representation](model2_graph.png)
+
+Note the vaccination immunity is not lifelong. Also, people recovered from the primary infection only keep immune to pertussis for a specific period of time.$\alpha_v$ is the rate of vaccinated individuals losing immunity, and $\alpha_r$ is the rate of recovered individuals losing immunity. Here $I_1$ represents primary infections and $I_2$ represents repeat infection. $\lambda_2 = \beta_2(1\pm a)$, $\beta_2$ is the average transmission rate from individuals with a primary infection, while $\lambda_1 = \beta_1(1\pm a)$, $\beta_1$ is transmission rate for naive individuals. $a$ is the seasonality effect factor, and the sign $+$ or $-$ depends on school time. 
+
+The parameter $\epsilon$ represents the probability that susceptible (but previously infected or vaccinated) individuals, upon exposure, boost their immunity instead of becoming infectious. In this immune-boosting model, we set $\epsilon = 0.5$.(http://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000647)
+
+Following is the defferential equations representing the transmission dynamics among different population set.
+
+$\frac{dS_1}{dt} = (1-p) \nu N - \lambda_1(t) S_1 -\mu S_1$
+
+$\frac{dE_1}{dt} = \lambda_1(t) S_1 - \sigma E_1 - \mu E_1$
+
+$\frac{dI_1}{dt} = \sigma E_1 - \gamma_1 I_1 - \mu I_1$
+
+$\frac{dV}{dt} = p \nu N - \alpha_v V - \mu V$
+
+$\frac{dS_2}{dt} = \alpha_v V + \alpha_r R - \mu S_2 - \lambda_2(t) S_2$
+
+$\frac{dE_2}{dt} = (1-\epsilon) \lambda_2(t) S_2 - \mu E_2 - \sigma E_2$
+
+$\frac{dI_2}{dt} = \sigma E_2 - \mu I_2 -  \gamma_2 I_2$
+
+$\frac{dR}{dt} = \epsilon \lambda_2(t) S_2 + \gamma_1 I_1 + \gamma_2 I_2 - \alpha_r R - \mu R$
+
+To improve the model performance, we introduce the initial value parameters. We'll also estimate the initial state value, instead of blindly fixing those $S1_0$，$V_0$, etc. On the other hand, we have find the number of infectious people, or exposed people are so small compared with the number of susceptible and vaccinated people, and the initial value of $I$,$E$,$R$ seems of slight influence on the convergence. To reduce the number of parameters needed to be estimate, I only set the initial value of $S_1$ and $V$ as parameter, fix initial values of $E_1$, $E_1$,$I_1$,$R$,$E_2$,$I_2$, and calculate initial value of $S_2$,$S2_0 \approx N - V_0-S1_0$.
+```{r}
+pertussis2_statenames <- c("S1","V","S2","E1","I1","R","E2","I2","H","VS2")
+pertussis2_rpnames <- c( "p","beta1","beta2","alphav","alphar","epsilon","sigma","gamma1","gamma2","rho","a","k")
+pertussis2_ivpnames <- c("S1_0","V_0")
+pertussis2_paramnames <- c(pertussis2_rpnames,pertussis2_ivpnames)
+pertussis2_fixed_params <- c(p = 0.777,sigma = 365/10, gamma1 = 365/100, epsilon=0.5, gamma2 = 365/100)
+pertussis2_obsnames <- colnames(pertussis_data)[2]
+```
+
+```{r}
+pertussis2_dmeasure <- "
+  double f = dnbinom_mu(nearbyint(Case),1.0/k,rho*H,1);
+  lik = (give_log) ? f : exp(f);
+"
+pertussis2_rmeasure <- "
+  Case = rnbinom_mu(1.0/k,rho*H);
+"
+```
+
+
+```{r}
+pertussis2_rprocess <- "
+  double lambda1 = beta1*(1+b*a)*(I1+I2)/N;
+  double lambda2 = beta2*(1+b*a)*(I1+I2)/N;
+
+  int N_NV = N*nu*p*dt; 
+  int N_NS1 = N*nu*(1-p)*dt;
+
+  int N_VS2 = rbinom(V,1-exp(-alphav*dt));
+  int N_S1E1 = rbinom(S1, 1-exp(-lambda1*dt));
+  int N_S2E2 = rbinom(S2, 1-exp(-(1-epsilon)*lambda2*dt));
+  double N_E1I1 = rbinom(E1, 1-exp(-sigma*dt));
+  double N_E2I2 = rbinom(E2, 1-exp(-sigma*dt));
+  double N_I1R = rbinom(I1, 1-exp(-gamma1*dt));
+  double N_I2R = rbinom(I2, 1-exp(-gamma2*dt));
+  int N_S2R = rbinom(S2, 1-exp(-epsilon*lambda2*dt));
+  double N_RS2 = rbinom(R, 1-exp(-alphar*dt));
+  int N_S1 = rbinom(S1, 1-exp(-mu*dt));
+  double N_V = rbinom(V, 1-exp(-mu*dt));
+  int N_S2 = rbinom(S2, 1-exp(-mu*dt));
+  double N_E1 = rbinom(E1, 1-exp(-mu*dt));
+  double N_I1 = rbinom(I1, 1-exp(-mu*dt));
+  double N_E2 = rbinom(E1, 1-exp(-mu*dt));
+  double N_I2 = rbinom(I1, 1-exp(-mu*dt));
+  double N_R = rbinom(R, 1-exp(-mu*dt));
+
+  S1 += N_NS1 - N_S1E1 - N_S1 ;
+  V +=  N_NV - N_VS2 - N_V ;
+  S2 +=  N_VS2 + N_RS2 - N_S2E2 -N_S2R - N_S2 ;
+  E1 +=  N_S1E1 - N_E1I1 - N_E1;
+  if(E1<0) E1=0;
+  I1 +=  N_E1I1  - N_I1R - N_I1 ;
+  if(I1<0) I1 = 0;
+  E2 += N_S2E2 - N_E2I2 - N_E2;
+  if(E2<0) E2 = 0;
+  I2 += N_E2I2 - N_I2R -N_I2;
+  if(I2<0) I2 = 0;
+  R += N_I1R + N_I2R + N_S2R -N_RS2 - N_R ;
+  if(R<0) R = 0;
+  H += N_E1I1 + N_E2I2;
+  VS2 += N_VS2;
+"
+
+pertussis2_fromEstimationScale <- "
+ Talphav = expit(alphav);
+ Talphar = expit(alphar);
+ Tbeta1 = exp(beta1);
+ Tbeta2 = exp(beta2);
+ Trho = expit(rho);
+ Ta = exp(a);
+ Tk = expit(k);
+
+ TS1_0 = exp(S1_0);
+ TV_0 = exp(V_0);
+"
+
+pertussis2_toEstimationScale <- "
+ Tbeta1 = log(beta1);
+ Tbeta2 = log(beta2);
+ Talphav = logit(alphav);
+ Talphar = logit(alphar);
+ Trho = logit(rho);
+ Ta = log(a);
+ Tk = logit(k);
+
+ TS1_0 = log(S1_0);
+ TV_0 = log(V_0);
+"
+
+pertussis2_initializer <- "
+ S1 = nearbyint(S1_0*1000000);
+ V =  nearbyint(V_0*1000000);
+ S2 = 9947000-S1-V;
+ E1 = 5;
+ E2 = 5;
+ I1 = 10;
+ I2 = 10;
+ R = 55;
+ H = 0;
+"
+```
+
+```{r warning=FALSE}
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.75-1")
+pertussis2 <- pomp(
+  data = pertussis_data[1:176,],
+  times="time",
+  t0=pertussis_data$time[1]-7/365.25,
+  rprocess=euler.sim(
+    step.fun=Csnippet(pertussis2_rprocess),
+    delta.t=1/365.25
+  ),
+  rmeasure=Csnippet(pertussis2_rmeasure),
+  dmeasure=Csnippet(pertussis2_dmeasure),
+  covar=covartable,
+  tcovar="time",
+  
+  obsnames = pertussis2_obsnames,
+  statenames = pertussis2_statenames,
+  paramnames = pertussis2_paramnames,
+  zeronames = c("H","VS2"),
+  covarnames = c("b","N","nu","mu"),
+  initializer = Csnippet(pertussis2_initializer),
+  fromEstimationScale=Csnippet(pertussis2_fromEstimationScale),
+  toEstimationScale=Csnippet(pertussis2_toEstimationScale)
+)
+plot(pertussis2)
+```
+
+```{r}
+pertussis2_box <- rbind(
+  beta1 = c(log(1), log(10)),
+  beta2 = c(log(1), log(10)),
+  alphav = c(log(1/15), log(1/4)),
+  alphar = c(log(1/15),log(1/6)),
+  rho = c(log(0.2),log(0.8)),
+  a = c(log(0.05),log(0.3)),
+  k = c(log(0.01),log(1)),
+  S1_0=c(log(2),log(5)),
+  V_0=c(log(2),log(4))
+)
+#Here the rw.sd for ivp parameters is recommended in lecture note. We are also free to change it to see which value performs better.
+pertussis_rw.sd_ivp <- 0.1
+```
+
+
+```{r}
+stew(file=sprintf("box_eval2-%d.rda",run_level),{
+  
+  t_global <- system.time({
+    mifs_global2 <- foreach(i=1:pertussis_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  mif2(
+     pertussis2,
+     start=c(apply(pertussis2_box,1,function(x)exp(runif(1,x[1],x[2]))), pertussis2_fixed_params),   
+     Np=pertussis_Np,
+     Nmif=pertussis_Nmif,
+     cooling.type="geometric",
+     cooling.fraction.50=pertussis_cooling.fraction.50,
+     transform=TRUE,
+     rw.sd=rw.sd(
+          beta1=pertussis_rw.sd,
+          beta2=pertussis_rw.sd,
+          alphav=pertussis_rw.sd,
+          alphar=pertussis_rw.sd,
+          rho=pertussis_rw.sd,
+          a = pertussis_rw.sd,
+          k = pertussis_rw.sd,
+          S1_0 = ivp(pertussis_rw.sd_ivp),
+          V_0 = ivp(pertussis_rw.sd_ivp)
+      )
+
+    )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+plot(mifs_global2)
+```
+
+Unfortunately, this more complex and seemingly more realistic model performs even worse than the first model. Although the effective sample size is large enough, nfail is always 0, and observed state $H$ seems coverges well, all the other state and parameters diverges. 
+
+Especially, we pay attention to the state value $V$ and $S1$, they are quite different in the 10 global search. This may be due to the large start box for $V_0$ and $S1_0$. I set these two initial value varying in the range [2000000, 4000000], and [2000000, 5000000]. For each outer iteration, the initial situation is so different, that the parameters and states are difficult to converge.
+
+What's worse, in 9 cases, the value of $V$ and $\alpha_v$ seems to be quite small, that there's nearly no individual lose immunity each week. $VS2$ always keeps near zero. 
+
+```{r}
+stew(file=sprintf("lik_global_eval2-%d.rda",run_level),{
+  t_global_eval2 <- system.time({
+    liks_global2 <- foreach(i=1:pertussis_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals2<- replicate(pertussis_Neval, logLik(pfilter(pertussis2,params=coef(mifs_global2[[i]]),Np=pertussis_Np)))
+      logmeanexp(evals2, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+
+results_global2 <- data.frame(logLik=liks_global2[,1],logLik_se=liks_global2[,2],t(sapply(mifs_global2,coef)))
+
+summary(results_global2$logLik,digits=5)
+
+if (run_level>2) 
+  write.table(rbind(results_global2),
+              file="mif_bsflu_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+
+pairs(~logLik+beta1+beta2+alphav+alphar+rho+a,data=subset(results_global2,logLik>max(logLik)-250))
+
+idx <- which.max(results_global2$logLik)
+results_global2[idx,]
+```
+
+The maximum likelihood parameters shows out unreasonably low $V_0$ (means there are only 873249 vaccinate people at the beginning of 2008), low $\alpha_v$ (meaning that the duration of vaccine effect is over 500 years, although seems a bit better than the result of first model), high $S1_0$ (meaning that there are 6222710 people in Michigan are totally naive to pertussis at the beginning of 2008).
+
+The $\alpha_r = 0.1676$ looks sensible, which means the people keeps immune to pertussis for nearly 6 years after recovering from the primary infection. However, we can not trust this estimation, since $\alpha_r$ does not converges well for iteration, and its estimated value is strongly related with the estimation of $\alpha_v$.
+
+The value of report rate $\rho = 0.6963$, overdispersed parameter $k=0.1326$, and seasonality effect factor $a = 0.08$ is similar to these maximum likelihood prameters for the first model. Also we note these three parameters converges well in the MIF2 convergence diagnostic plot. So the estimation for these three parameters are reasonable.
+
+##Conclusion
+1.Pertussis transmission in Michigan is really influenced by the closing and opening of school (seasonality effect factor $a$ estimated as 0.08), that is to say, child is exposed to pertussis in school at a rate 1.08 times of the rate in holiday period. We are not sure whether this number is accurate, but the influence of seasonality can really be explained by school time to some extent.
+
+2.The pertussis has report rate $\rho$ estimated around 0.7. Among every 10 new infections, about 7 people report their infection.
+
+3.We have found a relatively simple and acceptable model to explain the transmission of pertussis.
+Advantages: simple; reasonable estimate of transmission rate,report rate, overdispersed parameter, seasonality effect factor; simulated data not bad fitted with the true data.
+Disadvantage: vaccine waning rate is estimated as too small, which means permanent immunity and contradicts with epidemiology knowledge.
+
+4.We have build a more complicated and realistic model, although by now it has not shown  better performance, this does not mean that it's a worse model than the first simple model. We need more exploration (debugging, adjusting global search setting, trying more iterated particle filtering experiment, etc.) to get a better idea about this model.
+
+##Future work
+1.Find sensible start box for global search to improve the performance of model 2.
+
+2.Model Modification
+Actually, after the individual was infected and some symptoms appears, the Pertussis disease can be divided into three stages: Catarrhal stage (1–2 weeks),
+Paroxysmal stage (usually 1–6 weeks, but perhaps up to 10 weeks. Convalescent stage (usually 2–6 weeks, but may last for months). The disease is usually milder in adolescents and adults, consisting of a persistent cough similar to that found in other upper respiratory infections. However, these individuals are still able to transmit the disease to others, including unimmunized or in- completely immunized infants.
+
+So we think the improved model may assume that the amount of time an individual  remains infectious is distributed as $Gamma(3, \frac{1}{3\gamma})$, which means the expectation of infectious period is $\frac{1}{\gamma}$, and the variance is $\frac{1}{3\gamma}$.That is to say, each state $I$ will be divided into three stages: $I^1$, $I^2$, $I^3$. 
+
+3.Seasonality
+Observe the true data, we should notice that there seems more cases in the second half of each year than in the first half. So apart from the influence of school opening and closing. When it becomes cooler, chidren drop resistance to infectious disease. So when we set the seasonality effect factor $b$, we may also need to consider the season and temperature. 
+
+4.More expensive computation
+If time and computational resources allowed, we may be able to try more computationally expensive experiments:
+*set run level 3 with $Np = 60000$, $Nmif=300$, $Nglobal=100$
+*estimate the "fixed" parameters $\frac{1}{\sigma}$, and $\frac{1}{\gamma}$, with incubation period 8-14 days as box range and infectious period 7-15 weeks as box range.
+*use data for a longer time period, since the duration of vaccination effect is about or longer than 10 years, but here we only use data for nearly 4 years. 
+
+5.Diagnostic and prediction
+If we have found a model good enough (MIF2 converges well, reasonable parameter estimation), we may use it to do some prediction to see how well our simulations fit the data after 2012.
+

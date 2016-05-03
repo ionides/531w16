@@ -1,0 +1,420 @@
+---
+title: "POMP Modeling for Heston Stochastic Volatility Model"
+author: "STATS 531 Final Project"
+output: 
+  html_document:
+      toc: true
+      theme: flatly
+---
+
+-------
+
+-------
+
+#1 Introduction
+
+Volatility is a major driven factor for the price of underlying assets. "Stochastic volatility models are those in which the variance of a stochastic process is itself randomly distributed."[1] There are many popular stochastic volatility models: Heston model, CEV model, SABR model etc. In this project, we are going to use **pomp** to study the performance of Heston model on Dow Jones Industrial Average Index, which is a stock market index.  
+
+-------
+
+-------
+
+#2 Data Introduction
+
+* We are going to analyze Dow-Jones index from January 2, 2015 to April 21, 2016, which are downloaded from Yahoo.com. In order to get a demeaned stationary data, we use log return of the index and remove the mean. 
+
+
+```{r,message=FALSE}
+setwd("~/Desktop/531-final")
+dow=read.csv(file = "dow.csv",header = T)
+dow_log=diff(log(dow$Adj_Close))
+dow_hp=dow_log-mean(dow_log)
+```
+```{r,fig.height=4,fig.width=12}
+par(mfrow=c(1,2))
+plot(dow$Adj_Close,type='l',main="Adjusted Dow-Jones")
+plot(dow_hp,type = 'l',main="Demeaned log return")
+```
+
+-------
+
+-------
+
+#3 Heston model
+
+* Heston model is "a mathematical model describing the evolution of the volatility of an underlying asset. It is a stochastic volatility model: such a model assumes that the volatility of the asset is not constant, nor even deterministic, but follows a random process"[2] from Wikipedia.
+
+* Based on the definition from Wikipedia[3], Heston model assumes that $S_t$, the price of the asset, is determined by a stochastic process:
+$$
+dS_t=\mu S_tdt+\sqrt{v_t}S_tdW_t^S
+$$
+where $v_t$, the instantaneous variance, is a CIR process:
+$$
+dv_t=\kappa (\theta-v_t)dt+\xi v_tdW_t^v
+$$
+and $dW_t^S$ and $dW_t^v$ are Wiener processes, with correlation $\rho$.
+
+* Since we have already detrended data, we could eliminate the drift term in the equation of $S_t$. And based on the discrete form of a CIR process, proposed by *David Backus et al., 1998*[4], we could write the discrete form for Heston model:
+$$Y_n= \sqrt{V_n} \epsilon_n\\
+V_n=(1-\phi)\theta+\phi V_{n-1}+\sqrt{V_{n-1}}\omega_n$$
+where ${\epsilon_n}$ is an iid $N(0,1)$ sequence, and ${\omega_n}$ is an iid $N(0,\sigma_\omega^2)$ sequence.  $Y$ denotes the log return of index and $V$ is the volatility. 
+
+* Parameters have constrained conditions: 
+$$
+0<\phi<1, \theta>0, \sigma_\omega>0
+$$.
+
+------
+
+------
+
+#4 Building a POMP model
+
+* we start to build a POMP model based on Heston model.
+
+```{r,message=FALSE}
+require(pomp)
+
+dow_statenames <- c("V","Y_state")
+dow_rp_names <- c("sigma_omega","phi","theta")
+dow_ivp_names <- c("V_0")
+dow_paramnames <- c(dow_rp_names,dow_ivp_names)
+dow_covarnames <- "covaryt"
+
+rproc1 <- "
+  double omega;
+  omega = rnorm(0,sigma_omega);
+  V = theta*(1 - phi) + phi*sqrt(V) + sqrt(V)*omega;
+"
+rproc2.sim <- "
+  Y_state = rnorm( 0,sqrt(V) );
+ "
+rproc2.filt <- "
+  Y_state = covaryt;
+ "
+dow_rproc.sim <- paste(rproc1,rproc2.sim)
+dow_rproc.filt <- paste(rproc1,rproc2.filt)
+```
+
+```{r}
+dow_initializer <- "
+  V = V_0;
+  Y_state = rnorm( 0,sqrt(V) );
+"
+dow_rmeasure <- "
+   y=Y_state;
+"
+dow_dmeasure <- "
+   lik=dnorm(y,0,sqrt(V),give_log);
+"
+```
+
+* It is better to convert parameters to the whole real value range, so we use log&exp to transform parameters constrained larger than 1, and use logit&expit to transform parameters within (0,1). 
+```{r}
+dow_toEstimationScale <- "
+  Tsigma_omega = log(sigma_omega);
+  Ttheta = log(theta);
+  Tphi = logit(phi);
+"
+dow_fromEstimationScale <- "
+  Tsigma_omega = exp(sigma_omega);
+  Ttheta = exp(theta);
+  Tphi = expit(phi);
+"
+```
+
+* To justify and test our model, we choose a set of parameters and simulate data from the model and then we compare the original data and simulated data. 
+
+```{r}
+##----------test for parameters--------------##
+dow.filt <- pomp(data=data.frame(y=dow_hp,
+                     time=1:length(dow_hp)),
+              statenames=dow_statenames,
+              paramnames=dow_paramnames,
+              covarnames=dow_covarnames,
+              times="time",
+              t0=0,
+              covar=data.frame(covaryt=c(0,dow_hp),
+                     time=0:length(dow_hp)),
+              tcovar="time",
+              rmeasure=Csnippet(dow_rmeasure),
+              dmeasure=Csnippet(dow_dmeasure),
+              rprocess=discrete.time.sim(step.fun=Csnippet(dow_rproc.filt),delta.t=1),
+              initializer=Csnippet(dow_initializer),
+              toEstimationScale=Csnippet(dow_toEstimationScale), 
+              fromEstimationScale=Csnippet(dow_fromEstimationScale)
+)
+
+expit<-function(real){1/(1+exp(-real))}
+logit<-function(p.arg){log(p.arg/(1-p.arg))}
+
+params_test <- c(
+     sigma_omega = 0.001,  
+     phi = 0.001,
+     theta = 0.0004,
+     V_0= 0.002
+  )
+
+sim1.sim <- pomp(dow.filt, 
+               statenames=dow_statenames,
+               paramnames=dow_paramnames,
+               covarnames=dow_covarnames,
+               rprocess=discrete.time.sim(step.fun=Csnippet(dow_rproc.sim),delta.t=1)
+)
+
+sim1.sim <- simulate(sim1.sim,seed=1,params=params_test)
+plot(Y_state~time,data=sim1.sim,type='l',col="red",ylim=c(-0.06,0.1))
+lines(dow_hp,type='l')
+legend("topleft",legend=c("Original","Simulated"),col=c("black","red"),
+       cex=0.8,lty=1,bty="n")
+```
+```{r,fig.height=4,fig.width=12}
+par(mfrow=c(1,2))
+plot(V~time,data=sim1.sim,type='l',main="Simulated Volatility")
+plot(Y_state~time,data=sim1.sim,type='l',main="Simulated Y_state")
+#plot(sim1.sim)
+```
+
+* From the plot, our model is reasonable. We have also tried other parameter values to test and found that this model is sensitive and the simulation result highly depends on the choice of parameters. 
+
+-------
+
+-------
+
+#5 Filtering on simulated data
+
+* Then we check that whether we can filter on simulated data and try to gain more knowledge on the range of parameters. We set three different run levels. We get an unbiased likelihood estimate of 823.82 with a Monte standard error of 0.01.
+
+```{r}
+##--------filtering on simulated data----------
+run_level <- 1 
+dow_Np <-          c(100,1e3,5e3)
+dow_Nmif <-        c(10, 100,200)
+dow_Nreps_eval <-  c(4,  10,  20)
+dow_Nreps_local <- c(10, 20, 20)
+dow_Nreps_global <-c(10, 20, 40)
+```
+
+```{r,message=FALSE}
+require(doParallel)
+registerDoParallel(2)
+```
+
+```{r}
+sim1.filt <- pomp(sim1.sim, 
+  covar=data.frame(
+    covaryt=c(obs(sim1.sim),NA),
+    time=c(timezero(sim1.sim),time(sim1.sim))),
+  tcovar="time",
+  statenames=dow_statenames,
+  paramnames=dow_paramnames,
+  covarnames=dow_covarnames,
+  rprocess=discrete.time.sim(step.fun=Csnippet(dow_rproc.filt),delta.t=1)
+)
+
+stew(file=sprintf("pf1.rda",run_level),{
+  t.pf1 <- system.time(
+    pf1 <- foreach(i=1:dow_Nreps_eval[run_level],.packages='pomp',
+                   .options.multicore=list(set.seed=TRUE)) %dopar% try(
+                     pfilter(sim1.filt,Np=dow_Np[run_level])
+                   )
+  )
+},seed=493536993,kind="L'Ecuyer")
+(L.pf1 <- logmeanexp(sapply(pf1,logLik),se=TRUE))
+```
+
+-------
+
+-------
+
+#6 Fitting the stochastic volatility model to Dow-Jones data
+
+* We now start to filter on Dow-Jones data. We set run level as 3. 
+
+```{r}
+##---------Fitting the stochastic leverage model to Dow-Jones data------------
+run_level <- 3 
+dow_Np <-          c(100,1e3,5e3)
+dow_Nmif <-        c(10, 100,200)
+dow_Nreps_eval <-  c(4,  10,  20)
+dow_Nreps_local <- c(10, 20, 20)
+dow_Nreps_global <-c(10, 20, 40)
+
+dow_rw.sd_rp <- 0.001
+dow_rw.sd_ivp <- 0.001
+dow_cooling.fraction.50 <- 0.5
+
+params_test <- c(
+     sigma_omega = 0.001,  
+     phi = 0.001,
+     theta = 1,
+     V_0= 0.02
+  )
+
+stew(file=sprintf("mif1-%d.rda",run_level),{
+   t.if1 <- system.time({
+   if1 <- foreach(i=1:dow_Nreps_global[run_level],
+                  .packages='pomp', .combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar% try(
+                    mif2(dow.filt,
+                         start=params_test,
+                         Np=dow_Np[run_level],
+                         Nmif=dow_Nmif[run_level],
+                         cooling.type="geometric",
+                         cooling.fraction.50=dow_cooling.fraction.50,
+                         transform=TRUE,
+                         rw.sd = rw.sd(
+                            sigma_omega  = dow_rw.sd_rp,
+                            theta      = dow_rw.sd_rp,
+                            phi       = dow_rw.sd_rp,
+                            V_0       = ivp(dow_rw.sd_ivp)
+                         )
+                    )
+                  )
+   L.if1 <- foreach(i=1:dow_Nreps_global[run_level],.packages='pomp',
+                      .combine=rbind,.options.multicore=list(set.seed=TRUE)) %dopar% 
+                      {
+                        logmeanexp(
+                          replicate(dow_Nreps_eval[run_level],
+                                    logLik(pfilter(dow.filt,params=coef(if1[[i]]),Np=dow_Np[run_level]))
+                          ),
+                          se=TRUE)
+                      }
+    
+  })
+},seed=318817883,kind="L'Ecuyer")
+
+r.if1 <- data.frame(logLik=L.if1[,1],logLik_se=L.if1[,2],t(sapply(if1,coef)))
+if (run_level>1) 
+  write.table(r.if1,file="dow_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.if1$logLik,digits=5)
+
+```
+
+* We see that the largest logLikelihood is 325.90 for this POMP model. 
+
+* Compare the initial and last iteration value of parameters, $\theta$ has converged from 1 to 0.02 while the other three do not change significantly.
+
+```{r}
+r.if1[which.max(r.if1$logLik),]
+```
+
+* From the logLikelihood surface with respect to different parameters, we see that likelihood has a strong negative linear relationship with $\theta$ and peaks are not significant for other parameters, which might because the iteration times are not large enough. 
+
+```{r}
+pairs(~logLik+sigma_omega+theta+phi,data=r.if1)
+
+```
+
+```{r}
+plot(if1)
+```
+
+* According to the filter and convergence diagnostic, the efficient sample size is large enough. And the likelihood achieves the maximum at the last iteration. $\theta$ has the best convergence and other parameters converge within a very small interval.
+
+------
+
+------
+
+#7 Likelihood maximization using randomized starting values
+
+* For better estimating parameters, we need to try different initial values of parameters. We could set a value box in parameter space and then randomly choose initial values from this box. As for the specification for the box, I found that this model seems to be very sensitive to initial values and it is very frequent that "dmeasure gives non-finite values". After many practice, I finally come to the box shown below with a relatively small interval for each parameter. 
+
+
+```{r}
+##--------Likelihood maximization using randomized starting values--------
+
+dow_box <- rbind(
+  sigma_omega=c(0.001,0.005),
+  theta    = c(0.9,1),
+  phi = c(0.001,0.005),
+  V_0 = c(0.02,0.03)
+)
+
+stew(file=sprintf("box_eval-%d.rda",run_level),{
+  t.box <- system.time({
+    if.box <- foreach(i=1:dow_Nreps_global[run_level],.packages='pomp',.combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        if1[[1]],
+        start=apply(dow_box,1,function(x)runif(1,x[1],x[2]))
+      )
+    
+    L.box <- foreach(i=1:dow_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                      .options.multicore=list(set.seed=TRUE)) %dopar% {
+                        set.seed(87932+i)
+                        logmeanexp(
+                          replicate(dow_Nreps_eval[run_level],
+                                    logLik(pfilter(dow.filt,params=coef(if.box[[i]]),Np=dow_Np[run_level]))
+                          ), 
+                          se=TRUE)
+                      }
+  })
+},seed=290860873,kind="L'Ecuyer")
+
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+if(run_level>1) write.table(r.box,file="dow_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.box$logLik,digits=5)
+r.box[which.max(r.box$logLik),]
+```
+
+* The maximum logLikelihood is 339.65, and parameters which maximizes the likelihood are also shown.
+
+* From the logLikelihood surface, optimization is achieved at the lower bound of $\theta$ and about 0.003 for $\phi$ and 0.003 for $\sigma$.
+
+* The efficient sample size is large enough. And the likelihood achieves the maximum at the last iteration. $\theta$ has the best convergence and other parameters converge within a very small interval.
+
+```{r}
+pairs(~logLik+sigma_omega+theta+phi+V_0,data=r.box)
+plot(if.box)
+```
+
+-------
+
+-------
+
+
+#8 Benchmark likelihoods for GARCH models
+
+* Finally, we compare our model with GARCH model to evaluate the success of our model.
+
+```{r}
+library(tseries)
+L.garch.benchmark = logLik(garch(dow_hp))
+L.garch.benchmark
+```
+
+* The GARCH(1,1) has a maximized logLikelihood of 1064.316 with 3 parameters. And our model has a maximized logLikelihood of 339.65 with 4 parameters. Thus the likelihood favors GARCH model. It seems that our mechanistic model performs not well. However from the diagnostics before, our model has achieved maximum at the last iteration, thus if we increase the iteration times, we might expect better results.
+
+------
+
+------
+
+#9 Conclusion
+
+* In conclusion, simulation and diagnostics all validate the effectiveness of our model. However, the model is very sensitive to the change of parameters so we are limited to work on relatively small intervals for parameters, which resulted in the failure of finding a MLE. If we could figure out why this model is so sensitive, then we could widen the parameter interval and find the confidence interval for parameters by profile likelihood. 
+
+* The other reason that our model does not perform well as expected might because that, Heston model constrains volatility to be positive with specific choice of parameters, which is obviously not consistent with the fluctuation of stock prices.
+
+
+
+-------
+
+-------
+
+#10 Reference
+
+[1] "Stochastic volatility", https://en.wikipedia.org/wiki/Stochastic_volatility#Heston_model
+
+[2]&[3] "Heston model", https://en.wikipedia.org/wiki/Heston_model
+
+[4] David Backus, Silvio Foresi, Chris I. Telmer, 1998. Discrete Time Models of Bond Pricing. http://repository.cmu.edu/cgi/viewcontent.cgi?article=1504&context=tepper
+
+[5] Edward Ionides, 2016. Case study: POMP modeling to investigate financial volatility. http://ionides.github.io/531w16/notes15/notes15.html#benchmark-likelihoods-for-alternative-models
+ 
+
+-------
+
+-------
+
+

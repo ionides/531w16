@@ -1,0 +1,633 @@
+datasum = matrix(NA, ncol=22, nrow=48)#
+for (i in 1:48){#
+	for (j in 2:22){#
+		datasum[i,j] = sum(data[((i-1)*13+1):(i*13), j])#
+	}#
+}
+head(datasum)
+datasum = matrix(NA, ncol=22, nrow=48)#
+for (i in 1:48){#
+	datasum[i,1] = data[i*13,1]#
+	for (j in 2:22){#
+		datasum[i,j] = sum(data[((i-1)*13+1):(i*13), j])#
+	}#
+}
+head(datasum)
+head(data)
+data[13,1]
+datasum = matrix(NA, ncol=22, nrow=48)#
+for (i in 1:48){#
+	for (j in 2:22){#
+		datasum[i,j] = sum(data[((i-1)*13+1):(i*13), j])#
+	}#
+}
+## input the data #
+data = read.csv("48.csv",header=T)#
+colnames(data)#
+datasum = matrix(NA, ncol=22, nrow=48)#
+for (i in 1:48){#
+	for (j in 2:22){#
+		datasum[i,j] = sum(data[((i-1)*13+1):(i*13), j])#
+	}#
+}#
+#
+datasum = data.frame(datasum, colnames=colnames(data))
+dim(data)
+dim(datasum)
+col(data)
+## input the data #
+data = read.csv("48.csv",header=T)#
+colnames(data)#
+datasum = matrix(NA, ncol=22, nrow=48)#
+for (i in 1:48){#
+	for (j in 2:22){#
+		datasum[i,j] = sum(data[((i-1)*13+1):(i*13), j])#
+	}#
+}#
+#
+datasum = data.frame(datasum)
+colnames(datasum)=colnames(data)
+head(datasum)
+for (i in 1:48){#
+	datasum[i,1] = data[i*13,1]#
+}
+head(datasum)
+for (i in 1:48){#
+	datasum[i,1] = as.character(data[i*13,1])#
+}
+head(datasum)
+## input the data #
+data = read.csv("48.csv",header=T)#
+colnames(data)#
+datasum = matrix(NA, ncol=22, nrow=48)#
+for (i in 1:48){#
+	for (j in 2:22){#
+		datasum[i,j] = sum(data[((i-1)*13+1):(i*13), j])#
+	}#
+}#
+#
+datasum = data.frame(datasum)#
+colnames(datasum) = colnames(data)#
+for (i in 1:48){#
+	datasum[i,1] = as.character(data[i*13,1])#
+}#
+#
+datasum = datasum[, -c(2,21,22)]#
+#
+head(datasum)#
+sapply(datasum, class)
+write.csv(datasum, "48_cleared.csv")
+## input the data#
+data48 = read.csv("48_cleared.csv", header=T)#
+head(data48)
+names(data48)
+class(data48$English.language) = factor
+class(data48$English.language)
+## make col(English.language) to be a factor#
+data48$English.language = as.factor(data48$English.language)
+lm1 = lm(OF.Value..log. ~ CPI + GNI.per.capita.log. + HDI + Population.log. + Total.affected.from.disasters + DAC.ODA.log..residuals. + English.language, data48)
+summary(lm1)
+lm2 = lm(OF.Number ~ CPI + GNI.per.capita.log. + HDI + Population.log. + Total.affected.from.disasters + DAC.ODA.log..residuals. + English.language, data48)#
+summary(lm2)
+lm2 = lm(OF.Number. ~ CPI + GNI.per.capita.log. + HDI + Population.log. + Total.affected.from.disasters + DAC.ODA.log..residuals. + English.language, data48)#
+summary(lm2)
+summary(data48)
+data48$Region = as.factor(data48$English.Region)
+data48$Region = as.factor(data48$Region)
+summary(data48)
+lm3 = lm(Export.Import.log. ~ OF.Value..log. + FDI.Stock.log. + FDI.flow.log. + GNI.per.capita.log. + HDI + Inflation + English.language + Region, data48)#
+summary(lm3)
+lm4 = lm(Export.Import.log. ~ OF.Number. + FDI.Stock.log. + FDI.flow.log. + GNI.per.capita.log. + HDI + Inflation + English.language + Region, data48)#
+summary(lm4)
+lm5 = lm(Export.log. ~ OF.Value..log. + FDI.Stock.log. + FDI.flow.log. + GNI.per.capita.log. + HDI + Inflation + English.language + Region, data48)#
+summary(lm5)
+lm6 = lm(Export.log. ~ OF.Number. + FDI.Stock.log. + FDI.flow.log. + GNI.per.capita.log. + HDI + Inflation + English.language + Region, data48)#
+summary(lm6)
+lm7 = lm(Import.log. ~ OF.Value..log. + FDI.Stock.log. + FDI.flow.log. + GNI.per.capita.log. + HDI + Inflation + English.language + Region, data48)#
+summary(lm7)
+lm8 = lm(Import.log. ~ OF.Number. + FDI.Stock.log. + FDI.flow.log. + GNI.per.capita.log. + HDI + Inflation + English.language + Region, data48)#
+summary(lm8)
+log(0.001)
+log(0.01)
+(log(10))^2
+library(pomp)
+help(sir)
+sliceDesign(#
+  c(Beta=2,gamma=1,rho=0.8,N=2600),#
+  Beta=rep(seq(from=0.5,to=4,length=40),each=3),#
+  gamma=rep(seq(from=0.5,to=2,length=40),each=3)) -> p
+head(p,10)
+core()
+detectCores()
+library(parallel)
+detectCores()
+bsflu_box=Null
+bsflu_box=NULL
+bsflu_box[1] = rbind(Beta=c(0.001,0.01),mu_I=c(0.5,2))
+bsflu_box = rbind(Beta=c(0.001,0.01),mu_I=c(0.5,2))
+bsflu_box
+Beta = data.frame(seq(0.001,0.01,length.out = 100))
+Beta
+Beta = data.frame(seq(0.001,0.01,length.out = 100),col.names=Beta)
+Beta
+Beta = data.frame(seq(0.001,0.01,length.out = 100),col.names="Beta")
+Beta
+load("/Users/macbook/Documents/2016 Winter/STATS 531 - Analysis Time Series/cache/notes12-unnamed-chunk-4_45600f31a17db605ae93c6fcb7e09dbd.RData")
+load("/Users/macbook/Documents/2016 Winter/STATS 531 - Analysis Time Series/cache/notes12-profile_lik_global_eval_9.3_537c1bdedf5be279b9d24b3b84aba58d.RData")
+library(faraway)
+data(femsmoke)
+femsmoke
+sapply(femsomke,class)
+femsmoke
+class(femsomke[,1])
+data=femsomke
+femsomke
+sapply(femsmoke,class)
+xtabs(y~dead +age +smoker, femsmoke)
+admission <- c(1,1,1,1,0,0,0,0)   # 1 for admissionnationality <- c(1,1,0,0,1,1,0,0) # 1 for domesticgender <- c(1,0,1,0,1,0,1,0)       # 1 for femalenumber <- c(4,10,7,10,14,33,82,167)PhD <- cbind(admission,nationality,gender,number)
+PhD
+# input data#
+admission <- c(1,1,1,1,0,0,0,0)   # 1 for admission#
+nationality <- c(1,1,0,0,1,1,0,0) # 1 for domestic#
+gender <- c(1,0,1,0,1,0,1,0)       # 1 for female#
+y <- c(4,10,7,10,14,33,82,167)#
+#
+PhD <- cbind(admission,nationality,gender,y)
+########################
+## input data#
+admission <- c(1,1,1,1,0,0,0,0)   # 1 for admission#
+nationality <- c(1,1,0,0,1,1,0,0) # 1 for domestic#
+gender <- c(1,0,1,0,1,0,1,0)       # 1 for female#
+y <- c(4,10,7,10,14,33,82,167)#
+#
+UMstats <- cbind(admission,nationality,gender,y)#
+UMstats <- data.frame(UMstats)#
+#
+#################
+## log linear models#
+#
+#######################
+## mutually independent (admission,nationality,gender)#
+model_a_n_g <- glm(y ~ admission + nationality + gender, data = UMstats, family = poisson)#
+summary(model_a_n_g)#
+#
+## independence test via G^2 (deviance)#
+pchisq(deviance(model_a_n_g), df.residual(model_a_n_g), lower = F)#
+#
+########################
+## jointly independent model (XY, Z)#
+## nationality and gender jointly independent of admission#
+model_ng_a<-glm(y~admission+nationality+gender+nationality*gender,data=UMstats,family="poisson")#
+summary(model_ng_a)#
+#
+## independence test#
+pchisq(deviance(model_ng_a),df.residual(model_ng_a),lower=F)#
+#
+## adimission and gender jointly independent of nationality#
+model_ag_n<-glm(y~admission+nationality+gender+admission*gender,data=UMstats,family="poisson")#
+summary(model_ag_n)#
+#
+## adimission and gender jointly independent of nationality#
+model_an_g<-glm(y~admission+nationality+gender+admission*nationality,data=UMstats,family="poisson")#
+summary(model_an_g)#
+#
+#####################
+## conditional independent models (XZ, YZ)#
+## nationality and gender are conditional independent given admission#
+model_ag_an<-glm(y~admission+nationality+gender+gender*admission+nationality*admission,data=UMstats,family="poisson")#
+summary(model_ag_an)#
+#
+## independence test#
+pchisq(deviance(model_ag_an),df.residual(model_ag_an),lower=F)#
+#
+## adimission and nationality are conditional independent given gender#
+model_ag_ng<-glm(y~admission+nationality+gender+admission*gender+nationality*gender,data=UMstats,family="poisson")#
+summary(model_ag_ng)#
+#
+## independence test#
+pchisq(deviance(model_ag_ng),df.residual(model_ag_ng),lower=F)#
+#
+## admission and gender conditional independent given nationality#
+model_an_gn<-glm(y~admission+nationality+gender+admission*nationality+gender*nationality,data=UMstats,family="poisson")#
+summary(model_an_gn)#
+#
+pchisq(deviance(model_an_gn),df.residual(model_ab_gn),lower=F)#
+#
+###########################
+## A homogeneous association model #
+## (XY, XZ, YZ): all pairwise interactions#
+model_an_ng_ga<-glm(y~admission+nationality+gender+admission*nationality+gender*nationality,gender*admission,data=UMstats,family="poisson")#
+summary(model_an_ng_ga)#
+#
+pchisq(deviance(model_an_ng_ga),df.residual(model_an_ng_ga),lower=F)
+########################
+## input data#
+admission <- c(1,1,1,1,0,0,0,0)   # 1 for admission#
+nationality <- c(1,1,0,0,1,1,0,0) # 1 for domestic#
+gender <- c(1,0,1,0,1,0,1,0)       # 1 for female#
+y <- c(4,10,7,10,14,33,82,167)#
+#
+UMstats <- cbind(admission,nationality,gender,y)#
+UMstats <- data.frame(UMstats)#
+#
+#################
+## log linear models#
+#
+#######################
+## mutually independent (admission,nationality,gender)#
+model_a_n_g <- glm(y ~ admission + nationality + gender, data = UMstats, family = poisson)#
+summary(model_a_n_g)#
+#
+## independence test via G^2 (deviance)#
+pchisq(deviance(model_a_n_g), df.residual(model_a_n_g), lower = F)#
+#
+########################
+## jointly independent model (XY, Z)#
+## nationality and gender jointly independent of admission#
+model_ng_a<-glm(y~admission+nationality+gender+nationality*gender,data=UMstats,family="poisson")#
+summary(model_ng_a)#
+#
+## independence test#
+pchisq(deviance(model_ng_a),df.residual(model_ng_a),lower=F)#
+#
+## adimission and gender jointly independent of nationality#
+model_ag_n<-glm(y~admission+nationality+gender+admission*gender,data=UMstats,family="poisson")#
+summary(model_ag_n)#
+#
+## adimission and gender jointly independent of nationality#
+model_an_g<-glm(y~admission+nationality+gender+admission*nationality,data=UMstats,family="poisson")#
+summary(model_an_g)#
+#
+#####################
+## conditional independent models (XZ, YZ)#
+## nationality and gender are conditional independent given admission#
+model_ag_an<-glm(y~admission+nationality+gender+gender*admission+nationality*admission,data=UMstats,family="poisson")#
+summary(model_ag_an)#
+#
+## independence test#
+pchisq(deviance(model_ag_an),df.residual(model_ag_an),lower=F)#
+#
+## adimission and nationality are conditional independent given gender#
+model_ag_ng<-glm(y~admission+nationality+gender+admission*gender+nationality*gender,data=UMstats,family="poisson")#
+summary(model_ag_ng)#
+#
+## independence test#
+pchisq(deviance(model_ag_ng),df.residual(model_ag_ng),lower=F)#
+#
+## admission and gender conditional independent given nationality#
+model_an_gn<-glm(y~admission+nationality+gender+admission*nationality+gender*nationality,data=UMstats,family="poisson")#
+summary(model_an_gn)#
+#
+pchisq(deviance(model_an_gn),df.residual(model_an_gn),lower=F)#
+#
+###########################
+## A homogeneous association model #
+## (XY, XZ, YZ): all pairwise interactions#
+model_an_ng_ga<-glm(y~admission+nationality+gender+admission*nationality+gender*nationality,gender*admission,data=UMstats,family="poisson")#
+summary(model_an_ng_ga)#
+#
+pchisq(deviance(model_an_ng_ga),df.residual(model_an_ng_ga),lower=F)
+xtabs(y ~ nationalty + gender + adimssion, UMstats)
+xtabs(y ~ nationality + gender + adimssion, UMstats)
+xtabs(y ~ nationality + gender + admission, UMstats)
+UMstats
+xtabs(y ~ gender + nationality + admission, UMstats)
+########################
+## input data#
+admission <- c(1,1,1,1,0,0,0,0)   # 1 for admission#
+nationality <- c(1,1,0,0,1,1,0,0) # 1 for domestic#
+gender <- c(1,0,1,0,1,0,1,0)       # 1 for female#
+y <- c(4,10,7,10,14,33,82,167)#
+#
+UMstats <- cbind(admission,nationality,gender,y)#
+UMstats <- data.frame(UMstats)#
+#
+xtabs(y ~ gender + nationality + admission, UMstats)#
+#
+#################
+## log linear models#
+#
+#######################
+## mutually independent (admission,nationality,gender)#
+model_a_n_g <- glm(y ~ admission + nationality + gender, data = UMstats, family = poisson)#
+summary(model_a_n_g)
+summary(model_a_n_g)#
+#
+## independence test via G^2 (deviance)#
+pchisq(deviance(model_a_n_g), df.residual(model_a_n_g), lower = F)
+## jointly independent model (XY, Z)#
+## nationality and gender jointly independent of admission#
+model_ng_a<-glm(y~admission+nationality+gender+nationality*gender,data=UMstats,family="poisson")#
+summary(model_ng_a)#
+#
+## independence test#
+pchisq(deviance(model_ng_a),df.residual(model_ng_a),lower=F)
+## admission and gender jointly independent of nationality#
+model_ag_n<-glm(y~admission+nationality+gender+admission*gender,data=UMstats,family="poisson")#
+summary(model_ag_n)#
+#
+pchisq(deviance(model_ag_n),df.residual(model_ag_n),lower=F)
+## admission and nationality are jointly independent of gender#
+model_an_g<-glm(y~admission+nationality+gender+admission*nationality,data=UMstats,family="poisson")#
+summary(model_an_g)#
+#
+pchisq(deviance(model_an_g),df.residual(model_an_g),lower=F)
+## nationality and gender are conditional independent given admission#
+model_ag_an<-glm(y~admission+nationality+gender+gender*admission+nationality*admission,data=UMstats,family="poisson")#
+summary(model_ag_an)#
+#
+## independence test#
+pchisq(deviance(model_ag_an),df.residual(model_ag_an),lower=F)
+## admission and nationality are conditional independent given gender#
+model_ag_ng<-glm(y~admission+nationality+gender+admission*gender+nationality*gender,data=UMstats,family="poisson")#
+summary(model_ag_ng)#
+#
+## independence test#
+pchisq(deviance(model_ag_ng),df.residual(model_ag_ng),lower=F)
+model_an_gn<-glm(y~admission+nationality+gender+admission*nationality+gender*nationality,data=UMstats,family="poisson")#
+summary(model_an_gn)#
+#
+pchisq(deviance(model_an_gn),df.residual(model_an_gn),lower=F)
+model_an_ng_ga<-glm(y~admission+nationality+gender+admission*nationality+gender*nationality,gender*admission,data=UMstats,family="poisson")#
+summary(model_an_ng_ga)#
+#
+pchisq(deviance(model_an_ng_ga),df.residual(model_an_ng_ga),lower=F)
+## (XY, XZ, YZ): all pairwise interactions#
+model_an_ng_ga<-glm(y~admission*nationality+gender*nationality+gender*admission,data=UMstats,family="poisson")#
+summary(model_an_ng_ga)#
+#
+pchisq(deviance(model_an_ng_ga),df.residual(model_an_ng_ga),lower=F)
+## admission and nationality are conditional independent given gender#
+model_ag_ng<-glm(y~admission+nationality+gender+admission*gender+nationality*gender,data=UMstats,family="poisson")#
+summary(model_ag_ng)#
+#
+## independence test#
+pchisq(deviance(model_ag_ng),df.residual(model_ag_ng),lower=F)
+## admission and gender conditional independent given nationality#
+model_an_gn<-glm(y~admission+nationality+gender+admission*nationality+gender*nationality,data=UMstats,family="poisson")#
+summary(model_an_gn)#
+#
+pchisq(deviance(model_an_gn),df.residual(model_an_gn),lower=F)
+1/4+1/14+1/7+1/82
+sqrt(1/4+1/14+1/7+1/82)
+log(3.347)
+1.208+1.96*0.69
+exp(2.56)
+require(ggplot2)#
+trainPC = predict(datatrain.PCAcor)#
+qplot(x=trainPC[,1], y=trainPC[,2], label=row.names(datatrain), geom="text")
+qplot(x=trainPC[,1], y=trainPC[,2], label=row.names(datatrain), geom="text")
+## input the data #
+datatrain <- read.csv(file = "file:///Users/macbook/Documents/2016 Winter/STATS 503 - Appl Multivar Anl/Final Project/datatrain.csv", header = T)#
+datatest <- read.csv(file = "file:///Users/macbook/Documents/2016 Winter/STATS 503 - Appl Multivar Anl/Final Project/datatest.csv", header = T)#
+#
+x = NULL#
+for (i in 1:(dim(datatrain)[1])){#
+  if ((sum(datatrain[i,7:24])==0) & (datatrain[i,25]=="Default"))#
+    x = cbind(x, i)#
+}#
+y = NULL#
+for (i in 1:(dim(datatest)[1])){#
+  if ((sum(datatest[i,7:24])==0)& (datatest[i,25]=="Default"))#
+    y = cbind(y, i)#
+}#
+datatrain = datatrain[-x,]#
+datatest = datatest[-y,]#
+rm(x,y)#
+#
+## Logistic Regression#
+trainlog = glm(data = datatrain, default~X1+X2+X3+X4+X5+X6+X7+X8+#
+                 X9+X10+X11+X12+X13+X14+X15+X16+X17+X18+X19+X20+X21+X22+X23, family='binomial')#
+print(summary(trainlog))#
+## Using package'nnet'#
+require(nnet)#
+trainlogm = multinom(data = datatrain, default~X1+X2+X3+X4+X5+X6+X7+#
+                       X8+X9+X10+X11+X12+X13+X14+X15+X16+X17+X18+X19+X20+X21+X22+X23)#
+## summary(trainlogm)#
+## Training error#
+sum(predict(trainlogm, newdata=datatrain) == datatrain$default)/nrow(datatrain)#
+## Test error#
+testresult = predict(trainlogm, newdata=datatest)#
+sum(testresult == datatest$default)/nrow(datatest)#
+#
+table(datatest$default,predict(trainlogm, newdata=datatest))#
+################################################
+## numerical data#
+datatrain.numerical = datatrain[,c(2,6:24)]#
+## PCA on cor#
+datatrain.PCAcor = princomp(datatrain.numerical, cor=T)#
+summary(datatrain.PCAcor)#
+barplot(datatrain.PCAcor$sdev^2)#
+## Choose ncomp=11 from the barplot#
+loadings = datatrain.PCAcor$loadings[,1:20]
+require(ggplot2)#
+trainPC = predict(datatrain.PCAcor)#
+qplot(x=trainPC[,1], y=trainPC[,2], label=row.names(datatrain), geom="text")
+require(ggbiplot)#
+ggbiplot(datatrain.PCAcor)
+ggbiplot(datatrain.PCAcor, label=row.names(datatrain))
+ggbiplot(datatrain.PCAcor, label=row.names(datatrain), geom="text")
+print(ggbiplot(datatrain.PCAcor, label=row.names(datatrain), geom="text"))
+print(ggbiplot(datatrain.PCAcor, labels=row.names(datatrain), geom="text"))
+## input the data #
+datatrain <- read.csv(file = "file:///Users/macbook/Documents/2016 Winter/STATS 503 - Appl Multivar Anl/Final Project/datatrain.csv", header = T)#
+datatest <- read.csv(file = "file:///Users/macbook/Documents/2016 Winter/STATS 503 - Appl Multivar Anl/Final Project/datatest.csv", header = T)#
+#
+x = NULL#
+for (i in 1:(dim(datatrain)[1])){#
+  if ((sum(datatrain[i,7:24])==0) & (datatrain[i,25]=="Default"))#
+    x = cbind(x, i)#
+}#
+y = NULL#
+for (i in 1:(dim(datatest)[1])){#
+  if ((sum(datatest[i,7:24])==0)& (datatest[i,25]=="Default"))#
+    y = cbind(y, i)#
+}#
+datatrain = datatrain[-x,]#
+datatest = datatest[-y,]#
+rm(x,y)
+summary(datatrain)
+summary(datatest)
+a = rbind(traindata,testdata)
+a = rbind(datatrain,datatest)
+summary(a)
+detroitcases <- read.table('http://www.tycho.pitt.edu/api/info?event=cases&loc_type=city&loc=detroit&state=mi&apikey=YOURAPIKEY.txt', header=TRUE, sep="\t")
+head(detroitcases)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv",head=T)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv",head=F)
+a
+head(a)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv",head=F)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv",head=T)
+head(a)
+plot(a$MICHIGAN)
+summary(a)
+class(a$MICHIGAN)
+a$MICHIGAN = as.numeric(as.character(a$MICHIGAN))
+class(a$MICHIGAN)
+summary(a)
+plot(a$MICHIGAN)
+plot(a$MICHIGAN,type="l")
+for (i in 1:dim(a)[1]){}
+for (i in 1:dim(a)[1]){
+if (a$MICHIGAN[i] == NA){
+a$MICHIGAN[i] = mean(a$MICHIGAN[(i-2):(i+2)])
+}
+for (i in 1:dim(a)[1]){
+if (a$MICHIGAN[i] == "NA"){
+for (i in 1:dim(a)[1]){
+a$MICHIGAN[i] = mean(a$MICHIGAN[(i-2):(i+2)])
+}
+a$MICHIGAN[2] == "NA"
+dim(a)
+a$MICHIGAN[2] == NA
+for (i in 1:dim(a)[1]){#
+   if (a$MICHIGAN[i] == "NA"){#
+     for (i in 1:dim(a)[1]){#
+       a$MICHIGAN[i] = mean(a$MICHIGAN[(i-2):(i+2)])#
+     }#
+   }#
+  }
+library(maboost)
+require(randomForest)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv head(a)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv, head=T)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv", head=T)
+head(a)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv", head=T)
+a = a[a$YEAR <= 1968]
+a = a(a$YEAR <= 1968)
+a$YEAR
+a$YEAR <= 1967
+a = a[a$YEAR <= 1980]
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv", head=T)
+dim(a)
+b = matrix(NA, nrow=(13*12),ncol=3)
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv", head=T)
+dim(a)
+682/52
+52*14
+52*13
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv", head=T)
+dim(a)
+for (i in 1:13){#
+	for (j in 1:12){#
+		b[(i-1)*13+j,1] = 1967+i#
+		b[(i-1)*13+j,2] = j#
+		b[(i-1)*13+j,3] = sum(a[((i-1)*52+(j-1)*4):((i-1)*52+(j)*4)])#
+	}#
+}
+for (i in 1:13){#
+	for (j in 1:12){#
+		b[(i-1)*13+j,1] = 1967+i#
+		b[(i-1)*13+j,2] = j#
+		b[(i-1)*13+j,3] = sum(a[((i-1)*52+(j-1)*4):((i-1)*52+(j)*4),3])#
+	}#
+}
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv", head=T)
+for (i in 1:13){#
+	for (j in 1:12){#
+		b[(i-1)*13+j,1] = 1967+i#
+		b[(i-1)*13+j,2] = j#
+		b[(i-1)*13+j,3] = sum(a[((i-1)*52+(j-1)*4):((i-1)*52+(j)*4),3])#
+	}#
+}
+a = read.csv(file="file:///Users/macbook/Downloads/MUMPS_Cases_MICHIGAN_20160415121110.csv", head=T)
+b = matrix(NA, nrow=(13*12),ncol=3)
+for (i in 1:13){#
+	for (j in 1:12){#
+		b[(i-1)*13+j,1] = 1967+i#
+		b[(i-1)*13+j,2] = j#
+		b[(i-1)*13+j,3] = sum(a[((i-1)*52+(j-1)*4):((i-1)*52+(j)*4),3])#
+	}#
+}
+for (i in 1:13){#
+	for (j in 1:12){#
+		b[(i-1)*12+j,1] = 1967+i#
+		b[(i-1)*12+j,2] = j#
+		b[(i-1)*12+j,3] = sum(a[((i-1)*52+(j-1)*4):((i-1)*52+(j)*4),3])#
+	}#
+}
+head(b)
+colnames(b) = c(Year, Month, Cases)
+colnames(b) = c("Year", "Month", "Cases")
+head(b)
+write.csv(b,file="1")
+write.csv(b,file="1.csv")
+d = c(13206,13654,14178,13388,12119,11665,11353,11049,10836,11424,11478,11929,12006)
+rep(1:4, c(2,1,2,1))
+rep(1:4, each = 2)
+e = rep(d, each =12)
+dim(e)
+e
+dim(b)
+dim(e) = c(156,1)
+f = cbind(b,e)
+head(f)
+g = c(8696000,8781000,8881826,8974186,9028944,9077956,9117507,9117668,9129205,9171110,9217761,9266268,9262078)
+g = rep(g, each=12)
+f = cbind(b,g)
+head(f)
+f = cbind(b,e,g)
+head(f)
+f
+colnames(f) = c("Year", "Month", "Mumps", "Birth", "Pop")
+write.csv(f,file="Mumps_MI.csv")
+round(1.2)
+save.image()
+Mumps_data = read.csv("Mumps_MI.csv")
+Mumps_data = read.csv("Mumps_MI.csv", header=T)
+head(Mumps_data)
+colnames(Mumps_data)
+Mumps_data = read.csv("Mumps_MI.csv", header=T)#
+colnames(Mumps_data)
+head(Mumps_data)
+exp(0.12)
+exp(0.012)
+676/52
+a = read.csv(file="3.csv",head=T)
+summary(a)
+dim(a)
+a = read.csv(file="3.csv",head=F)
+dim(a)
+head(a)
+class(a$V3)
+class(a$V3)="numerica"
+class(a$V3)
+summary(a)
+a = read.csv(file="3.csv",head=F)
+class(a$V3) = "numeric"
+summary(a)
+dim(a)
+b = matrix(NA,nrow=12*13,ncol=1)
+12*13
+for (i in 1:13){#
+	for (j in 1:12){#
+		b[(i-1)*12+j] = sum(a[((i-1)*52+(j-1)*4+1):((i-1)*52+j*4),3])#
+	}#
+}
+b
+plot(b)
+plot(b,type="l")
+13+25+46+26
+head(a[,3])
+head(a)
+a = read.csv(file="3.csv",head=F)
+head(a)
+class(a$V3)
+a$V3 = as.numeric(as.character(a$V3))
+summary(a)
+head(a)
+b = matrix(nrow=156,ncol=1)
+for (i in 1:13){#
+	for (j in 1:12){#
+		b[(i-1)*12+j] = sum(a[((i-1)*52+(j-1)*4+1):((i-1)*52+j*4),3])#
+	}#
+}
+head(b)
+plot(b,type="l")
+summary(b)
+write.csv(b,file="1.csv")
+load("/Users/macbook/Documents/2016 Winter/STATS 531 - Analysis Time Series/Final_Weiyu Li/box_eval-2.rda")

@@ -1,0 +1,511 @@
+---
+title: "Project Report: POMP Model on Foreign Currency Exchange Rate"
+date: "4/23/2016"
+output:
+  html_document:
+    fig_caption: true
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=0"
+    ]
+---
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+\newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\matH{\mathbb{H}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+----------------------
+
+---------------
+
+# Introduction
+
+* Economists and Mathematicians have been trying to study the foreign exchange rate for years. From some research paper, Geometric Brownian Motion (GBM) has been proved useful in simulating financial data (Brewer, K., Feng, Y., & Kwan, C, 2012). Gerber, for example, points out in the paper that GBM could be used to model assets and liability (Gerber, H., & Shiu, E., 2003). Motivated by those research papaers, I want to model the motion of foreign exchange rate with time series techniques. 
+
+* The methods I use to approach the above question are POMP and GARCH model. I compare the log likelihood of the two models to see which one performs better. 
+
+* In this report, I will focus on the GBP/USD exchange rate. 
+
+* The question of interests is that whether GBM POMP is suitable for fitting the GBP/USD exchange rate data and provides stable results. Also, by comparing the GBM POMP model and GARCH model, which method would be more appropriate for practical use. 
+<br>
+
+-------
+
+--------
+```{r libraries, echo=FALSE, warning = FALSE, results = 'hide',message=FALSE}
+set.seed(100000)
+library(ggplot2)
+library(plyr)
+library(reshape2)
+library(pomp)
+library(tseries)
+library(doParallel)
+library(foreach)
+library(doMC)
+```
+
+# Data Source
+
+* To study the relationships, we attain our data from the website of Federal Reserve System (Foreign Exchange Rate, 2016). 
+
+* The dataset has two variables, Rate (GBP/USD exchange rate) and Date. It is a daily data recording GBP/USD exchange rate from the year 2000 to present. 
+
+* The original data has 4244 observations. Some of them are missing values. The missing data represents that the market is closed for that day. I removed all missing values in the dataset. That is to say, we do not consider the closing market days. After removing missing values, we have 4088 observations. Also to note that there are around 260 data points for each year. 
+
+* For computational purpose, we select only 300 subset of the original data. It records foreign exchange rate around the year 2010 and 2011. The economic market was quite stable at that time. 
+
+* We write ${N_t,t=1,\dots,T}$ for the data. 
+<br>
+```{r read_data, echo=FALSE,fig.cap="Figure 1. Time Series of Original Data",warning = FALSE}
+data = read.csv("fx.csv")
+data$Rate = as.numeric(as.character(data$Rate))
+# Remove 2790, which is closing market
+dt = na.omit(data)
+plot(ts(dt$Rate,start = 2000, end = 2016, deltat = 1/260), main="Time Series Plot for GBP/USD from 2000 to 2016",xlab="Year",ylab = 'Exchange Rate',type = 'l')
+```
+
+* Figure 1 shows the times series plot of the whole data set. We can see a sharp decrease in the year 2008, which is caused by the Financial Crisis. 
+
+```{r visualize_data, echo=FALSE,fig.cap="Figure 2. Time Series of Used Data"}
+# Take the data subset with 400 samples
+dt2 = dt[2601:2900,]
+dt2$Date=1:300
+fx = pomp(dt2,times="Date",t0=0)
+plot(fx, xlab = 'time from 0 to 300', main = 'GBP/USD Exchagne Rate')
+```
+
+* Figure 2 shows a subset of 300 data points. They are recorded between the year 2010 and 2011. It represents a healthy market. For convenience of computation, we use 0 to 300 to represent the time. There are many fluctuations in this time interval. Overall, it seems that there is an increasing trend. 
+
+-------
+
+-------
+
+# Mathematical Modal
+
+## Geometric Brownian Motion (GBM) Model
+
+* Brewer points out in his paper that the Geometric Brownian Motion Model means the logarithm of the data follows a Brownian motion and provided the following equations(Brewer, K., Feng, Y., & Kwan, C, 2016). 
+
+* The original differential equation is defined as 
+$$ dN = \mu Ndt+\delta Ndz$$
+where $N$ is the foreign exchange rate on that day, $dz=\epsilon \sqrt{dt}$ and $\epsilon$ is a random draw from the normal distribution with mean 0 and variance $\sigma$. $\mu$ and $\delta$ are usually the drift parameter and the volatility parameter, respectively. 
+<br>
+
+* The equation is equivalent to 
+$$ d\log(N) = (\mu -\frac{\delta ^2}{2})dt+\delta dz$$
+
+* After solving the differential equation, we get 
+$$ N_{t+\Delta{t}}=N_{t}e^{(\mu -\frac{\delta ^2}{2})\Delta{t}+\delta \epsilon \sqrt{\Delta{t}}}$$
+Set $\Delta{t}$ equal to 1, we have 
+$$ N_{t+1}=N_{t}e^{(\mu -\frac{\delta ^2}{2})\frac{1}{n}+\frac{\delta }{\sqrt{n}}\epsilon }$$
+where $n$ is the number of days in a year, which is 260 (only accounts for open market days).
+<br>
+
+-------
+
+-------
+
+## Parameter Description
+
+* There are 3 parameters $\mu$, $\delta$ and $\sigma$. 
+
+* $\mu$ is the drift parameter that shows the increasing or decreasing trend. 
+
+* $\delta$ is the volatility parameter that measures the deviations from the mean. 
+
+* $\sigma$ is the variance of the state parameter $\epsilon$. By increasing sigma, it will increase the deviations from the mean. 
+
+-------
+
+-------
+
+# POMP Model
+
+## Build POMP Model
+
+* The rprocess is based on the GBM model with two state variables, $N$ and $\epsilon$.
+
+* The parameters are $\mu$, $\sigma$ and $\delta$.
+
+* The initial value of N is drawn from a random poisson distribution with mean 1.5. The initial value of $\epsilon$ is drawn from a poisson distribution with mean 1. 
+
+* The rmeasure is defined as Rate being drawn from a random draw from the normal distribution with mean 0 and variance $N$, which is the state variable. 
+
+* The detailed implementation is shown below. 
+
+```{r pomp}
+dmeas <- Csnippet("lik = dnorm(Rate,0,N,give_log);")
+rmeas <- Csnippet("Rate = rnorm(0,N);")
+Ne_initializer <- "
+ N=rpois(1.5);
+ e=rpois(1);
+"
+stochStep <- Csnippet("
+                      e = rnorm(0,sigma);
+                      N = N*exp((mu-delta*delta/2)/260+delta/sqrt(260)*e);
+                      ")
+
+stopifnot(packageVersion("pomp")>="0.75-1")
+pomp(data = dt2,
+     times="Date",
+     t0=0,
+     rprocess=discrete.time.sim(step.fun=stochStep,delta.t=1),
+     rmeasure = rmeas,
+     dmeasure=dmeas, 
+     obsnames = "Rate",
+     paramnames=c("mu","delta","sigma"),
+     statenames=c("N","e"),
+     initializer=Csnippet(Ne_initializer)
+     ) -> fx
+```
+
+-------
+
+-------
+
+## Set Run Level
+
+* There are three run levels. The analysis of this report is based on level 3.
+
+* Detailed parameters are defined below
+
+```{r run_level}
+run_level = 3
+level_Np = c(100,1000,5000)
+level_Nmif = c(10,100,300)
+level_Nreps_eval = c(4,10,20)
+level_Nreps_local = c(10,20,20)
+level_Nreps_global = c(10,20,100)
+```
+
+
+-------
+
+-------
+
+# Likelihood Slice
+
+* I first used slicing to get a brief view of when the log likelihood is maximized for each parameter. 
+ 
+```{r slicing, echo = FALSE, results = 'hide'}
+sliceDesign(
+  c(mu=0.1,delta=0.2,sigma=0.4),
+  mu=rep(seq(from=-10,to=10,length=40),each=3),
+  delta=rep(seq(from=0.1,to=3,length=40),each=3),
+  sigma=rep(seq(from=0.1,to=3,length=40),each=3)
+  ) -> p
+
+registerDoMC(cores=5)
+set.seed(998468235L,kind="L'Ecuyer")
+mcopts <- list(preschedule=FALSE,set.seed=TRUE)
+
+foreach (theta=iter(p,"row"),.combine=rbind,
+         .inorder=FALSE,.options.multicore=mcopts) %dopar% 
+         {
+           pfilter(fx,params=unlist(theta),Np=5000) -> pf
+           pf
+           theta$loglik <- logLik(pf)
+           theta
+         } -> p
+
+```
+
+```{r mu, echo = FALSE, fig.cap="Figure 3. Slicing for mu"}
+v = "mu"
+x <- subset(p,slice==v)
+plot(x[[v]],x$loglik,xlab=v,ylab="loglik",main='slicing for mu')
+```
+
+* Along the $\mu$ direction, the slicing for $\mu$ shows that the maximum of log likelihood is located when $\mu$ is aorund 0. 
+
+```{r delta, echo = FALSE, fig.cap="Figure 4. Slicing for delta"}
+v = "delta"
+x <- subset(p,slice==v)
+plot(x[[v]],x$loglik,xlab=v,ylab="loglik",main='slicing for delta')
+```
+
+* Along the $\delta$ direction, the slicing for $\delta$ shows that the maximum of log likelihood is located when $\delta$ is around 0.6.
+
+```{r sigma, echo = FALSE, fig.cap="Figure 5. Slicing for sigma"}
+v = "sigma"
+x <- subset(p,slice==v)
+plot(x[[v]],x$loglik,xlab=v,ylab="loglik",main='slicing for sigma')
+```
+
+* Along the $\sigma$ direction, the slicing for $\sigma$ shows that the maximum of log likelihood is located when $\sigma$ is 1.3.
+
+-------
+
+-------
+
+# Partical Filter
+
+```{r filtering, echo = FALSE}
+test = c(N.0=1.5,e.0=0,mu=0,delta=0.7,sigma=1.4)
+registerDoParallel()
+stew(file=sprintf("pf1.rda",run_level),{
+  t.pf1 <- system.time(
+    pf1 <- foreach(i=1:level_Nreps_eval[run_level],.packages='pomp',
+                   .options.multicore=list(set.seed=TRUE)) %dopar% try(
+                     pfilter(fx,params=test,
+                             Np=level_Np[run_level])
+                   )
+  )
+},seed=493536993,kind="L'Ecuyer")
+logmeanexp(sapply(pf1,logLik),se=TRUE)
+```
+
+* The particle filter gives us an unbiased Monte Carlo estimate of the log likelihood. By using Number of particles of 5000, we got an estimate of -576.34 with a Monte standard error of 0.02.
+
+-------
+
+-------
+
+# Iterated Filtering on Data
+
+## Maximization and Likelihood Evaluation
+
+```{r fitting, echo = FALSE}
+fx.sd_rp <- 0.002
+fx.sd_ivp <- 0.1
+fx_cooling.fraction.50 <- 0.1
+
+stew("mif1.rda",{
+  t.if1 <- system.time({
+    if1 <- foreach(i=1:level_Nreps_local[run_level],
+                   .packages='pomp', .combine=c,
+                   .options.multicore=list(set.seed=TRUE)) %dopar% try(
+                     mif2(fx,
+                          start=test,
+                          Np=level_Np[run_level],
+                          Nmif=level_Nmif[run_level],
+                          cooling.type="geometric",
+                          cooling.fraction.50=fx_cooling.fraction.50,
+                          transform=TRUE,
+                          rw.sd = rw.sd(
+                            mu = fx.sd_rp,
+                            delta = fx.sd_rp,
+                            sigma = fx.sd_rp
+                          )
+                     )
+                   )
+    
+    L.if1 <- foreach(i=1:level_Nreps_local[run_level],.packages='pomp',
+                     .combine=rbind,.options.multicore=list(set.seed=TRUE)) %dopar% 
+                     {
+                       logmeanexp(
+                         replicate(level_Nreps_eval[run_level],
+                                   logLik(pfilter(fx,params=coef(if1[[i]]),Np=level_Np[run_level]))
+                         ),
+                         se=TRUE)
+                     }
+  })
+},seed=318817883,kind="L'Ecuyer")
+
+r.if1 <- data.frame(logLik=L.if1[,1],logLik_se=L.if1[,2],t(sapply(if1,coef)))
+if (run_level>1) 
+  write.table(r.if1,file="fx_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.if1$logLik,digits=5)
+```
+
+* The Local Maximum Search gives us a maximum of likelihood of -568.81 with a standard error of 0.007.
+
+-------
+
+-------
+## Likelihood Surface Evaluation
+
+```{r fitting_pairs, echo = FALSE, fig.cap="Figure 6. Pairwise Plot"}
+pairs(~logLik+mu+delta+sigma,data=subset(r.if1,logLik>max(logLik)-20))
+```
+
+* The pairwise plot shows us the geometry of the likelihood surface in a neighborhood (20 units around the maximum likelihood) for each parameter. 
+
+* I will then perform global search to see if the result is stable and compare the likelihood with the GARCH model. 
+
+-------
+
+-------
+
+# Global Search with Randomized Starting Values
+
+## Iterated Filtering with randomized starting values
+
+* For our data, the randomized starting values could be chosen from the following box. 
+
+```{r fx_box}
+fx_box <- rbind(
+  mu = c(-5,10),
+  delta = c(0.1,1.5),
+  sigma = c(0.5,3)
+)
+```
+
+```{r global_search, echo = FALSE}
+stew(file="box_eval.rda",{
+  t.box <- system.time({
+    if.box <- foreach(i=1:level_Nreps_global[run_level],.packages='pomp',.combine=c,
+                      .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        if1[[1]],
+        start=apply(fx_box,1,function(x)runif(1,x))
+      )
+    
+    L.box <- foreach(i=1:level_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                     .options.multicore=list(set.seed=TRUE)) %dopar% {
+                       set.seed(87932+i)
+                       logmeanexp(
+                         replicate(level_Nreps_eval[run_level],
+                                   logLik(pfilter(fx,params=coef(if.box[[i]]),Np=level_Np[run_level]))
+                         ), 
+                         se=TRUE)
+                     }
+  })
+},seed=290860873,kind="L'Ecuyer")
+
+
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+if(run_level>1) write.table(r.box,file="fx2_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.box$logLik,digits=5)
+```
+
+* Parameter estimation requires many and random starting values. Now I draw a starting value uniformly from an interval for each parameter. If the estimation gives stable result with different starting values, then it will provide confidence that an adequate global search has been carried out (Ionizes, E., 2016). 
+
+* It gives us a best likelihood of -568.82 with a standard error of 0.008. 
+
+* The likelihood is similar to our local search and the global search provides a quite stable statistic. 
+
+-------
+
+-------
+
+## Global Geometry of the likelihood surface
+
+```{r search_pairs, echo = FALSE, fig.cap="Figure 7. Pairwise Plot"}
+pairs(~logLik+mu+delta+sigma,data=subset(r.box,logLik>max(logLik)-10))
+```
+
+* By using the pairwise plot, we can get a feeling of how does the geometry of the likelihood surface look like in the neighborhood (10 units around the maximum likelihood) for each parameter. 
+
+* We can see that the points are clustered and end up with comparable likelihoods though the parameters are drawn from different starting values. It shows that the model gives stable maximization of likelihood.
+
+-------
+
+-------
+
+
+# GARCH Model
+
+## Model Description
+
+* According to notes from the class, the GARCH(p,q) model has the form $$ Y_n = \epsilon_n \sqrt{V_n},$$ where $$ V_n = \alpha_0 + \sum_{j=1}^p \alpha_j Y_{n-j}^2 + \sum_{k=1}^q \beta_k V_{n-k}$$ and $\epsilon_{1:N}$ is white noise (Ionides E., 2016).
+
+* From comparing the GARCH(1,0), GARCH(0,1) and GARCH(1,1) model by checking their log likelihoods, I decide to use the GARCH(0,1) model which gives the largest likelihood. 
+
+-------
+
+-------
+
+## Log Likelihood
+
+```{r garch, echo = FALSE , results = 'hide'}
+fxg = garch(dt2$Rate,order = c(0,1),coef = NULL, itmax = 200,eps=NULL, grad = c("analytic"))
+```
+
+```{r garch_loglik, echo = FALSE}
+logLik(fxg)
+```
+
+* The GARCH(0,1) model gives the log likelihood of -560.0184. It is slightly larger than than the likelihood we get from the POMP model.
+
+* The likelihood does not change significantly between the POMP model and GARCH model. However, the GARCH model is difficult to interpret. So personally speaking, I favor the POMP model. But we may still need to use some preliminary results to see if it can be improved to beat the GARCH model.
+
+-------
+
+-------
+
+## Diagnose Plots
+
+```{r garch_plot, echo = FALSE, fig.cap="Figure 10. Diagnostics Plots" }
+par(mfrow=c(1,2))
+qqnorm(fxg$residuals)
+qqline(fxg$residuals)
+
+acf(fxg$residuals, na.action=na.pass)
+par(mfrow=c(1,1))
+```
+
+* The QQ-plot shows the residuals are normally distributed.
+
+* The ACF plot shows 2 lags slightly falling outside the dashed line. Since most autocorrelation values are within the confidence lines, the do not reject the assumption that errors are independent. 
+
+-------
+
+-------
+
+# Conclusions
+
+* In this report, I use the Geometric Brownian Motion to build a POMP model on the foreign exchange rate (GBP/USD).
+
+* The POMP model gives a stable maximum log likelihood of -568.82. It shows that the GBM POMP model is suitable for the GBP/USD exchange rate data. 
+
+* GARCH(0,1) model is used as a benchmark for comparison. The GARCH(0,1) model gives the log likelihood of -560.0184, which is slightly larger than the POMP model. 
+
+* Personally speaking, I would favor the POMP model since GARCH is difficult to interpret and does not improve the likelihood significantly. However further preliminary analysis is necessary to improve the POMP model. 
+
+-------
+
+-------
+
+
+# Limitations and Further Work
+
+* Now the POMP has two states and three parameters. From practical perspective, more states could be introduced into the POMP model such as states recording the gross domestic product of the two countries. Further investigation could be conducted to find a mathematical formula to incorporate other factors into Geometric Brownian Motion model. 
+
+-------
+
+-------
+
+# Acknowledgment
+The project is based on the course on Time Series Analysis, taught by Professor Ionides at the University of Michigan Winter, 2016. The POMP model and R coding consults examples in the class notes from http://ionides.github.io/531w16/notes13/notes13.html.
+
+-------
+
+-------
+
+# References
+[1] Brewer, K., Feng, Y., & Kwan, C. (2012, November). Geometric Brownian Motion, Option Pricing, and Simulation. Retrieved April 21, 2016, from http://epublications.bond.edu.au/cgi/viewcontent.cgi?article=1131&context=ejsie
+
+[2] Foreign Exchange Rates - H.10. (2016). Retrieved April 21, 2016, from https://www.federalreserve.gov/releases/h10/hist/dat00_uk.htm
+
+[3] Geometric Brownian motion. (2016, February 18). In Wikipedia, The Free Encyclopedia. Retrieved 21:37, April 21, 2016, from https://en.wikipedia.org/w/index.php?title=Geometric_Brownian_motion&oldid=705536768
+
+[4] Gerber, H., & Shiu, E. (2003, June). Geometric Brownian Motion Models for Assets and Liabilities: From Pension Funding to Optimal Dividends. Retrieved April 23, 2016, from https://www.researchgate.net/publication/267017769_Geometric_Brownian_Motion_Models_for_Assets_and_Liabilities_From_Pension_Funding_to_Optimal_Dividends
+
+[5] Ionizes, E. (2016, March 22). Practical likelihood-based inference for POMP models. Retrieved April 23, 2016, from http://ionides.github.io/531w16/notes13/notes13.html
+
+[6] Ionides, E. (2016, April 5). Case study: POMP modeling to investigate financial volatility. Retrieved April 23, 2016, from http://ionides.github.io/531w16/notes15/notes15.html

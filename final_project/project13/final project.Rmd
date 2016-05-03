@@ -1,0 +1,559 @@
+---
+title: "Investigate Financial Volatility of Apple Stock via Time Series Analysis"
+author: ""
+date: "April 28, 2016"
+output: html_document
+---
+
+
+### 1. Introduction
+In the financial market, investors are always passionate to find some patterns or trends of the prices. Specifically, the return, defined as ${y_n}= \Delta \log {x_n} = \log {x_{n}}-\log {x_{n-1}}$ in finance (where ${x_n}$ is the price at time n), is the focus of attention.Since people will have arbitrage chance if the return is correlated, the random process of return is a martingale, and we have
+$$E({y_n}|{y_1},...,{y_{n-1}}) = {y_{n-1}}$$ Therefore, it's a hard task to predict the return and make benefits. However, the volatility (variance) of the return series cannot be traded, so have some interesting features. Large numbers of researches built model on the financial volatility and found it correlated with returns, and this relationship is called financial leverage. One important application of modeling volatility is to help price the option, a kind of financial derivatives (see details from  http://www.investopedia.com/university/options-pricing/black-scholes-model.asp). 
+
+In this project, I collected the stock price of Apple Inc. (April 1st, 2006 - April 1st, 2016) from http://finance.yahoo.com/ and investigate the financial volatility through both Garch and Partially Observed Markov Process (POMP) models.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+require(fGarch)
+require(knitr)
+require(tseries)
+require(pomp)
+require(plyr)
+require(dplyr)
+require(ggplot2)
+require(doParallel)
+
+dat <- read.csv('apple.csv', header = T)
+dat <- dat[,c('Date','Adj.Close')]
+
+dat <- dat[nrow(dat):1,]
+dat[,'Date'] <- as.Date(dat$Date)
+
+sub_dat <- dat[dat$Date >= as.Date('2006-03-31') & dat$Date <= as.Date('2016-04-01'),]
+rt <- diff(log(sub_dat$Adj.Close))
+demean.rt = scale(rt, scale = F)
+sub_dat <- sub_dat[-1, ]
+sub_dat$rt = rt
+sub_dat$demean.rt = demean.rt
+
+par(mfrow = c(1,2))
+```
+
+
+The original data is plotted below. The return is also calculated and centeriazed, and we can see that the demeaned return process is a random pertubation around 0. The variance of the process is quite different when time varies, but high volatility usually clusters together.
+
+```{r, echo=FALSE}
+plot(sub_dat$Date, sub_dat$Adj.Close, type = 'l', 
+     main = 'Apple Stock - Price', xlab = 'Date', ylab = 'Adjusted Close')
+plot(sub_dat$Date, sub_dat$demean.rt, type = 'l', 
+     main = 'Apple Stock - Return',xlab = 'Date', ylab = 'Demeaned Log Return')
+```
+
+### 2. Garch Model 
+Denote the return and volatility at time n as $y_n$ and $\sigma_n^2$. The Garch(p,q) model has the form as below:
+$$ y_n = \sigma_n\epsilon_n  $$
+where
+$$ \sigma_n^2 = \alpha_0 + \sum_{j=1}^p \alpha_j y_{n-j}^2 + \sum_{k=1}^q \beta_k \sigma_{n-k}^2 $$
+and $\epsilon_{1:N}$ is white noise.
+
+The Garch model assumes $y_n$ to be uncorrelated, but $\sigma_n$ does depend on $y_{n-1}$, which means, the burst of volatility will be driven by the previous returns. Specifically, the Garch model suggests that $y_n^2$ is correlated. Therefore, I checked the ACF plot of both $y_n$ and $y_n^2$ before fitting the Garch model.
+
+```{r, echo=FALSE}
+acf(demean.rt, main = 'ACF plot of return')
+acf(demean.rt^2, main = 'ACF plot of return^2')
+```
+
+From the above 2 plots, we know our data satisfies these 2 assumptions of the Garch model. And the next step I use the AIC (Akaike Information Criterion) value, which defined as $-2loglikelihood + 2k$ ($k$ is the number of parameters) to choose the model that describes the data best. 
+```{r, warning = F}
+Table_For_GARCH_AIC <- function(data,P,Q){
+  table <- matrix(NA,(P),(Q))
+  for(p in 1:P) {
+    for(q in 1:Q) {
+      temp.fit = garch(x = data, order = c(p,q), grad = "numerical", trace = FALSE)
+      table[p,q] <- 2*length(temp.fit$coef) - 2*as.numeric(logLik(temp.fit))
+    }
+  }
+  dimnames(table) <- list(paste("<b> p",1:P, "</b>", sep=""),paste("q",1:Q,sep=""))
+  table
+}
+apple_aic_table <- Table_For_GARCH_AIC(demean.rt,5,5)
+kable(apple_aic_table,digits=2)
+```
+
+Garch(5,4) has the smallest AIC value so is preffered by the criterion. Since the model suggests $y_n$ is white noise with mean 0 and variance $\sigma_n^2$, we plotted the $\pm 2\sigma_n$ as the 95% confidence of return together with its real value. To get a simpler model, we also give the fitted results of Garch(1,1).
+
+
+```{r, warning = F}
+fit.garch <- garchFit(~garch(5,4), demean.rt, trace = F)
+u = fit.garch@sigma.t
+plot(sub_dat$Date,demean.rt, ylim = c(-0.3,0.3), ylab = 'Returns', xlab = 'Date', type = 'l', main = 'Garch(5,4)', lwd = 1)
+lines(sub_dat$Date, -2*u, lty=2, col='grey', lwd = 1.5)
+lines(sub_dat$Date, 2*u, lty=2, col='grey', lwd = 1.5)
+legend('topright', c('return','+- 2*sqrt(volatility)'), col = c('black','grey'), lty = c(1,2), lwd = c(1,1.5))
+```
+
+```{r, echo=FALSE, warning = F}
+fit.garch2 <- garchFit(~garch(1,1), demean.rt, trace = F)
+#summary(fit.garch2)
+u2 = fit.garch2@sigma.t
+plot(sub_dat$Date,demean.rt, ylim = c(-0.3,0.3),ylab="Returns", xlab = 'Date',type = 'l', main = 'Garch(1,1)', lwd = 1)
+lines(sub_dat$Date,-2*u2, lty=2, col='grey', lwd = 1.5)
+lines(sub_dat$Date,2*u2, lty=2, col='grey', lwd = 1.5)
+legend('topright', c('return','+- 2*sqrt(volatility)'), col = c('black','grey'), lty = c(1,2), lwd = c(1,1.5))
+```
+
+The Garch(1,1) gives us a similar confidence interval, with not that small AIC values compared to Garch(5,4). So we choose the Garch(1,1) model finally and use it to make a prediction. The loglikelihood of Garch(5,4) is 6368.659, and it's 6365.752 for Garch(1,1). The following lines also presents the estimated coefficients of Garch(1,1) model. 
+
+```{r, echo=FALSE, warning = F}
+a0 = as.numeric(fit.garch2@fit$coef[2])
+a1 = as.numeric(fit.garch2@fit$coef[3])
+b1 = as.numeric(fit.garch2@fit$coef[4])
+print(fit.garch2@fit$coef)
+set.seed(1)
+```
+
+Now we use the Garch(1,1) model to make a prediction, we predict 40 time afterwards, which include 20 for calibration. As we can see, the Garch model can give us a good prediction for the volatility, but the return itself is not that predictable, since it is generated from Normal distribution with mean 0.
+```{r, warning = F}
+pred.u = c()
+pred.y = c()
+u.pre = u2[(length(u2)-20)]
+y.pre = demean.rt[(length(demean.rt)-20)]
+for(ahead in 1:40){
+  cur.u = sqrt(a0+a1*y.pre^2+b1*u.pre^2)
+  cur.y = rnorm(1, 0, cur.u)
+  pred.u = c(pred.u,cur.u)
+  pred.y = c(pred.y,cur.y)
+  u.pre = cur.u
+  y.pre = cur.y
+}
+```
+
+```{r, echo=FALSE, warning = F}
+plot.y = c(demean.rt, rep(NA,20))
+plot.predy = c(rep(NA, (length(demean.rt)-20)), pred.y)
+plot.u2 = c(u2, rep(NA,20))
+plot.predu = c(rep(NA, (length(u2)-20)), pred.u)
+nn = length(plot.y)
+
+plot(plot.y[(nn-399):nn],ylim = c(-0.10,0.15),ylab="Returns", xlab = 'time', type = 'l', 
+     main = 'Garch(1,1) - Calibration and Prediction', lwd = 1.5)
+lines(-2*plot.u2[(nn-399):nn], lty=2, col='grey', lwd = 1.5)
+lines(2*plot.u2[(nn-399):nn], lty=2, col='grey', lwd = 1.5)
+lines(plot.predy[(nn-399):nn], col = 'red', lwd = 1.5)
+lines(-2*plot.predu[(nn-399):nn], lty = 2, col = 'blue', lwd = 1.5)
+lines(2*plot.predu[(nn-399):nn], lty = 2, col = 'blue', lwd = 1.5)
+abline(v = (length(plot.y[(nn-399):nn]) - 21), lty = 2, lwd = 1.5)
+legend('topleft',c('return','predicted return','+- 2*sqrt(volatility)', '+- 2*predicted volatility'),
+       col = c('black', 'red','grey','blue'), lty = c(1,1,2,2), lwd = c(1.5,1.5,1.5,1.5))
+```
+
+### 3.Asymmetric Leverage via POMP Model
+Recall the Garch model, which models $$ \sigma_n^2 = \alpha_0 + \sum_{j=1}^p \alpha_j y_{n-j}^2 + \sum_{k=1}^q \beta_k \sigma_{n-k}^2 $$ Since all the $y_n$ terms are taken square here, we can see the model assumes the 'good' news, which corresponding to positive $y_n$ and 'bad' news, which corresponding to negative $y_n$ will have some extent of effect on the volatility. However, experience suggests that negative returns tend to increase financial leverage, which is usually called asymmetric leverage. Therefore, people build several models based on this point of view. 
+
+Here I inherite the model of Carles Bretó [4] to analysis the financial volatility. Denote $h_n = log(\sigma_n^2) = 2log(\sigma_n)$, the model has the form
+$$ y_n = \sigma_n\epsilon_n = \exp{(h_n/2)}\epsilon_n $$
+$$ h_n = \mu_h(1-\phi)+\phi h_{n-1}+\beta\rho \exp{(-h_{n-1}/2)}+\sigma_\omega\omega_n$$
+where
+$\beta = y_{n-1}\sigma_\eta\sqrt{1-\phi^2}$ and $\sigma_\omega = \sigma_\eta\sqrt{1-\phi^2}\sqrt{1-\rho^2}$, $\epsilon_{1:N}$, $\omega_{1:N}$ are both Gaussian unit-variance white noise.
+
+Simply speaking, the parameter $\rho$ represents the relationship between $\sigma_n$ and $y_{n-1}$, i.e., the leverage. With $\rho$ ranges from (-1,0), it suggests the 'bad' new have larger effects on volatility, and with $\rho$ ranges from (0,1), the 'good' new will have larger effects, so here we expected (-1,0) to be the proper range. And $\phi$ represents the relationship between $\sigma_n$ and $\sigma_{n-1}$. Another model we discussed in the class is suppose the leverage to be random walk, compared with that model, the above assumes the leverage to be constant and is a specific case, so is simpler. Also, we can estimate the value of $\rho$ and get a more direct sense of the extent of leverage, that is also one of the reason why I choose this model here.
+
+The following lines show some details of how I build this model with POMP, to estimate the parameters for our specific Apple Stock data, we use 'covaryt' to link the observation with the latent state variable.
+```{r, echo=FALSE, warning = F}
+apple_statenames <- c("H","Y_state")
+apple_rp_names <- c("mu_h","phi","sigma_eta","rho")
+apple_ivp_names <- c("H_0")
+apple_paramnames <- c(apple_rp_names,apple_ivp_names)
+apple_covarnames <- "covaryt"
+```
+
+```{r, warning = F}
+rproc1 <- "
+double beta,omega;
+omega = rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-rho*rho));
+beta = Y_state * sigma_eta * sqrt( 1- phi*phi );
+H = mu_h*(1 - phi) + phi*H + beta * rho * exp(-H/2) + omega;
+"
+rproc2.sim <- "
+Y_state = rnorm( 0,exp(H/2) );
+"
+
+rproc2.filt <- "
+Y_state = covaryt;
+"
+```
+
+```{r, echo=FALSE, warning = F}
+apple_rproc.sim <- paste(rproc1,rproc2.sim)
+apple_rproc.filt <- paste(rproc1,rproc2.filt)
+apple_initializer <- "
+H = H_0;
+Y_state = rnorm( 0,exp(H/2) );
+"
+apple_rmeasure <- "
+y=Y_state;
+"
+
+apple_dmeasure <- "
+lik=dnorm(y,0,exp(H/2),give_log);
+"
+
+expit<-function(real){1/(1+exp(-real))}
+logit<-function(p.arg){log(p.arg/(1-p.arg))}
+
+cores <- 4 
+registerDoParallel(cores)
+```
+
+Since some of the parameters have limited scale such as (-1,0) or (0,1), when building the pomp object, we use the logit function to transform them for estimation and then use expit to transform back.
+
+```{r, warning = F}
+apple_toEstimationScale <- "
+Tsigma_eta = log(sigma_eta);
+Tphi = logit(phi);
+Trho = logit(-rho);
+"
+
+apple_fromEstimationScale <- "
+Tsigma_eta = exp(sigma_eta);
+Tphi = expit(phi);
+Trho = -expit(rho);
+"
+
+apple.filt <- pomp(data=data.frame(y=demean.rt,
+                                   time=1:length(demean.rt)),
+                   statenames=apple_statenames,
+                   paramnames=apple_paramnames,
+                   covarnames=apple_covarnames,
+                   times="time",
+                   t0=0,
+                   covar=data.frame(covaryt=c(0,demean.rt),
+                                    time=0:length(demean.rt)),
+                   tcovar="time",
+                   rmeasure=Csnippet(apple_rmeasure),
+                   dmeasure=Csnippet(apple_dmeasure),
+                   rprocess=discrete.time.sim(step.fun=Csnippet(apple_rproc.filt),delta.t=1),
+                   initializer=Csnippet(apple_initializer),
+                   toEstimationScale=Csnippet(apple_toEstimationScale), 
+                   fromEstimationScale=Csnippet(apple_fromEstimationScale)
+)
+```
+
+We apply the IF2 algorithm from Ionides[http://ionides.github.io/531w16/notes13/notes13.html] to get the maximum likelihood and so investigate how well this model can describe our data. Using the iteration level as below, we generate a box of starting values of each parameters and get the diagnostics plot below.
+
+```{r, echo=FALSE, warning = F}
+apple_rw.sd_rp_mu <- 0.1
+apple_rw.sd_rp_phi <- 0.02
+apple_rw.sd_rp_rho <- 0.02
+apple_rw.sd_rp_sigma <- 0.15
+apple_rw.sd_ivp <- 0.1
+apple_cooling.fraction.50 <- 0.3
+
+apple_box <- rbind(
+  mu_h    =c(-5,5),
+  phi = c(0.4,0.99),
+  rho = c(-0.95,-0.05),
+  sigma_eta = c(0.5,2),
+  H_0 = c(-2,2)
+)
+```
+
+```{r, warning = F}
+run_level <- 4
+apple_Np <-          c(100,200,1e3,2e3)
+apple_Nmif <-        c(10, 50,100,200)
+apple_Nreps_eval <-  c(4,  4,10,  20)
+apple_Nreps_local <- c(10, 10,20, 20)
+apple_Nreps_global <-c(10, 10,20, 100)
+
+stew("box_eval.rda",{
+  t.box <- system.time({
+    if.box <- foreach(i=1:apple_Nreps_global[run_level],.packages='pomp',.combine=c,
+                      .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        apple.filt,
+        start=apply(apple_box,1,function(x)runif(1,x[1],x[2])),
+        Np=apple_Np[run_level],
+        Nmif=apple_Nmif[run_level],
+        cooling.type="geometric",
+        cooling.fraction.50=apple_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd = rw.sd(
+          mu_h      = apple_rw.sd_rp_mu,
+          phi       = apple_rw.sd_rp_phi,
+          rho       = apple_rw.sd_rp_rho,
+          sigma_eta = apple_rw.sd_rp_sigma,
+          H_0       = ivp(apple_rw.sd_ivp)
+        )
+      )
+    
+    L.box <- foreach(i=1:apple_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                     .options.multicore=list(set.seed=TRUE)) %dopar% {
+                       set.seed(87932+i)
+                       logmeanexp(
+                         replicate(apple_Nreps_eval[run_level],
+                                   logLik(pfilter(apple.filt,params=coef(if.box[[i]]),Np=apple_Np[run_level]))
+                         ), 
+                         se=TRUE)
+                     }
+  })
+},seed=290860873,kind="L'Ecuyer")
+```
+
+```{r, echo=FALSE, warning = F}
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+plot(if.box)
+```
+
+We can see the likelihood converges well, the parameters $\phi$, $\rho$, $\mu_h$, $\sigma_\eta$ also shrinkage to certain scale and become stable after several iteration. For the $H_0$, which is the initial value of the log volatility, it becomes stable soon but not shrinkage. Given the shrinkage of all other parameters, we can conclude that the value of this parameter will not influence our result a lot. Therefore, we set it as a constant = 0 in our fowlloing analysis.
+
+Summarizing the log likelihood, the mean value is 6442.0. And in this sense, the model describes our data better(log likelihhod for Garch is around 6365). 
+
+```{r, echo=FALSE, warning = F}
+summary(r.box$logLik,digits=5)
+```
+
+For better interpretation, our next step is to construct the profile likelihood of intereted parameters and give out a 95% confidence interval. Two important variables here are $\rho$ and $\phi$ (corresponding to the relationship between $\sigma_n$ and $y_{n-1}$, $\sigma_{n-1}$ respectively). Therefore, we generte a fixed sequence of $\rho$ and $\phi$, and find the maximum profile likelihood. Based on the rough range of final distribution of the parmeters above, we draw 20 fixed values from (-0.6, -0.1) for $\rho$ and (0.75, 0.99) for $\phi$. 
+
+
+```{r, echo=FALSE, warning = F}
+#### phi #####
+It=20
+nprof=25
+
+profile.box <- profileDesign(  
+  phi = seq(0.75, 0.99, length.out = It),
+  lower=c(mu_h=-5,rho = -0.5, sigma_eta = 0.5),
+  upper=c(mu_h=5,rho = -0.1, sigma_eta = 2),
+  nprof=nprof
+)
+
+
+stew(file=sprintf("profile phi.rda",It),{
+  
+  t_global.4 <- system.time({
+    prof.llh<- foreach(i=1:(It*nprof),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+     # Find MLE
+      mif2(
+        apple.filt,
+        start=c(unlist(profile.box[i,]), apple_fixed_params),
+        Np = 1000, Nmif = 500,
+        cooling.type="geometric",
+        cooling.fraction.50=apple_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd = rw.sd(
+          mu_h      = apple_rw.sd_rp_mu,
+          rho       = apple_rw.sd_rp_rho,
+          sigma_eta = apple_rw.sd_rp_sigma
+        )
+      )->mifs_global.4
+      
+      # evaluate llh
+      evals = replicate(10, logLik(pfilter(mifs_global.4,Np=5000)))
+      ll=logmeanexp(evals, se=TRUE)        
+      
+      data.frame(as.list(coef(mifs_global.4)),
+                 loglik = ll[1],
+                 loglik.se = ll[2])
+    }
+  })
+},seed=931129,kind="L'Ecuyer")
+
+prof.llh %>% 
+  ddply(~phi,subset,rank(-loglik)<=10) %>%
+  subset(select=apple_paramnames) -> pars
+
+
+stew(file=sprintf("profile phi-2.rda",It),{
+  
+  t_global.5 <- system.time({
+    prof.llh<- foreach(i=1:(nrow(pars)),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+      # Find MLE
+      mif2(
+        apple.filt,
+        start=unlist(pars[i,]),
+        Np = 1000, Nmif = 50,
+        cooling.type="geometric",
+        cooling.fraction.50=apple_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd = rw.sd(
+          mu_h      = apple_rw.sd_rp_mu,
+          rho       = apple_rw.sd_rp_rho,
+          sigma_eta = apple_rw.sd_rp_sigma
+        )
+      )->mifs_global.5
+      # evaluate llh 
+      pf= replicate(10,pfilter(mifs_global.5,Np=5000))
+      evals=sapply(pf,logLik)
+      ll=logmeanexp(evals, se=TRUE)  
+      nfail=sapply(pf,getElement,"nfail")
+      
+      data.frame(as.list(coef(mifs_global.5)),
+                 loglik = ll[1],
+                 loglik.se = ll[2],
+                 nfail.max=max(nfail))
+    }
+  })
+},seed=931129,kind="L'Ecuyer")
+
+prof.llh %<>%
+  subset(nfail.max==0) %>%
+  mutate(phi=exp(signif(log(phi),5))) %>%
+  ddply(~phi,subset,rank(-loglik)<=1)
+
+a=max(prof.llh$loglik)
+b=a-1.92
+CI=which(prof.llh$loglik>=b)
+c=prof.llh$phi[min(CI)]
+d=prof.llh$phi[max(CI)]
+phi_est = mean(c(c,d))
+
+prof.llh %>%
+  ggplot(aes(x=phi,y=loglik))+
+  geom_point()+
+  geom_smooth(method="loess")+
+  geom_hline(aes(yintercept=a),linetype="dashed")+
+  geom_hline(aes(yintercept=b),linetype="dashed")+
+  geom_vline(aes(xintercept=c),linetype="dashed")+
+  geom_vline(aes(xintercept=d),linetype="dashed")
+
+print(c(c,d))
+```
+
+The 95% confidence interval for $\phi$ is [0.902, 0.914].
+
+```{r, echo=FALSE, warning = F}
+apple_fixed_params <- c(H_0 = 0)
+
+mcopts <- list(set.seed=TRUE)
+
+########### rho ##############
+It=20
+nprof=25
+profile.box <- profileDesign(  
+  rho = seq(-0.6, -0.1, length.out = It),
+  lower=c(mu_h=-5,phi = 0.65, sigma_eta = 0.5),
+  upper=c(mu_h=5,phi = 0.99, sigma_eta = 2),
+  nprof=nprof
+)
+```
+
+
+
+```{r, echo = F, warning = F}
+stew(file=sprintf("profile rho.rda"),{
+  
+  t_global.4 <- system.time({
+    prof.llh<- foreach(i=1:(It*nprof),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+      # Find MLE
+      mif2(
+        apple.filt,
+        start=c(unlist(profile.box[i,]), apple_fixed_params),
+        Np = 1000, Nmif = 50,
+        cooling.type="geometric",
+        cooling.fraction.50=apple_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd = rw.sd(
+          mu_h      = apple_rw.sd_rp_mu,
+          phi       = apple_rw.sd_rp_phi,
+          sigma_eta = apple_rw.sd_rp_sigma
+        )
+      )->mifs_global.4
+      
+      # evaluate llh
+      evals = replicate(10, logLik(pfilter(mifs_global.4,Np=5000)))
+      ll=logmeanexp(evals, se=TRUE)        
+      
+      data.frame(as.list(coef(mifs_global.4)),
+                 loglik = ll[1],
+                 loglik.se = ll[2])
+    }
+  })
+},seed=931129,kind="L'Ecuyer")
+
+prof.llh %>% 
+  ddply(~rho,subset,rank(-loglik)<=10) %>%
+  subset(select=apple_paramnames) -> pars
+
+
+stew(file=sprintf("profile rho-2.rda"),{
+  
+  t_global.5 <- system.time({
+    prof.llh<- foreach(i=1:(nrow(pars)),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+      # Find MLE
+      mif2(
+        apple.filt,
+        start=unlist(pars[i,]),
+        Np = 1000, Nmif = 50,
+        cooling.type="geometric",
+        cooling.fraction.50=apple_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd = rw.sd(
+          mu_h      = apple_rw.sd_rp_mu,
+          phi       = apple_rw.sd_rp_phi,
+          sigma_eta = apple_rw.sd_rp_sigma
+        )
+      )->mifs_global.5
+      # evaluate llh 
+      pf= replicate(10,pfilter(mifs_global.5,Np=5000))
+      evals=sapply(pf,logLik)
+      ll=logmeanexp(evals, se=TRUE)  
+      nfail=sapply(pf,getElement,"nfail")
+      
+      data.frame(as.list(coef(mifs_global.5)),
+                 loglik = ll[1],
+                 loglik.se = ll[2],
+                 nfail.max=max(nfail))
+    }
+  })
+},seed=931129,kind="L'Ecuyer")
+
+
+prof.llh %<>%
+  subset(nfail.max==0) %>%
+  mutate(rho=-exp(signif(log(-rho),5))) %>%
+  ddply(~rho,subset,rank(-loglik)<=1)
+
+a=max(prof.llh$loglik)
+b=a-1.92
+CI=which(prof.llh$loglik>=b)
+rho_est = prof.llh[which.max(prof.llh$loglik),'rho']
+c=prof.llh$rho[min(CI)]
+d=prof.llh$rho[max(CI)]
+rho_est = prof.llh$rho[median(CI)]
+
+prof.llh %>%
+  ggplot(aes(x=rho,y=loglik))+
+  geom_point()+
+  geom_smooth(method="loess")+
+  geom_hline(aes(yintercept=a),linetype="dashed")+
+  geom_hline(aes(yintercept=b),linetype="dashed")+
+  geom_vline(aes(xintercept=c),linetype="dashed")+
+  geom_vline(aes(xintercept=d),linetype="dashed")
+
+print(c(c,d))
+```
+
+The 95% confidence interval for $\rho$ is [-0.284, -0.232]. This indicates that the financial leverage for apple stock is around -0.25, which does exist, but not that large as some other stock, such as sp500 index. And the asymmetric property of 'good' and 'bad' new do happen.
+
+
+### 4. Conclusion
+* 1. Garch(1,1) model can fits the Apple Stock return well and give us a prediction of the volatility, which helps people to invest financial derivatives.
+<br /> 
+* 2. Fitting an Asymmetric Leverage model through POMP gives us an estimate of the leverage around -0.25. This model also suggests 'bad' news do influence the volatility more than 'good' news.
+<br /> 
+* 3. POMP model gives us an approach to construct a state-space model, we can introduce some market common sense as parameters into the model, and use the real market data to verify it. 
+
+### 5. Reference
+[1]http://finance.yahoo.com
+
+[2]Edward Ionides. Stats 531 Lecture Notes. http://ionides.github.io/531w16/#course-description
+
+[3]Robert H.Shumway, David S.Stoffer. Time Series Analysis and Its Applications, Third Edition. Springer.
+
+[4]Carles Bretó. On idiosyncratic stochasticity of financial leverage effects. Statistics & Probability Letters, Volume 91, August 2014, Pages 20–26.
+
+[5]Nikolaus Hautsch, Yangguoyi Ou. Discrete-Time Stochastic Volatility Models and MCMC-Based Statistical Inference. SFB 649 Discussion Paper 2008-063.
+
+
+

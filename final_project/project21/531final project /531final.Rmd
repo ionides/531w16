@@ -1,0 +1,843 @@
+---
+title: "Analysis on Financial Volatility of Hang Seng Stock Market Index"
+author: ""
+output: html_document
+---
+
+###I. Introduction
+
+The Hang Seng Index is a freefloat-adjusted market capitalization-weighted stock market index in Hong Kong and is the main indicator of the overall market performance in Hong Kong. It is used to record and monitor daily changes of the largest companies of Hong Kong stock market. In this project, I will analyze the financial volatility of daily index return using the data from recent five years information of Hang Seng stock market index. This paper will perform two models to the data, which is GARCH model, asymmetric stochastic volatility model with fixed financial leverage. 
+
+The paper has the following structure. Section II introduces our dataset and its features. Section III and Section IV gives our implementation of GARCH model and asymmetric stochastic volatility models. We analyze the result and compare the performances in Section V. In Section VI, we discuss possible futere work.
+
+###II. Dataset and Features
+
+Our dataset is provided by Yahoo Finance. It include the Hang Seng stock market index daily closed prices from Jan. 1st, 2011 to Jan. 1st, 2016. The following figures show us the plot of daily closed price and daily return. The daily return is computed by the formula: $$Y_n = log(S_n) - log(S_{n-1}) $$ 
+
+where $S_n$ is the index price.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+setwd("~/Downloads")
+require(quantmod)
+dat=getSymbols('^HSI',env=NULL,from="2011-1-1",to="2016-1-1")
+dat=as.data.frame(dat)
+colnames(dat)=c("open","high","low","close","volume","adjclose")
+dat=dat[-1:-5]
+
+dat$return=c(NA)
+for (i in 2:dim(dat)[1]){
+  dat$return[i]=log(dat$adjclose[i]/dat$adjclose[i-1])
+}
+dat=na.omit(dat)
+dat$date=row.names(dat)
+dat$date=as.Date(dat$date)
+
+par(mfrow=c(2,1))
+plot(adjclose~date,data=dat,type = 'l',main="Daily Closed Price")
+plot(return~date,data=dat,type='l',main="Daily Return")
+HS=dat$return
+```
+
+We can find that the return of index is sightly mean 0. In this case, we have a good reason to analyze the volality of the daily index return.
+
+###III. GARCH Model
+
+The GARCH(p,q) model has the form
+$$
+Y_n = \epsilon_n \sqrt{V_n}, \\
+V_n = \alpha_0 + \sum_{j=1}^p \alpha_j Y_{n-j}^2 + \sum_{k=1}^q \beta_k V_{n-k}\\
+$$
+where $\epsilon_n$ are white noises.
+
+The plot below shows the $Y_n$ and the auto-correlation of $Y_n$ and ${Y_n}^2$
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+test=getSymbols('^HSI',env=NULL,from="2016-1-1",to="2016-4-1")
+test=as.data.frame(test)
+colnames(test)=c("open","high","low","close","volume","adjclose")
+test=test[-1:-5]
+
+test$return=c(NA)
+for (i in 2:dim(test)[1]){
+  test$return[i]=log(test$adjclose[i]/test$adjclose[i-1])
+}
+test=na.omit(test)
+test$date=row.names(test)
+test$date=as.Date(test$date)
+
+require(tseries)
+
+require(fGarch)
+
+acf(dat$return,lag=100,main="ACF of HSI log return")
+acf(dat$return^2,lag=100,main="ACF of HSI squared log return")
+```
+
+From the plot, we have the reason to believe that there is no significant correlation for $Y_n$ while strong signal of correlations among ${Y_n}^2$. That indicates that GARCH model should be a good fit for this dataset. We first tabulate some AIC values for a range of different choices of p and q.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+aic_table = function(P,Q){
+  table = matrix(NA,P,Q)
+  for(p in 1:P) {
+    for(q in 1:Q) {
+      fitpq=garchFit(substitute(~ garch(i,j),list(i=p, j=q)),data =dat$return,trace=F)
+                     table[p,q] = as.numeric(fitpq@fit$ics[1])
+    }
+  }
+  dimnames(table)=list(paste("GAR",1:P,sep=""),paste("CH",1:Q,sep=""))
+  table
+}
+d_aic_table = aic_table(4,5)
+require(knitr)
+kable(d_aic_table,digits=5)
+```
+
+From the AIC table, although all GARCH models have similar AIC value, we select GARCH(1,5) as candidate because it has the smallest AIC value. We first fit a GARCH(1,5) model.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+fit15 = garchFit( ~ garch(1,5), data =dat$return,trace=F )
+summary(fit15)
+```
+
+We find that the coefficient of $\beta_n$ where n>1 is extremely small. Thus the GARCH(1,5) model is similar to GARCH(1,1) model. In this case, we fit the most popular used GARCH(1,1) model to the dataset instead of the GARCH(1,5) model.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+fit11 = garchFit( ~ garch(1,1), data =dat$return,trace=F )
+summary(fit11)
+```
+
+The volatility implied by the GARCH(1,1) model is shown above. From the Shapiro-Wilk test, we can conclude that the residuals of GARCH(1,1) model is hardly be said normal.
+
+Then we plot the range of 95% confidence interval(about two sigmas away) of $Y_n$ value and the estimated volatilities. Here we can conclude that the GARCH(1,1) model fit the data well since all points lie in the 95% confidence interval.
+
+```{r,warning=FALSE,echo=FALSE,message=FALSE}
+par(mfrow=c(2,1))
+plot(dat$date,fit11@h.t,type="l",ylab="Estimated Volatility",xlab="Date",main="2010-2015")
+plot(seq(1,length(HS)),HS,main="Fitted Value",type="l",xlab="Date")
+lines(seq(1,length(HS)),2*fit11@sigma.t, lty=2, col=4,type="l")
+lines(seq(1,length(HS)),-2*fit11@sigma.t, lty=2, col=4,type="l")
+```
+
+
+```{r,warning=FALSE,echo=FALSE,message=FALSE}
+prediction=predict(fit11, n.ahead=length(test$return))
+sd=prediction$standardDeviation
+#require(fGarch)
+#predict(fit11,n.head=length(test$return),plot=TRUE,mse="uncond",conf=.9,nx=100)
+plot(seq(1,length(test$return)),test$return,main="Predicted 95% Confidence Interval",type="l",xlab="")
+lines(seq(1,length(test$return)),mean(HS)+2*sd, lty=2, col=4,type="l")
+lines(seq(1,length(test$return)),mean(HS)-2*sd, lty=2, col=4,type="l")
+
+```
+
+From the figure above, most of points lies on the 95% confidence interval while there are still a little of points stay out of 95% range. Thus we can hardly say that the Gaussian GARCH(1,1) model predicts well for the Hang Seng stock market index.
+
+###IV. POMP Model for Financial Volatility
+
+We start with build a POMP model with fixed financial leverage. The stochastic volatility model with fixed financial leverage have the following state-space representation:
+
+$$Y_n = (\exp{H_n/2}) \epsilon_n$$
+$$H_n= \mu_h (1-\phi) +\phi H_{n-1} + \beta \times \rho  \exp{-H_{n-1}/2} +\sigma_{\omega} \omega_n$$
+
+with $\beta =Y_{n-1} \sigma \sqrt{1-\phi^2}$ and $\sigma_{\omega} = \sigma \sqrt{1-\phi^2} \sqrt{1-\rho^2}$ where $\rho$, $\sigma$ and $\phi$ are the parameters after all.
+
+Then we build POMP model. First we plot the diagnostic plot from global search of the likelihood surface using randomized starting values.
+
+```{r,warning=FALSE,message=FALSE,echo=F}
+expit<-function(real){1/(1+exp(-real))}
+logit<-function(p.arg){log(p.arg/(1-p.arg))}
+
+require(pomp)
+
+HS=dat$return
+
+HS_statenames <- c("H","Y_state")
+HS_rp_names <- c("mu_h","phi","sigma_eta","rho")
+HS_ivp_names <- c("H_0")
+HS_paramnames <- c(HS_rp_names,HS_ivp_names)
+HS_covarnames <- "covaryt"
+rproc1 <- "
+double beta,omega;
+omega = rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-rho*rho)) ;
+beta = Y_state * sigma_eta * sqrt( 1- phi*phi );
+H = mu_h*(1 - phi) + phi*H + beta * rho * exp(-H/2) + omega;
+"
+rproc2.sim <- "
+Y_state = rnorm( 0,exp(H/2) );
+"
+
+rproc2.filt <- "
+Y_state = covaryt;
+"
+HS_rproc.sim <- paste(rproc1,rproc2.sim)
+HS_rproc.filt <- paste(rproc1,rproc2.filt)
+HS_initializer <- "
+H = H_0;
+Y_state = rnorm( 0,exp(H/2) );
+"
+HS_rmeasure <- "
+y=Y_state;
+"
+
+HS_dmeasure <- "
+lik=dnorm(y,0,exp(H/2),give_log);
+"
+HS_toEstimationScale <- "
+Tsigma_eta = log(sigma_eta);
+Tphi = logit(phi);
+Trho=tan(rho*(3.1416/2));
+"
+
+HS_fromEstimationScale <- "
+Tsigma_eta = exp(sigma_eta);
+Tphi = expit(phi);
+Trho=atan(rho)*(2/3.1416);
+
+"
+
+HS.filt <- pomp(data=data.frame(y=HS,
+                                time=1:length(HS)),
+                statenames=HS_statenames,
+                paramnames=HS_paramnames,
+                
+                covarnames=HS_covarnames,
+                times="time",
+                t0=0,
+                covar=data.frame(covaryt=c(0,HS),
+                                 time=0:length(HS)),
+                tcovar="time",
+                rmeasure=Csnippet(HS_rmeasure),
+                dmeasure=Csnippet(HS_dmeasure),
+                rprocess=discrete.time.sim(step.fun=Csnippet(HS_rproc.filt),delta.t=1),
+                initializer=Csnippet(HS_initializer),
+                toEstimationScale=Csnippet(HS_toEstimationScale), 
+                fromEstimationScale=Csnippet(HS_fromEstimationScale)
+)
+
+run_level <- 1
+HS_Np <-          c(100,1e3,2e3)
+HS_Nmif <-        c(50, 100,200)
+HS_Nreps_eval <-  c(4,  10,  20)
+HS_Nreps_local <- c(10, 20, 20)
+HS_Nreps_global <-c(10, 20, 100)
+
+
+HS_rw.sd_rp <- 0.02###
+HS_rw.sd_ivp <- 0.1###
+HS_cooling.fraction.50 <- 0.5###
+
+
+fixed_params <- c(H_0=10)###
+
+
+HS.filt <- pomp(data=data.frame(y=HS,time=1:length(HS)),
+                statenames=HS_statenames,
+                paramnames=HS_paramnames,
+                covarnames=HS_covarnames,
+                times="time",
+                t0=0,
+                covar=data.frame(covaryt=c(0,HS),
+                                 time=0:length(HS)),
+                tcovar="time",
+                rmeasure=Csnippet(HS_rmeasure),
+                dmeasure=Csnippet(HS_dmeasure),
+                rprocess=discrete.time.sim(step.fun=Csnippet(HS_rproc.filt),delta.t=1),
+                initializer=Csnippet(HS_initializer),
+                toEstimationScale=Csnippet(HS_toEstimationScale), 
+                fromEstimationScale=Csnippet(HS_fromEstimationScale)
+)
+
+HS_box <- rbind(
+  rho =c(-1,0),###
+  phi = c(0,1),###
+  mu_h=c(-20,20),###
+  sigma_eta=c(0,4)###
+)
+
+stew(file="box_eval_HS_try.rda",{
+  t.box <- system.time({
+    require(doParallel)
+    cores <- 20  # The number of cores on this machine 
+    registerDoParallel(cores)
+    if.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=c,
+                      .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        HS.filt,
+        start=c(apply(HS_box,1,function(x)runif(1,x[1],x[2])),fixed_params),
+        Np=HS_Np[run_level],
+        Nmif=HS_Nmif[run_level],
+        cooling.type="geometric",
+        cooling.fraction.50=0.2,
+        transform=TRUE,
+        rw.sd = rw.sd(
+          rho       = 0.01,###
+          phi       = 0.01,###
+          mu_h      = 0.1,###
+          sigma_eta = 0.01###
+          )
+      )
+    
+    
+    L.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                     .options.multicore=list(set.seed=TRUE)) %dopar% {
+                       set.seed(87932+i)
+                       logmeanexp(
+                         replicate(HS_Nreps_eval[run_level],
+                                   logLik(pfilter(HS.filt,params=coef(if.box[[i]]),Np=HS_Np[run_level]))
+                         ), 
+                         se=TRUE)
+                     }
+     
+  })
+},seed=290860873,kind="L'Ecuyer")
+plot(if.box)
+```  
+
+The maximal log-likelihood is:
+
+```{r,warning=FALSE,message=FALSE}
+max(L.box[,1])
+```
+
+If we look at the diagnostic plot, we can conclude that $\sigma_{\omega}$ and $\mu_h$ converge obviously. However, we concern about the value of $\rho$ and $\phi$ more. We first try to fix the value of $\rho$ and $\phi$.
+
+```{r,warning=FALSE,message=FALSE,echo=F}
+run_level <- 2
+HS_Np <-          c(100,1e3,2e3)
+HS_Nmif <-        c(50, 100,200)
+HS_Nreps_eval <-  c(4,  10,  20)
+HS_Nreps_local <- c(10, 20, 20)
+HS_Nreps_global <-c(10, 20, 100)
+
+fixed_params <- c(H_0=-11,sigma_eta=1,mu_h=-10)###
+
+
+HS.filt <- pomp(data=data.frame(y=HS,time=1:length(HS)),
+                statenames=HS_statenames,
+                paramnames=HS_paramnames,
+                covarnames=HS_covarnames,
+                times="time",
+                t0=0,
+                covar=data.frame(covaryt=c(0,HS),
+                                 time=0:length(HS)),
+                tcovar="time",
+                rmeasure=Csnippet(HS_rmeasure),
+                dmeasure=Csnippet(HS_dmeasure),
+                rprocess=discrete.time.sim(step.fun=Csnippet(HS_rproc.filt),delta.t=1),
+                initializer=Csnippet(HS_initializer),
+                toEstimationScale=Csnippet(HS_toEstimationScale), 
+                fromEstimationScale=Csnippet(HS_fromEstimationScale)
+)
+
+HS_box <- rbind(
+  rho =c(-0.5,0.5),###
+  phi = c(0.5,0.99)#,###
+  #mu_h=c(-20,20),###
+  #sigma_eta=c(0,4)###
+)
+
+stew(file="box_eval_HS.rda",{
+t.box <- system.time({
+  require(doParallel)
+  cores <- 20  # The number of cores on this machine 
+  registerDoParallel(cores)
+  if.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=c,
+                    .options.multicore=list(set.seed=TRUE)) %dopar%  
+    mif2(
+      HS.filt,
+      start=c(apply(HS_box,1,function(x)runif(1,x[1],x[2])),fixed_params),
+      Np=HS_Np[run_level],
+      Nmif=HS_Nmif[run_level],
+      cooling.type="geometric",
+      cooling.fraction.50=0.2,
+      transform=TRUE,
+      rw.sd = rw.sd(
+        rho       = 0.02,###
+        phi       = 0.02#,###
+        #mu_h      = 0.1,###
+        #sigma_eta = 0.01###
+      )
+    )
+  
+  
+  L.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                   .options.multicore=list(set.seed=TRUE)) %dopar% {
+                     set.seed(87932+i)
+                     logmeanexp(
+                       replicate(HS_Nreps_eval[run_level],
+                                 logLik(pfilter(HS.filt,params=coef(if.box[[i]]),Np=HS_Np[run_level]))
+                       ), 
+                       se=TRUE)
+                   }
+  
+})
+},seed=290860873,kind="L'Ecuyer")
+
+#file.remove("box_eval_HS.rda")
+plot(if.box)
+```
+
+We can find the value of $\rho$ and $\phi$ seem more convergent in the new diagnostics plot. Then we calculate the likelihood and see whether fixing the value of $\sigma_{\omega}$ and $\mu_h$ matters.
+
+```{r,warning=FALSE,message=FALSE}
+max(L.box[,1])
+```
+
+We can find that the new maximal log-likelihood is no smaller than the old one. Thus we have a good reason to fix the value of $\sigma_{\omega}$ and $\mu_h$. 
+
+The diagnostic plot also gives us the approximate value of $\phi$ to be around 0.95 and $\rho$ to be around -0.6.In this case, we are quite confident that the $\rho$ will not be close to zero, which means the Hang Seng stock market index truely exit financial leverage.
+
+The graph below shows the liklihood surface. The black lines are the contours of likelihood and those small circle might be the points where the likelihood is highest. Although those circle distributed seperately on this plot, actually they are rather concentrated on the box [-0.6,-0.2] $\times$ [0.90,0.98] when we looking from its whole space level.
+
+```{r,warning=FALSE,message=FALSE,echo=F}
+
+p= expand.grid(rho=seq(from=-0.8,to=-0,length=20),
+               phi=seq(from=0.8,to=0.99,length=20),
+               mu_h=-10,
+               sigma_eta=1,
+               H_0=-11
+)
+stew (file="liki_surf_hs.rda",{
+  p= foreach (theta=iter(p,"row"),.combine=rbind,
+              .inorder=FALSE,.options.multicore=list(set.seed=TRUE)) %dopar% 
+              {
+                pf= pfilter(HS.filt,params=unlist(theta),Np=100)
+                theta$loglik <- logLik(pf)
+                theta
+              } 
+})
+require(dplyr)
+require(ggplot2)
+pp <- mutate(p,loglik=ifelse(loglik>max(loglik)-100,loglik,NA))
+ggplot(data=pp,mapping=aes(x=rho,y=phi,z=loglik,fill=loglik))+
+  geom_tile(color=NA)+
+  geom_contour(color='black',binwidth=3)+
+  scale_fill_gradient()+
+  labs(x=expression(rho),y=expression(phi))
+
+```
+
+We can find the fact that the value of $\phi$ is so much close to 1. If this happens, the $H_n$ tends to be a random walk. Therefore we next try to analyze whether $\phi$ can be 1.
+
+We calculate the confidence interval by profile-likelihood:
+$$ {\ell^\mathrm{profile}_d}(\theta_d) = \max_{\phi\in{\mathbb{R}}^D: \phi_d=\theta_d}{\ell}(\phi)$$
+
+We need to fix the $\phi$ at first and then we plot the corresponding maximal likelihood for each fixed $\phi$,then the approximate 95% confidence interval for $\phi$ is given by
+$$\{\phi^* : {\ell}({\phi^*}) - {\ell^\mathrm{profile}_d}(\phi)\} < 1.92.$$
+
+We start with the search area for $\rho$ is [-0.6,-0.2] and that for $\phi$ to be [0.90,0.98].
+
+```{r,warning=FALSE,message=FALSE,echo=F}
+
+fixed_params <- c(mu_h=-10, sigma_eta=1,H_0=-11)
+run_level <- 1
+HS_Np <-          c(100,1e3,2e3)
+HS_Nmif <-        c(100, 100,200)
+HS_Nreps_eval <-  c(4,  10,  20)
+HS_Nreps_local <- c(10, 20, 20)
+
+
+stew(file= "profile_likeli_phi.rda" ,{
+  LOGLIK=c()
+  for (phi in seq(0.9,0.98,0.005)){
+    j=((phi-0.9)/0.005)+1
+    fixed_params1 <- c(fixed_params,phi=phi)
+    HS_box = rbind(rho= c(-0.6,-0.2))
+    t.box <- system.time({
+      require(doParallel)
+      cores <- 20  # The number of cores on this machine 
+      registerDoParallel(cores)
+      if.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=c,
+                        .options.multicore=list(set.seed=TRUE)) %dopar%  
+        mif2(
+          HS.filt,
+          start=c(apply(HS_box,1,function(x)runif(1,x[1],x[2])),fixed_params1),
+          Np=HS_Np[run_level],
+          Nmif=HS_Nmif[run_level],
+          cooling.type="geometric",
+          cooling.fraction.50=0.1,
+          transform=TRUE,
+          rw.sd = rw.sd(
+            rho       = 0.05)
+        )
+      
+      
+      ##########likelihood global######  
+      L.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                       .options.multicore=list(set.seed=TRUE)) %dopar% {
+                         set.seed(87932)
+                         logmeanexp(
+                           replicate(HS_Nreps_eval[run_level],
+                                     logLik(pfilter(HS.filt,params=coef(if.box[[i]]),Np=HS_Np[run_level]))
+                           ), se=TRUE)
+                       }
+      
+    })
+    print(j)
+    print(phi)
+    LOGLIK[j]=mean(L.box[,1])
+    print(LOGLIK[j])
+    
+  }
+})
+
+
+
+LOGLIK=c(3848.958,3848.706,3849.823,3851.926,3852.858,3854.418,3856.738,3856.985,3859.415,3861.68,
+         3862.071,3863.246,3865.898,3867.992,3868.718,3868.93,3870.703)
+
+stew (file= "profile_likeli-phi.rda" ,{
+  LOGLIK_phi=c()
+  LOGLIK_phi=LOGLIK
+})
+
+Index=which(LOGLIK>=(max(LOGLIK)-1.92))
+
+plot( seq(0.9,0.98,0.005),LOGLIK_phi,xlab=expression(phi),ylab="profile-likelihood",type="l",col="tomato")
+abline(h = max(LOGLIK)-1.92,lty=2, lwd=2,v=c(0.885,0.905))
+```
+
+The above plot shows no reasonable fact for us to reject that $\phi$ equals to 1 because 1 is probabily lies in the 95% confidence interval. In order to see more information, we next change the search area for $\phi$ to be [0.98,0.999].
+
+```{r,warning=FALSE,message=FALSE,echo=F}
+
+fixed_params <- c(mu_h=-10, sigma_eta=1,H_0=-11)
+run_level <- 1
+HS_Np <-          c(100,1e3,2e3)
+HS_Nmif <-        c(100, 100,200)
+HS_Nreps_eval <-  c(4,  10,  20)
+HS_Nreps_local <- c(10, 20, 20)
+
+
+stew(file= "profile_likeli_phi_small.rda" ,{
+  LOGLIK=c()
+  for (phi in seq(0.98,0.999,0.001)){
+    j=((phi-0.98)/0.001)+1
+    fixed_params1 <- c(fixed_params,phi=phi)
+    HS_box = rbind(rho= c(-0.6,-0.2))
+    t.box <- system.time({
+      require(doParallel)
+      cores <- 20  # The number of cores on this machine 
+      registerDoParallel(cores)
+      if.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=c,
+                        .options.multicore=list(set.seed=TRUE)) %dopar%  
+        mif2(
+          HS.filt,
+          start=c(apply(HS_box,1,function(x)runif(1,x[1],x[2])),fixed_params1),
+          Np=HS_Np[run_level],
+          Nmif=HS_Nmif[run_level],
+          cooling.type="geometric",
+          cooling.fraction.50=0.1,
+          transform=TRUE,
+          rw.sd = rw.sd(
+            rho       = 0.05)
+        )
+      
+      
+      ##########likelihood global######  
+      L.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                       .options.multicore=list(set.seed=TRUE)) %dopar% {
+                         set.seed(87932)
+                         logmeanexp(
+                           replicate(HS_Nreps_eval[run_level],
+                                     logLik(pfilter(HS.filt,params=coef(if.box[[i]]),Np=HS_Np[run_level]))
+                           ), se=TRUE)
+                       }
+      
+      
+      
+      
+    })
+    print(j)
+    print(phi)
+    LOGLIK[j]=mean(L.box[,1])
+    print(LOGLIK[j])
+    
+  }
+})
+
+
+stew (file= "profile_likeli-phi-small.rda" ,{
+  LOGLIK_phi=c()
+  LOGLIK_phi=LOGLIK
+})
+
+Index=which(LOGLIK>=(max(LOGLIK)-1.92))
+
+#seq(0.001,0.01,0.0005)[Index]
+
+
+a=max(LOGLIK_phi)
+b=a-1.92
+CI=which(LOGLIK_phi>=b)
+c=seq(0.98,0.999,0.001)[min(CI)]
+d=seq(0.98,0.999,0.001)[max(CI)]
+
+D=data.frame(x=seq(0.98,0.999,0.001),y=LOGLIK_phi)
+
+D %>%
+  ggplot(aes(x=x,y=y))+
+  geom_point()+
+  geom_smooth(method="loess")+
+  geom_hline(aes(yintercept=a),linetype="dashed")+
+  geom_hline(aes(yintercept=b),linetype="dashed")+
+  geom_vline(aes(xintercept=c),linetype="dashed")+
+  geom_vline(aes(xintercept=d),linetype="dashed")
+  
+```
+
+Hence we can clearly find that the confidence interval of $\phi$ is far away from 1 indicate the significance of the parameter.
+
+Now we know the maximum likelihood estimates of every parameters in the model. We can simulate the data and compare to our original data to test the performance of the model. 
+The red points in the following graphs are real value while the blue histograms indicate the simulation result. From these graphs, we can find the fact that every red points lie among the histograms, especially the mean value lies right on the peak of the histogram. This means our model simulation simulated every real aspects of the data. Although the three real quantiles look like less jagged than the simulations, we can conclude that the POMP stochastic volatility model using fixed leverage still works well.
+
+```{r,warning=FALSE,message=FALSE,echo=F}
+
+library(GGally)
+statenames <- c("H","Y_state")
+paranames <- c("mu_h","phi","sigma_eta","rho")
+
+stochStep <- Csnippet("
+
+                      H = mu_h*(1 - phi) + phi*H + (Y_state * sigma_eta * sqrt( 1- phi*phi )) * rho * exp(-H/2) + (rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-rho*rho)));
+                      Y_state = rnorm( 0,exp(H/2) );
+                      ")
+
+
+
+
+params<- c(
+  rho = -0.4,
+  mu_h = -10,
+  phi = 0.991,
+  sigma_eta = 1,
+  H.0=0,
+  Y_state.0=0
+)
+
+
+simulation=pomp(data.frame(y=HS,time=1:length(HS)), times="time",
+                t0=0,rprocess=discrete.time.sim(step.fun=stochStep,delta.t=1),paramnames=paranames,statenames=c("H","Y_state"))
+
+
+S=simulate(simulation,nsim=500,seed=54321,params=params,as.data.frame=TRUE,states=TRUE,include.data=TRUE)
+
+y_mean=c()
+y_25=c()
+y_50=c()
+y_75=c()
+
+
+
+for (i in seq(2,100)){
+  y= S$Y_state[which(S$sim==i)]
+  y_mean[i]=mean((y^2)[100:1250])
+  y_50[i]=quantile((y^2)[100:1250],probs=0.5)
+  y_25[i]=quantile((y^2)[100:1250],probs=0.25)
+  y_75[i]=quantile((y^2)[100:1250],probs=0.75)
+}
+
+y=S$y[which(S$sim=="data")]
+
+y_mean[1]=mean((y^2)[100:1250])
+y_50[1]=quantile((y^2)[100:1250],probs=0.5)
+y_25[1]=quantile((y^2)[100:1250],probs=0.25)
+y_75[1]=quantile((y^2)[100:1250],probs=0.75)
+
+
+var1=c(rep("sim",99),"data")
+gg=data.frame(Mean=y_mean,q_0.25=y_25, q_0.5=y_50, q_0.75=y_75)
+
+gg[101,]=gg[1,]
+gg=gg[-1,]
+
+ggpairs(gg,
+        mapping = ggplot2::aes(color = var1),
+        diag=list(continuous='barDiag'),
+        upper=list(continuous="points"),
+        lower=list(continuous="points"))
+```
+
+###V. Results
+
+In this project, we implemented 2 different time series models on the daily return time series of Hang Seng stock market index. 
+
+The daily return series have nice aspects for GARCH model as non-correlation for return and strong correlation for squared return. The GARCH(1,1) can sightly work on training data set although whose residuals cannot be regarded as Gaussian distribution. However, the performance of GARCH(1,1) model on test data set is not satisfying.
+
+Then we fit a POMP stochastic volatility model using fixed leverage. After plugging the state-space formula to the POMP model, we find maximum likelihood estimates of each parameter in the model and there confidence interval. Especially we reject the hypothesis that $\phi$=1, which will lead the volatility to random walk process. Finally we simulate the data and compare that to our original data to check how well the model performs. We can eventually conclude that this model fits the original data well.
+
+###VI. Future Work
+
+We still have several pieces of work deserved to do.
+
+Firstly, we discussed the POMP stochastic volatility model with fixed financial leverage. We can go further to analyze the POMP stochastic volatility model with financial leverage which is Fisher transformation of a random walk. The raw diagnostic plot is shown below. From the diagnostic plot, $\mu_h$ is already converged while other parameters are not converaged which should be adjusted.
+
+```{r,warning=FALSE,message=FALSE,echo=F}
+
+HS_statenames <- c("H","G","Y_state")
+HS_rp_names <- c("mu_h","phi","sigma_eta","sigma_nu")
+HS_ivp_names <- c("H_0","G_0")
+HS_paramnames <- c(HS_rp_names,HS_ivp_names)
+HS_covarnames <- "covaryt"
+rproc1 <- "
+double beta,omega,nu;
+omega = rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-tanh(G)*tanh(G))) ;
+nu=rnorm(0,sigma_nu);
+G += nu;
+beta = Y_state * sigma_eta * sqrt( 1- phi*phi );
+H = mu_h*(1 - phi) + phi*H + beta * tanh(G) * exp(-H/2) + omega;
+"
+rproc2.sim <- "
+Y_state = rnorm( 0,exp(H/2) );
+"
+
+rproc2.filt <- "
+Y_state = covaryt;
+"
+HS_rproc.sim <- paste(rproc1,rproc2.sim)
+HS_rproc.filt <- paste(rproc1,rproc2.filt)
+HS_initializer <- "
+G = G_0;
+H = H_0;
+Y_state = rnorm( 0,exp(H/2) );
+"
+HS_rmeasure <- "
+y=Y_state;
+"
+
+HS_dmeasure <- "
+lik=dnorm(y,0,exp(H/2),give_log);
+"
+HS_toEstimationScale <- "
+Tsigma_eta = log(sigma_eta);
+Tphi = logit(phi);
+Tsigma_nu=log(sigma_nu);
+"
+
+HS_fromEstimationScale <- "
+Tsigma_eta = exp(sigma_eta);
+Tphi = expit(phi);
+Tsigma_nu=exp(sigma_nu);
+
+"
+
+HS.filt <- pomp(data=data.frame(y=HS,
+                                time=1:length(HS)),
+                statenames=HS_statenames,
+                paramnames=HS_paramnames,
+
+                covarnames=HS_covarnames,
+                times="time",
+                t0=0,
+                covar=data.frame(covaryt=c(0,HS),
+                                 time=0:length(HS)),
+                tcovar="time",
+                rmeasure=Csnippet(HS_rmeasure),
+                dmeasure=Csnippet(HS_dmeasure),
+                rprocess=discrete.time.sim(step.fun=Csnippet(HS_rproc.filt),delta.t=1),
+                initializer=Csnippet(HS_initializer),
+                toEstimationScale=Csnippet(HS_toEstimationScale),
+                fromEstimationScale=Csnippet(HS_fromEstimationScale)
+)
+
+run_level <- 1
+HS_Np <-          c(100,1e3,2e3)
+HS_Nmif <-        c(50, 100,200)
+HS_Nreps_eval <-  c(4,  10,  20)
+HS_Nreps_local <- c(10, 20, 20)
+HS_Nreps_global <-c(10, 20, 100)
+
+
+
+
+HS_rw.sd_rp <- 0.02
+HS_rw.sd_ivp <- 0.1
+HS_cooling.fraction.50 <- 0.5
+
+
+
+
+
+fixed_params <- c(H_0=0,G_0=0,sigma_eta=1)###
+
+
+HS.filt <- pomp(data=data.frame(y=HS,time=1:length(HS)),
+                statenames=HS_statenames,
+                paramnames=HS_paramnames,
+                covarnames=HS_covarnames,
+                times="time",
+                t0=0,
+                covar=data.frame(covaryt=c(0,HS),
+                                 time=0:length(HS)),
+                tcovar="time",
+                rmeasure=Csnippet(HS_rmeasure),
+                dmeasure=Csnippet(HS_dmeasure),
+                rprocess=discrete.time.sim(step.fun=Csnippet(HS_rproc.filt),delta.t=1),
+                initializer=Csnippet(HS_initializer),
+                toEstimationScale=Csnippet(HS_toEstimationScale),
+                fromEstimationScale=Csnippet(HS_fromEstimationScale)
+)
+
+HS_box <- rbind(
+  sigma_nu=c(0.005,0.25),
+  phi = c(0.8,0.99),###
+  mu_h=c(-10,10)###
+  #sigma_eta=c(0,2)###
+
+)
+
+stew(file="box_eval_HS2.rda",{
+t.box <- system.time({
+  require(doParallel)
+  cores <- 20  # The number of cores on this machine
+  registerDoParallel(cores)
+  if.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=c,
+                    .options.multicore=list(set.seed=TRUE)) %dopar%
+    mif2(
+      HS.filt,
+      start=c(apply(HS_box,1,function(x)runif(1,x[1],x[2])),fixed_params),
+      Np=HS_Np[run_level],
+      Nmif=HS_Nmif[run_level],
+      cooling.type="geometric",
+      cooling.fraction.50=0.2,
+      transform=TRUE,
+      rw.sd = rw.sd(
+        sigma_nu=0.001,
+        phi = 0.01,##
+        mu_h=0.1###
+        #sigma_eta=0.01###
+
+
+      )
+    )
+
+
+  L.box <- foreach(i=1:HS_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                   .options.multicore=list(set.seed=TRUE)) %dopar% {
+                     set.seed(87932+i)
+                     logmeanexp(
+                       replicate(HS_Nreps_eval[run_level],
+                                 logLik(pfilter(HS.filt,params=coef(if.box[[i]]),Np=HS_Np[run_level]))
+                       ),
+                       se=TRUE)
+                   }
+
+})
+},seed=290860873,kind="L'Ecuyer")
+
+plot(if.box)
+```
+
+Secondly, there still some stochastic volatility models worth being fitted, such as 3/2 model, Henston model etc. 
+
+Thirdly, in this paper, we have not performed forecasting in POMP model yet. In the future, we will consider using forecasting methods.
+
+### Reference
+
+[1]Discrete-Time Stochastic Volatility Models and MCMC-Based Statistical Inference,Nikolaus Hautsch, Yangguoyi Ou, 2008
+
+[2]Bret??, C. 2014. On idiosyncratic stochasticity of financial leverage effects. Statistics & Probability Letters 91:20???26.
+
+[3]http://ionides.github.io/531w16/
+
+[4]https://en.wikipedia.org/wiki/Hang_Seng_Index
+

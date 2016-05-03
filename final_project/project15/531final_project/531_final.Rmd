@@ -1,0 +1,434 @@
+---
+title: "Case study of Mumps Transmission"
+author: ""
+date: "April 28, 2016"
+output:
+  html_document:
+    toc: yes
+---
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+setwd("/Users/daisy/Documents/COURSE/2016WINTER/STATS531/final_project/flux/531final_project_mengjiao")
+options(cores=4)
+#theme_set(theme_bw())
+set.seed(594709947L)
+library(ggplot2)
+require(ggplot2)
+require(plyr)
+require(reshape2)
+require(magrittr)
+require(pomp)
+require(doParallel)
+require(mFilter)
+stopifnot(packageVersion("pomp")>="0.69-1")
+```
+
+#1. Introduction
+* Mumps is one of the contagious diseases, usually spreading through saliva or mucus from the mouth, nose, or throat (Gupta et al. 2005). outbreaks usually occur among people living in close-contact settings (Centers for disease contol and prevention website). Children are easily attacked by mumps since they are usually living in a crowded environmet. Thus outbreaks of mumps usually happen in winter and spring when students are attending classes.  
+
+* For the data part, I get weekly cases of mumps in Michigan from the website Project Tycho <http://www.tycho.pitt.edu>. This mumps data has been thoroughly standardized. Besides, I download the population data from US census Bureau <http://www.census.gov>. In this project, I want to get some insight of the whole process of mumps transmission throught constructing a partial observed markov process.  
+
+#2. Mumps Data
+* From the image below, we get a general intuition of mumps cases. There are about two peaks around 1971 and 1975. As we decompose the mumps cases into cycles and trends, we can easily see the decreasing trend for mumps cases. The trend is not obvious from 1970 to 1977. After 1977, the mumps cases drop sharply. There are few cases since 1981.
+
+```{r,echo=FALSE,message=FALSE}
+## ----read-in-data----------------------------------------------------------------
+#MUMPS
+a=read.table("MUMPS_Cases_MICHIGAN_20160418205342.csv",header = TRUE,sep=',')
+pop=read.table("michigan_population.csv",sep=',')
+names(pop)=c("Year","pop")
+
+b=a[(a$YEAR>1968)&(a$YEAR<1985),]
+b$Month=ceiling(b$WEEK/4)
+
+b[b$MICHIGAN=='-',]$MICHIGAN=0
+b$MICHIGAN=as.numeric(as.character(b$MICHIGAN))
+#b$DATE=b$YEAR+b$WEEK/52
+#plot(MICHIGAN~DATE,data=b,type='l')
+
+c=aggregate(b,by=list(b$YEAR,b$Month),'sum')
+d=c[order(c$Group.1,c$Group.2),]
+d=d[,c(1,2,5)]
+names(d)=c("Year","Month","Cases")
+d$Date=d$Year+d$Month/13
+
+#plot(Cases~Date,data=d,type='l')
+d=join(d,pop,type='left',match='all',by="Year")
+d$birthrate=floor(0.02*d$pop)
+
+mumps_data <- d[,c(4,3,5,6)]
+d %>% ggplot(aes(x=Date,y=Cases))+geom_line()
+
+##-------mumps-cases-----------------------------------------------------------------------------------
+summary(mumps_data$Cases)
+
+hp=hpfilter(mumps_data$Cases, freq=1000,type="lambda",drift=F)
+trend=ts(hp$trend)
+cycle=ts(hp$cycle)
+plot(ts.union(trend,cycle),type="l",xlab="Date",ylab="", main='Decomposition of mumps cases as trend and cycle')
+
+```
+
+* Covariate variable, population and birthrate are shown here as well. Since annual birthrate are not accessible, it is estimated as 2% of the total population. Population reaches a peak in 1980.  
+
+```{r,echo=FALSE}
+##-----------------------------------------------------------------------------------------------------
+covartable <- data.frame(
+  Date=mumps_data$Date,
+  P=predict(smooth.spline(x=1969:1984,y=mumps_data$pop[13*(1:16)]),
+            x=mumps_data$Date)$y,
+  birthrate=floor(predict(smooth.spline(x=1969:1984,y=mumps_data$birthrate[13*(1:16)]),x=mumps_data$Date)$y)
+)
+
+covartable %>% melt(id="Date") %>%
+  ggplot(aes(x=Date,y=value))+geom_point()+
+  facet_wrap(~variable,ncol=1,scales="free_y")
+
+```
+
+
+
+#3. POMP Model for Mumps
+##1.Mumps flow diagram
+* Usually, an infectious disease can be represented by three stages, including susceptible, infectious and recovered. For mumps, we can add a process of exposion, denoting the latent period, during which the individual has been infected but is not yet infectious themselves. In addition, we need to take the new birth into account, since they are important new entrances to susceptible compartment. Therefore, the transmission process of mumps can be represented as follows. The population is divided into four compartments: susceptible, exposed, infectious and recovered. The transmission rate from birth to susceptible is $\mu_{BS}$, from S to E is $\mu_{SE}$, E to I is $\mu_{EI}$, I to R is $\mu_{IR}$. Cases are reported with rate $\rho$ from infecious.
+
+```{r,echo=FALSE,warning=FALSE}
+## ----seir-diagram,echo=FALSE,cache=FALSE---------------------------------
+library(DiagrammeR)
+DiagrammeR("digraph SEIR {
+  graph [rankdir=TD, overlap=false, fontsize = 10]
+  node[shape=egg, label='B'] b;
+  subgraph {
+    rank=same;
+    node[shape=oval, label='S'] S;
+    node[shape=oval, label='E'] E;
+    node[shape=oval, label='I'] I;
+    node[shape=oval, label='R'] R;
+    S->E E->I I->R
+  }
+  b->S
+   }",type="grViz",engine="dot",height=300,width=800)
+```
+
+##2.Transmission Process
+### 1. BS
+* $\mu_{BS}$ is the rate of transmission from birth to susceptible. Here, similar as the measles case study (He et al. 2009), we consider the cohort effect and the entry delay when caculating the birth entry into susceptible class. 
+$$\mu_{BS}(t) = (1-c)\,B(t-\tau)+c\,\delta(t-t_0)\,\int_{t-1}^{t}\,B(t-\tau-s)\,ds$$
+In adition, we have to consider the fact that the vaccine against mumps starts from 1967, which may greatly decrease birth entry to susceptibles. According to Centers for disease contol and prevention, two doses mumps vaccine effetiveness is about 88%. Until 2013, measles, mumps, and rubella vaccine (MMR) covers about 91.9% national healthy people (Elam-Evans, Laurie D., et al. 2013). Thus, we may estimate that only about 20% new birth enters into susceptibles.
+
+### 2. SE
+* Transmission from susceptible to exposed follows some seasonality patterns. Because outbreaks of mumps usually happen in crowded environment, the number of cases in school terms must be higher than those in holidays. In Michgan, school holidays are 1-10, 66-74, 169-251, 327-332, 357-365 in a year, respectively spring break, summer break, Thanksgiving and Christmas. We specify the force of infection (He et al. 2009) as follows, where $\beta$ has seasonal patterns.
+
+$$\mu_{SE}(t) = \tfrac{\beta(t)}{P(t)}\,(I+\iota)^\alpha\,\zeta(t)$$
+
+During school,$$ {\beta(t)}=(1+2(1-p)a)\beta_0$$
+During holiday,$$ {\beta(t)}=(1-2pa)\beta_0$$
+
+* $\beta_0$ is mean transmission rate, p is proportion of school time, a is the ampitude of seasonality, $\iota$ is visting infectious and $\alpha$ is mixing parameter of local infectious and visiting infectious. 
+
+###3. Measurement model
+The cases reported given true incidence are modelled as an overdispersed binomial distribution (He et al. 2009). The distribution is like  
+$$\mathbb{E}[\text{cases}|C] = \rho\,C$$
+
+$$\mathrm{Var}[\text{cases}|C] = \rho\,(1-\rho)\,C + (\psi\,\rho\,C)^2$$
+
+$$f(c|\rho,\psi,C) = \Phi(c+\tfrac{1}{2},\rho\,C,\rho\,(1-\rho)\,C+(\psi\,\rho\,C)^2)-\Phi(c-\tfrac{1}{2},\rho\,C,\rho\,(1-\rho)\,C+(\psi\,\rho\,C)^2),$$
+
+
+#3. Fit A POMP model
+```{r,message=FALSE,cache=FALSE,warning=FALSE}
+## ----mumps_obsnames------------------------------------------------------
+colnames(mumps_data)[2]=c('B')
+
+## ----rprocess------------------------------------------------------------
+mumps_rprocess <- Csnippet("
+  double beta, br, seas, foi, dw, births;
+  double rate[3], trans[3];
+                  
+  // cohort effect
+  if (fabs(t-floor(t)-251.0/365.0) < 0.5*dt) 
+  br = cohort*birthrate/dt + (1-cohort)*birthrate;
+  else 
+  br = (1.0-cohort)*birthrate;
+  
+  // term-time seasonality
+  t = (t-floor(t))*365.25;
+  if ((t>=10&&t<=66) || (t>=74&&t<=169) || (t>=251&&t<=327) || (t>=332&&t<=357))
+  seas = 1.0+amplitude*0.3205/0.6794;
+  else
+  seas = 1.0-amplitude;
+  
+  // transmission rate
+  beta = R0*gamma*seas;
+  // expected force of infection
+  foi = beta*pow(I+iota,alpha)/P;
+  // white noise (extrademographic stochasticity)
+  dw = rgammawn(sigmaSE,dt);
+  
+  rate[0] = foi*dw/dt;  // stochastic force of infection
+
+  rate[1] = sigma;		  // rate of ending of latent stage
+
+  rate[2] = gamma;		  // recovery
+
+  
+  // Poisson births
+  births = rpois(0.2*br*dt);
+  
+  // transitions between classes
+  reulermultinom(2,S,&rate[0],dt,&trans[0]);
+  reulermultinom(2,E,&rate[1],dt,&trans[1]);
+  reulermultinom(2,I,&rate[2],dt,&trans[2]);
+  
+  S += births   - trans[0];
+  E += trans[0] - trans[1];
+  I += trans[1] - trans[2];
+  R = P - S - E - I;
+  W += (dw - dt)/sigmaSE;  // standardized i.i.d. white noise
+  H += trans[2];           // true incidence
+")
+
+## ----initializer------------------------------------------------------------
+
+mumps_initializer <- Csnippet("
+double m = P/(S_0+E_0+I_0+R_0);
+ S = nearbyint(m*S_0);
+ E = nearbyint(m*E_0);
+ I = nearbyint(m*I_0);
+ R = nearbyint(m*R_0);
+ W = 0;
+ H = 0;
+ ")
+
+## ----dmeasure------------------------------------------------------------
+mumps_dmeasure <- Csnippet("
+  double m = rho*H;
+  double v = m*(1.0-rho+psi*psi*m);
+  double tol = 1.0e-18;
+  if (B > 0.0) {
+  lik = pnorm(B+0.5,m,sqrt(v)+tol,1,0)-pnorm(B-0.5,m,sqrt(v)+tol,1,0)+tol;
+  } else {
+  lik = pnorm(B+0.5,m,sqrt(v)+tol,1,0)+tol;
+  }
+  ")
+
+## ----rmeasure------------------------------------------------------------
+mumps_rmeasure <- Csnippet("
+  double m = rho*H;
+  double v = m*(1.0-rho+psi*psi*m);
+  double tol = 1.0e-18;
+  B = rnorm(m,sqrt(v)+tol);
+  if (B > 0.0) {
+  B = nearbyint(B);
+  } else {
+  B = 0.0;
+  }
+")
+
+## ----scale------------------------------------------------------------
+mumps_toEstimationScale <- Csnippet("
+  TR0 = log(R0);
+  Tsigma = log(sigma);
+  Tgamma = log(gamma);
+  Talpha = log(alpha);
+  Tiota = log(iota);
+  Trho = logit(rho);
+  Tcohort = logit(cohort);
+  Tamplitude = logit(amplitude);
+  TsigmaSE = log(sigmaSE);
+  Tpsi = log(psi);
+  to_log_barycentric (&TS_0, &S_0, 4);
+  ")
+
+mumps_fromEstimationScale <- Csnippet("
+  TR0 = exp(R0);
+  Tsigma = exp(sigma);
+  Tgamma = exp(gamma);
+  Talpha = exp(alpha);
+  Tiota = exp(iota);
+  Trho = expit(rho);
+  Tcohort = expit(cohort);
+  Tamplitude = expit(amplitude);
+  TsigmaSE = exp(sigmaSE);
+  Tpsi = exp(psi);
+  from_log_barycentric (&TS_0, &S_0, 4);
+  ")
+
+```
+
+
+```{r}
+## ----construct-pomp-model------------------------------------------------------
+mumps2 <- pomp(
+  data=subset(mumps_data,select = c("B","Date")),
+  times="Date",
+  t0=1969+1/13,
+  rprocess=euler.sim(
+    step.fun=mumps_rprocess,
+    delta.t=1/365
+  ),
+  rmeasure=mumps_rmeasure,
+  dmeasure=mumps_dmeasure,
+  covar=covartable,
+  tcovar="Date",
+  #covarnames=c("P"),
+  fromEstimationScale=mumps_fromEstimationScale,
+  toEstimationScale=mumps_toEstimationScale,
+  
+  
+  zeronames=c("H","W"),
+  statenames=c("S","E","I","R","H","W"),
+  paramnames=c("R0","sigma","gamma","alpha","iota",
+               "rho","sigmaSE","psi","cohort","amplitude",
+               "S_0","E_0","I_0","R_0"),
+  #obsnames = mumps_obsnames,
+  initializer=mumps_initializer
+)
+```
+
+
+```{r}
+run_level <- 2
+switch(run_level,
+       {mumps_Np=1000; mumps_Nmif=10; mumps_Neval=10; mumps_Nglobal=8; mumps_Nlocal=10}, 
+       {mumps_Np=20000; mumps_Nmif=100; mumps_Neval=10; mumps_Nglobal=20; mumps_Nlocal=10}, 
+       {mumps_Np=60000; mumps_Nmif=300; mumps_Neval=10; mumps_Nglobal=100; mumps_Nlocal=20}
+)
+
+cores <- 4  # The number of cores on this machine 
+registerDoParallel(cores)
+mcopts <- list(set.seed=TRUE)
+
+set.seed(396658101,kind="L'Ecuyer")
+```
+
+
+```{r}
+## ----box_eval------------------------------------------------------------
+stew(file=sprintf("box_eval-%d.rda",run_level),{
+  
+  t_global <- system.time({
+    mifs_global <- foreach(i=1:mumps_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  
+      mif2(
+        mumps2,
+        start=c(apply(mumps_box,1,function(x)runif(1,x[1],x[2]))),
+        Np=mumps_Np,
+        Nmif=mumps_Nmif,
+        cooling.type="geometric",
+        cooling.fraction.50=0.5,
+        transform=TRUE,
+        rw.sd=rw.sd(
+          R0=0.02,
+          sigma=0.02,
+          gamma=0.02,
+          alpha=0.02,
+          iota=0.02,
+          rho=0.02,
+          sigmaSE=0.02,
+          psi=0.02,
+          cohort=0.02,
+          amplitude=0.02,
+          S_0=ivp(0.02),
+          E_0=ivp(0.02),
+          I_0=ivp(0.02),
+          R_0=ivp(0.02))
+      )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+
+## ----lik_global_eval-----------------------------------------------------
+stew(file=sprintf("lik_global_eval-%d.rda",run_level),{
+  t_global_eval <- system.time({
+    liks_global <- foreach(i=1:mumps_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(mumps_Neval, logLik(pfilter(mumps2,params=coef(mifs_global[[i]]),Np=mumps_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+
+results_global <- data.frame(logLik=liks_global[,1],logLik_se=liks_global[,2],t(sapply(mifs_global,coef)))
+
+```
+
+```{r}
+summary(results_global$logLik,digits=5)
+```
+
+```{r,warning=FALSE}
+plot(mifs_global)
+```
+
+* There are 14 parameters in total. We find the best parameter sets through global search with mifs. The diagnostic plot is shown above. In general, log likelihood achieves relatively high value, max log likelihood is -1239. From the convergence diagnostics, we can see loglik shows good convergence.
+
+* From the last iteration diagnostics, most of effective sampling size are larger than 1000. But it seems the particle filter fails to match the data at the begining of the time period. The effective sampling size are mainly smaller than hundreds around 1970. Increasing the number of particles may improve the performance. Different start points produce similar I and H process, but different parallel processes of S and R. 
+
+* For the diagnostics plot of parameters, psi alpha, R0, sigma and sigmaSE seems to converge. gamma, iota, rho, amplitude and cohort seem need more iterations to coverge. It is interesting for the values of S, E, I, R initials, different start points all achieve its own convergence value. These parameters show similar trend as S and R state diagnostics. We can see similar pattern in pairs plot. S, E, I, R initials have little influence on log likelihood. This suggests that S, E, I, R initial parameters are not well identified by the model and data. We may need other supplementary information.
+
+
+```{r}
+pairs(~logLik+S_0+E_0+I_0+R_0,data=subset(results_global,logLik>max(logLik)-550))
+```
+
+
+#4. Analysis
+##1. Simulate
+* We get our parameter estimate from maximum log likelihood. Now, we simulate the mumps cases from the mle. Simulation data caputures the seasonality pattern as the original data. In addition, it is intended to reproduce the decreasing trend of mumps cases. In general, the model caputures the main feature of original data. However, the model tends to estimate the cases in 1969-1970 much higher than the original data. It also ignores two peaks pattern. 
+
+* A reasonal hypothesis may be insufficient process of the model. One thing to notice is that, significant changes happen in 1967, vaccine against mumps starts. It is just two years before this time period. In our model, we only specify the new birth who are not immune to mumps entering into susceptible according to current vaccination rate. We do not specify the concrete process of vaccination. It is highly possible that when vaccination begins, there is a sharp decrease in mumps cases due to the decrease of susceptibles. However, due to the low vaccination rate at the begining, the mumps still transmitted and resulted in new infecious individuals. Therefore, we can specify the vaccination process to improve the model performance.
+```{r}
+## ----sims1,fig.height=8--------------------------------------------------
+a=which.max(results_global$logLik)
+mumps2 %>% 
+  simulate(params=coef(mifs_global[[a]]),nsim=9,as.data.frame=TRUE,include.data=TRUE) %>%
+  ggplot(aes(x=time,y=B,group=sim,color=(sim=="data")))+
+  guides(color=FALSE)+
+  geom_line()+facet_wrap(~sim,ncol=2)
+```
+
+```{r}
+## ----sims2---------------------------------------------------------------
+mumps2 %>% 
+  simulate(params=coef(mifs_global[[a]]),nsim=100,as.data.frame=TRUE,include.data=TRUE) %>%
+  subset(select=c(time,sim,B)) %>%
+  mutate(data=sim=="data") %>%
+  ddply(~time+data,summarize,
+        p=c(0.05,0.5,0.95),q=quantile(B,prob=p,names=FALSE)) %>%
+  mutate(p=mapvalues(p,from=c(0.05,0.5,0.95),to=c("lo","med","hi")),
+         data=mapvalues(data,from=c(TRUE,FALSE),to=c("data","simulation"))) %>%
+  dcast(time+data~p,value.var='q') %>%
+  ggplot(aes(x=time,y=med,color=data,fill=data,ymin=lo,ymax=hi))+
+  geom_ribbon(alpha=0.2)
+
+```
+
+##2. Parameters
+* We get the maximum loglikelihood estimates of the parameters as follows. $\sigma$ and $\gamma$ stand for transmission rate from exposed to infecious and from infecious to recovered. We define LP and IP as the latent and infectious periods (He et al. 2009), respectively, in days, calculated from $\mu_{EI}$ and $\mu_{IR}$. 
+
+$$LP=\tfrac{\delta}{1-exp(-\delta\mu_{EI})}$$
+$$IP=\tfrac{\delta}{1-exp(-\delta\mu_{IR})}$$ 
+
+* LP is 1.27 days, which means the latent period is rather short. Once exposed, the individual will be infectious. IP is 21.12 days, which is consistent with the data from Centers for disease contol and prevention website, saying people show symptoms about 16-18 days after infection.
+
+* The initial value of S_0 is rather high, about 47.8%. It may be part of the reason of very high mumps cases around 1970. Amplitude is seasonal pattern of mumps, high value at 0.87, suggesting the crowded environment is important reason for mumps transmission. The extra-demographic stochasticity parameter sigmaSE of 0.083, compared with measles case study (He et al. 2009), is relatively high value. It means extra-demographic stochasticity plays a role in mumps as well.
+
+```{r}
+mle=results_global[which.max(results_global$logLik),3:16]
+(mle)
+```
+
+
+
+
+#5. Conclusion
+* In general, this SEIR compartment model performs very well in mumps case. It captures the seasonality pattern and decreased trend of the mumps cases. 
+* The faliure of modeling in the first few years and the two peaks pattern suggests insufficient of this SEIR model. We may improve the performance by taking vaccination into account.
+* Paramters from the maximum likelihood estimation, tells us mumps is kind of high infecious diseases in terms of very short latent period. The latent period is about 1.27 days, the infecious period is about 21.12 days. In addition, crowded environment and extra-demographic stochasticity play important roles in mumps transmission.
+
+
+
+#6. Reference
+* [1] Centers for Disease Control and prevention, Mumps Vaccination <http://www.cdc.gov/mumps/vaccination.html>
+* [2] Elam-Evans, Laurie D., et al. "National, state, and selected local area vaccination coverage among children aged 19-35 months—United States, 2013." MMWR Morb Mortal Wkly Rep 63.34 (2014): 741-748.
+* [3] Gupta, Ravindra K., Jennifer Best, and Eithne MacMahon. "Mumps and the UK epidemic 2005." Bmj 330.7500 (2005): 1132-1135.
+* [4] He, Daihai, Edward L. Ionides, and Aaron A. King. "Plug-and-play inference for disease dynamics: measles in large and small populations as a case study." Journal of the Royal Society Interface (2009).
+

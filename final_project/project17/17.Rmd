@@ -1,0 +1,147 @@
+---
+title: "Insights into the CAPE Ratio using Linear and Non-Linear Models"
+author: ""
+---
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\data[1]{#1^*}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\eqspace{\quad\quad}
+
+In this paper, we attempt to gain insight into the variations of the cyclically adjusted price-to-earnings (CAPE) ratio of the S&P 500. The monthly cyclically adjusted price-to-earnings ratio is defined as the average monthly price of the S&P 500 stock index divided by the average of the past 10 years of earnings.^1^  John Campbell and Robert Shiller proposed the CAPE ratio in 1988 as a way to smooth the volatility presented by the traditional price-to-earnings multiple and as a way to forecast future stock market returns. Robert Shiller currently provides monthly data on the CAPE ratio through his website, which is linked in the reference section of our paper.^2^  Since its introduction in 1988, the measurement has become an important benchmark measure used by investment analysts to gauge the level of risk tolerance that is being reflected in market prices, where a high CAPE ratio represents a relatively high level of risk tolerance since investors are willing to pay more for the same amount of potential future earnings. Said differently, a relatively hight CAPE ratio indicates that investors demand less of a premium for risk inherent in the uncertainty of future returns. In this analysis, we examine the monthly CAPE ratio starting in January 2003 through May 2016. In the first part of the analysis, we use the traditional ARMA framework to study the CAPE ratio and in the second half we use a nonlinear POMP model to study the vagaries of the CAPE, in an attempt to gain insight into the way overall risk tolerance progresses in the markets.
+
+###Part I: ARMA Model
+
+In this section, we attempt to fit an ARMA(p,q) model to the CAPE data. We construct this model under the null hypothesis that there is no trend in the data. Although there have been wild swings in the CAPE ratio since 2013, the upper and lower bounds of the ratio appear somewhat consistent. Therefore, this underlying assumption is reasonable. Below we present the CAPE ratio over the period of our study.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+rm(list=ls())
+require(lubridate)
+require(ggplot2)
+require(gridExtra)
+require(knitr)
+require(RCurl)
+
+data_url = getURL("https://raw.githubusercontent.com/DBomber60/531proj/master/shiller_pe.csv")
+dat = read.csv(text=data_url, header = T)[1:400,]
+
+dat$Date = dmy(dat$Date)
+start = 2003
+dat = dat[which(year(dat[,1]) >= start),]
+dat = dat[order(dat$Date),] # reverse order from oldest to newest
+dat$day = seq(1:nrow(dat))  # strictly increasing times vector for pomp creation
+ts_data = ts(dat[,2], frequency = 12, start = start)
+plot(ts_data, main= "CAPE Ratio: January 2003 - March 2016",
+     ylab = "CAPE Ratio")
+```
+
+
+From this plot, we can see that the cape ratio reached its low during this time interval following the financial crisis of 2008-2009. During this time, investors fled the market as risk tolerance collapsed. In the more "normal" periods of 2003-2007 and 2012-2015, we can see that the CAPE ratio fluctuates within a somewhat narrow band with a possible upper bound around 25-28.  
+We examine the periodogram of the sample data to examine the periods of fluctuation. In examining the spectral density estimate, we note that the estimated spectral density is highest at lower frequencies, including a significant rise at a frequency of 0.3, which is emblematic of a ~3 year cycle.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+a = spectrum(ts_data, plot = F)
+j = ggplot(as.data.frame(cbind(a$freq, a$spec, type="l")), aes(x=a$freq, y=a$spec)) + 
+  geom_line(color="blue") + ylab("Spectrum") + xlab("Frequency (Cycles/ Year)") +
+  ggtitle("CAPE Periodogram") + scale_x_continuous(breaks= seq(6))
+j
+```
+
+We aim to fit a stationary Gaussian ARMA(p,q) model with parameter vector $\theta=(\ar_{1:p},\ma_{1:q},\mu,\sigma^2)$ given by
+$\ar(B)(X_n-\mu) = \ma(B) \epsilon_n,$
+$$\begin{eqnarray}
+\mu &=& \E[X_n]
+\\
+\ar(x)&=&1-\ar_1 x-\dots -\ar_px^p,
+\\ 
+\ma(x)&=&1+\ma_1 x+\dots +\ma_qx^q,
+\\
+\epsilon_n&\sim&\mathrm{ iid }\, N[0,\sigma^2].
+\end{eqnarray}$$
+Furthermore, we write $\data{y_n}$ for CAPE measure in month $t_n$ and model $\data{y_n}$ as a realization of the time series model 
+$$ Y^{}_n = \alpha + \epsilon_n,$$
+where $\{\epsilon_n\}$ is a stationary, causal, invertible, Gaussian ARMA process. After examining the AIC values for several combinations of potential ARMA(p,q) models, we use an ARMA(1,1) model, whose fitted values are as follows.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+m1 = arima(dat$val, order = c(1,0,1))
+m1
+```
+
+We note that the model exhibits an acceptable fit, with standard errors that are small relative to the fitted values. We next examine the residuals of the model and note some heteroskedasticity.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+r = resid(m1)
+plot(r, main="ARMA(1,1) Residuals over Time", ylab="Residuals")
+```
+
+Below we present other potential model choices and their AIC values.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- arima(data,order=c(p,0,q))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+table <- aic_table(dat$val,4,5)
+kable(table,digits=2)
+```
+
+While this model appears to have an acceptable fit, we do note heteroskedasticity in the residuals, indicating that some of the model assumptions may not be met. More importantly, though, this model does not do a great deal to enhance our understanding of market risk tolerance.
+
+###Part II: POMP Model
+
+In this section, we model the CAPE ratio as a partially observed Markov process. In this context, we propose a new way to study the movements in the CAPE ratio. Specifically, we view the CAPE ratio as an indirect measurement of the aggregate risk tolerance of the market and use a nonlinear population growth model, the Beverton Holt model, to gain insight into the risk tolerance of the market and its trajectory. 
+The Beaverton Holt model is based on the underlying idea that there exists a certain capacity of an environment to carry a given population.^3^ When a population is below the carrying capacity of its environment, the population is likely to exhibit a higher rate of growth as compared with the state when the population is close to or exceeding the carrying capacity of its environment. Hypothetically, a similar situation exists with respect to risk and markets.  There is an intrinsic upper bound to risk tolerance that may be met when conditions are good – companies are growing, nations are peaceful, terrorism is benign, and natural disasters are at bay.  When the overall level of risk tolerance is below this upper bound, investors are incentivized to enter the market, in turn bidding up prices and thus the CAPE ratio. Much as a population wanes and waxes as a function of the current population level relative to the carrying capacity of its environment, we propose that a similar dynamic is at work with regard to risk tolerance in markets. There are upper and lower bounds to risk tolerance and the movements of market prices (and thus the CAPE ratio) may be related to the current level and trajectory of risk tolerance.
+In order for this model to fit into the POMP framework, we add a stochastic element to the base Beverton-Holt model, $\varepsilon_t \sim \mathrm{Lognormal}(-\tfrac{1}{2}\sigma^2,\sigma^2).$ Additionally, we specify a measurement model for the observations themselves in which the measurement of the CAPE ratio is modelled as a draw from a negative binomial distribution with mean $\phi\,CAPE_n$ and  probability parameter $\psi$, and therefore variance $\mu/\psi$. In this context, the model takes the following form:
+$$CAPE_{n+1} = \frac{a\,CAPE_n}{1+b\,CAPE_n}\,\varepsilon_n,$$
+$$Y_n |CAPE_n \sim \mathrm{Negbin}(\phi\,CAPE_n,\psi).$$
+We use a particle filter to evaluate the likelihood at many different combinations of parameters and find a relatively high likelihood associated with parameters a=25 and b=1. Simulations from this model are presented below.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+require(pomp)
+require(reshape2)
+pe_pomp = pomp(dat[,2:3],times="day",t0=1)
+skel <- Csnippet("DN = (a*N)/(1+b*N);")
+pe_pomp <- pomp(pe_pomp,skeleton=skel,skeleton.type='map',
+                paramnames=c("a","b"),statenames=c("N"))
+
+stochStep <- Csnippet("
+                      e = rlnorm((-1)*sigma*sigma/2,sigma);
+                      N = a*N*e/(1+b*N);")
+pomp(pe_pomp,rprocess=discrete.time.sim(step.fun=stochStep,delta.t=1),
+     paramnames=c("a","b","sigma"),statenames=c("N","e")) -> pe_pomp
+
+# rmeas <- Csnippet("val = rpois(phi*N);")
+# dmeas <- Csnippet("lik = dpois(val,phi*N,give_log);")
+
+rmeas <- Csnippet("val = rnbinom(phi*N*psi/(1-psi),psi);")
+dmeas <- Csnippet("lik = dnbinom(val,phi*N*psi/(1-psi),psi,give_log);")
+
+pomp(pe_pomp,rmeasure=rmeas,dmeasure=dmeas,statenames=c("N"),
+     paramnames=c("phi","psi")) -> pe_pomp
+coef(pe_pomp) <- c(N.0=20,e.0=1,a=25,b=1,sigma=0.2,phi=1,psi=.9)
+
+sims <- simulate(pe_pomp,nsim=3,as.data.frame=TRUE,include.data=TRUE)
+ggplot(data=sims,mapping=aes(x=time,y=val))+geom_line()+
+  facet_wrap(~sim)
+```
+
+Although simulations from the model barely resemble the data itself, the parameter values with the highest associated likelihood do add some measure of insight to our understanding of the inherent risk capacity of the market. Furthermore, the parameters a=25 and b=1 imply that the risk capacity (or the high threshold for the CAPE ratio) is roughly 25. When the CAPE ratio exceeds this value, market prices are likely to fall and then the ratio is significantly below this value, market prices may be more likely to rise. However, this needs much greater development before being put to use by any investors. Future analyses should include covariates and a more complicated population model. However, we believe there is room for further development of our understanding of risk thresholds using well-developed and well-understood population models.
+
+###References
+1. “Cyclically Adjusted Price-to-Earnings Ratio.” Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Web. 25 April. 2016. <https://en.wikipedia.org/wiki/Cyclically_adjusted_price-to-earnings_ratio>
+2. http://www.multpl.com/shiller-pe/
+3. “Beverton-Holt Model.” Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Web. 25 April. 2016. <https://en.wikipedia.org/wiki/Beverton%E2%80%93Holt_model>
+
+###Acknowledgement
+The specific form of the POMP model used here is developed from a lecture by Professor Ionides on [statistical methodology for nonlinear partially observed Markov process models](http://ionides.github.io/531w16/notes11/notes11.html).

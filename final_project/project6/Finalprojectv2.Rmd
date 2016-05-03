@@ -1,0 +1,478 @@
+---
+title: 'STATS 531 Final Project: Models for Population of Nicholson’s Blowflies'
+author: ""
+date: "April 20, 2016"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    number_sections: true
+    pandoc_args: [
+      "--number-offset=0"
+    ]
+
+---
+
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad}
+\newcommand\myeq[1]{\eqspace \displaystyle #1}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+\newcommand\AR{\Phi}
+\newcommand\MA{\Psi}
+\newcommand\ev{u}
+\newcommand\given{{\, | \,}}
+\newcommand\equals{{=\,}}
+\newcommand\matA{\mathbb{A}}
+\newcommand\matB{\mathbb{B}}
+\newcommand\matH{\mathbb{H}}
+\newcommand\covmatX{\mathbb{U}}
+\newcommand\covmatY{\mathbb{V}}
+---
+
+```{r knitr-opts,include=FALSE,purl=FALSE,cache=FALSE}
+prefix <- "notes12"
+library(knitr)
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache.extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+  )
+
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  stringsAsFactors=FALSE,
+  encoding="UTF-8"
+  )
+```
+
+```{r prelims,echo=F,cache=F}
+set.seed(594709947L)
+require(ggplot2)
+theme_set(theme_bw())
+require(plyr)
+require(reshape2)
+require(foreach)
+require(doMC)
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.69-1")
+```
+
+#Introduction
+
+* From the Nicholson Blowfly Experiment, we can have some idea of population dynamics of artificial population of blowflies. In the experiment, unlimited quantities of larval food were provided; the adult food supply (ground liver) was constant at 0.4g per day, the adult number were monitored, as well as the numbers of eggs and larvae. The result of population of adult blowflies has been shown as an classic example of dynamic nature of fluctuations in insect populations(Brillinger, D. R. (2012).
+
+* The prototyic model in population biology is the Ricker model, modeling population growth and resource depletion (Class note 11).
+
+$$\myeq P_{n+1} = r\,P_{n}\,\exp(-P_{n}+\varepsilon_{n}), \qquad \varepsilon_{n}\;\sim\;\mathrm{Normal}(0,\sigma^2)$$
+
+* Here, $P_{n}$ is the population density at time $t_{n}=n$ and r is a parameter, relating to the population's intrinsic capacity to increase. And the intrinsic growth rate is assumed to be log-normally distributed. Parameter $\sigma$ is the standard deviation of the noise process $\varepsilon$.
+
+* Another classic discrete-time population model is the Beverton-Holt model (See Beverton-Holt model on Wikipedia, and Class note 11).
+$$P_{n+1} = \frac{a\,P_n}{1+b\,P_n}\,\varepsilon_n,$$
+Here parameter $a$ can be interpreted as the proliferation rate per generation and $\frac{a-1}{b}$ is the carring capacity of the environment. The noise process $\varepsilon$ may have the log-normal distribution with mean $0$ and variance $\sigma^2$.
+
+* There are also other population model such as the Hassell model and the Maynard Smith-Slatkin model.
+
+* What models explain the fluctuations in the experimental population of blowflies? In this project we will fit an SARMA model and a POMP model and compare them with another plausible model.
+
+---
+
+# Summary of the data
+
+* The data comes from the 4th set of Nicholson Blowfly Experiment. Because the pattern seems to change after $t=400$, we mainly analyse in the time window befor $t=400$.
+```{r read_data_blowfly,cache=TRUE}
+blowflies <- read.csv("http://ionides.github.io/531w16/final_project/blowfly4.csv",skip=3)
+head(blowflies)
+```
+
+* Let's have a look at the fluctuations. 
+```{r plot_data,cathe=T,echo=F}
+colnames(blowflies)<-c("day","pop")
+blowflies<-blowflies[blowflies$day<=400,]
+plot(pop~day,data=blowflies,type='o')
+acf(blowflies$pop)
+```
+
+* We can see some periodic patterns. Check them in the spectrum plot.
+
+```{r spectrum, echo=F,cache=T}
+spectrum(blowflies$pop,method = 'ar',main="spectrum of adult blowfly population")
+```
+
+* Looking into the spectrum of the data, we found that there is a periodic feature with frequency around 0.05~0.06, which is a cycle of around 18 bidays.
+* Next we will fit models to try to explain these fluctuations.
+
+------
+
+# Fitting an SARMA model
+
+## Selecting SARMA model using AIC
+
+* First, let's fit the data with an SARMA model to show the "seasonalty"" we see from the data. From the spectrum we set the seasonal period to be 18 bidays.
+
+$$ (1-\AR_p B^{18})(1-\ar_p B) X_n = (1+\ma_q B)\epsilon_n.$$
+
+```{r,aic_table, message = FALSE, warning = FALSE, echo = FALSE,cache=TRUE}
+
+aic_table <- function(data,P,Q,xreg=NULL){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+       table[p+1,q+1] <- arima(data,order=c(p,0,q),xreg=xreg,seasonal=list(order=c(1,0,0),period=18))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+
+e_aic_table <- aic_table(blowflies$pop,4,5,xreg=NULL)
+require(knitr)
+kable(e_aic_table,digits=2)
+```
+
+* The AIC table suggests that SARMA(3,4) with a period of 18 bidays fits the data best.
+
+```{r arima_3_4,cache=TRUE}
+arima(blowflies$pop,order=c(3,0,4),seasonal=list(order=c(1,0,0),period=18))
+```
+
+* The log-likelihood of the SARMA(3,4) with a period of 18 bidays is -1634.39.
+
+## Residual analysis
+
+* The plot of residuals shows that this model fits bad on the data, with some high peaks  in the residual plot. However the acf of the residuals shows that the residual can be seen as independent. The qq-plot shows that the redisuals are not Gaussian distributed.
+
+```{r acf_residual_SARMA,echo=F}
+plot(resid(arima(blowflies$pop,order=c(3,0,4),seasonal=list(order=c(1,0,0),period=18))),main="Residuals of SARMA model",ylab="Residuals")
+acf(resid(arima(blowflies$pop,order=c(3,0,4),seasonal=list(order=c(1,0,0),period=18))),main="ACF of SARMA model")
+qqnorm(resid(arima(blowflies$pop,order=c(3,0,4),seasonal=list(order=c(1,0,0),period=18))))
+```
+
+----
+
+# Fitting a POMP model
+
+## Beverton-Holt model
+* Now we want to fit a POMP model for the data. 
+* Let's try the stochastic Beverton-Holt model.
+$$P_{n+1} = \frac{a\,P_n}{1+b\,P_n}\,\varepsilon_n,$$
+where $a$ and $b$ are parameters and
+$$\varepsilon_t \sim \mathrm{Lognormal}(-\tfrac{1}{2}\sigma^2,\sigma^2).$$
+
+* The measurement model is
+
+$$\myeq Y_{n}|P_n\;\sim\;\mathrm{Poisson}(\phi\,P_{n})$$.
+
+* The parameter $\phi$ is proportional to the sampling effort. Here in this dataset, $\phi$ can be set as 1.
+
+## Constructing the pomp object
+* Now we can construct a pomp object according to the stochastic Beverton-Holt model.
+
+```{r pomp_model,cache=TRUE}
+
+require(pomp)
+skel <- Csnippet("
+                 DN = (a*N)/(1+(b*N));
+                 ")
+stochStep <- Csnippet("
+                      e = rlnorm(-0.5*sigma*sigma,sigma);
+                      N = ((a*N)/(1+(b*N)))*e;
+                      ")
+rmeas <- Csnippet("pop = rpois(phi*N);")
+dmeas <- Csnippet("lik = dpois(pop,phi*N,give_log);")
+
+pomp(blowflies,
+     times="day",t0=0,
+     skeleton=skel,
+     rprocess=discrete.time.sim(step.fun=stochStep,delta.t=2),
+     paramnames=c("a","b","sigma","phi"),
+     statenames=c("N","e"),
+     rmeasure=rmeas,
+     dmeasure=dmeas
+     ) -> blowfly
+
+```
+
+* By setting the parameters we can give one naive simulation of the model.
+
+```{r simulation}
+coef(blowfly) <- c(N.0=948,e.0=0,a=3,b=0.0007,sigma=0.6,phi=1)
+sims <- simulate(blowfly,nsim=1,as.data.frame=TRUE,include.data=TRUE)
+
+ggplot(sims,mapping=aes(x=time,y=pop,group=sim,color=sim=="data"))+
+  geom_line()+guides(color=FALSE)
+```
+
+## Likelihood slice
+
+* Now we can construct a likelihood slice and see how the likelihood changes with the parameters in the POMP model. Here we will use parallel computing.The plots of slices are below.It is convenient to do some parallelization when generating replications.
+
+```{r slice_design,cache=TRUE,results='hide'}
+
+sliceDesign(
+  c(N.0=948,e.0=0,a=3.3,b=0.0006,sigma=0.7,phi=1),
+  a=rep(seq(from=2.5,to=4,length=40),each=3),
+  b=rep(seq(from=0.0004,to=0.0009,length=40),each=3),
+  sigma=rep(seq(from=0.5,to=1.1,length=40),each=3)) -> p
+
+blowfly_mle=unlist(p[which.max(p$loglik),])
+
+require(foreach)
+require(doMC)
+
+registerDoMC(cores=5)   
+
+set.seed(998468235L,kind="L'Ecuyer")
+mcopts <- list(preschedule=FALSE,set.seed=TRUE)
+
+foreach (theta=iter(p,"row"),.combine=rbind,
+         .inorder=FALSE,.options.multicore=mcopts) %dopar% 
+         {
+           pfilter(blowfly,params=unlist(theta),Np=5000) -> pf
+           theta$loglik <- logLik(pf)
+           theta
+         } -> p
+
+foreach (v=c("a","b","sigma")) %do% 
+{
+  x <- subset(p,slice==v)
+  plot(x[[v]],x$loglik,xlab=v,ylab="loglik")
+}
+```
+
+
+## Filtering on simulated data
+* Let’s check that we can indeed filter and re-estimate parameters successfully for this simulated data.We proceed to carry out replicated particle filters at this tentative MLE:
+
+```{r pf,cache=TRUE,warning=F,message=F}
+
+simulate(blowfly,params=c(N.0=948,e.0=0,a=3.3,b=0.0006,sigma=0.7,phi=1),
+         nsim=10000,states=TRUE) -> x
+
+ell <- dmeasure(blowfly,y=obs(blowfly),x=x,times=time(blowfly),log=TRUE,
+                params=c(N.0=948,e.0=0,a=3.3,b=0.0006,sigma=0.7,phi=1))
+dim(ell)
+ell <- apply(ell,1,sum); summary(exp(ell)); logmeanexp(ell,se=TRUE)
+pf <- pfilter(blowfly,Np=5000,params=c(N.0=948,e.0=0,a=3.3,b=0.0006,sigma=0.7,phi=1))
+logLik(pf)
+pf <- replicate(10,pfilter(blowfly,Np=5000,params=c(N.0=948,e.0=0,a=3.3,b=0.0006,sigma=0.7,phi=1)))
+ll <- sapply(pf,logLik); ll
+L_pf<-logmeanexp(ll,se=TRUE)
+
+```
+
+* We obtain an unbiased likelihood estimate of `r round(L_pf[1],2)` with a Monte standard error of `r round(L_pf[2],2)`. From the slicing we can get a tentative MLE of $a=3.3$, $b=0.0006$, $\sigma=0.7$.
+
+## Setting run-levels
+* Then we set the run levels and prepare for searching for the MLE of the parameters using particle filter.
+
+```{r run_level}
+run_level <- 3
+switch(run_level,
+       {blowfly_Np=100; blowfly_Nmif=10; blowfly_Neval=4; blowfly_Nglobal=10; blowfly_Nlocal=10}, 
+       {blowfly_Np=1000; blowfly_Nmif=100; blowfly_Neval=10; blowfly_Nglobal=20; blowfly_Nlocal=20}, 
+       {blowfly_Np=10000; blowfly_Nmif=300; blowfly_Neval=20; blowfly_Nglobal=100; blowfly_Nlocal=20}
+)
+```
+
+## Local search for MLE
+* First we can do a local search based on the information from the likelihood surface slice.
+
+```{r local_search,cache=TRUE}
+
+stew(file=sprintf("blowfly_local_search-%d.rda",run_level),{
+  
+  t_local <- system.time({
+    mifs_local <- foreach(i=1:blowfly_Nlocal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  {
+      mif2(
+        blowfly,
+        start=c(N.0=948,e.0=0,a=3.3,b=0.0006,sigma=0.7,phi=1),
+        Np=blowfly_Np,
+        Nmif=blowfly_Nmif,
+        cooling.type="geometric",
+        cooling.fraction.50=0.5,
+        transform=TRUE,
+        rw.sd=rw.sd(
+          a=0.002,
+          b=0.000001,
+          sigma=0.001
+        )
+      )
+      
+    }
+  })
+  
+},seed=900242057,kind="L'Ecuyer")
+
+
+stew(file=sprintf("blowfly_lik_local-%d.rda",run_level),{
+  t_local_eval <- system.time({
+    liks_local <- foreach(i=1:blowfly_Nlocal,.packages='pomp',.combine=rbind) %dopar% {
+      evals <- replicate(blowfly_Neval, logLik(pfilter(blowfly,params=coef(mifs_local[[i]]),Np=blowfly_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=900242057,kind="L'Ecuyer")
+
+blowfly_results_local <- data.frame(logLik=liks_local[,1],logLik_se=liks_local[,2],t(sapply(mifs_local,coef)))
+summary(blowfly_results_local$logLik,digits=5)
+
+pairs(~logLik+a+b+sigma,data=subset(blowfly_results_local,logLik>max(logLik)-50))
+
+```
+
+* This investigation took  `r round(t_local["elapsed"]/60,1)` minutes for the maximization and `r round(t_local_eval["elapsed"]/60,1)` minutes for the likelihood evaluation. 
+* Evaluation of the best result of this search gives a likelihood of `r round(max(blowfly_results_local$logLik),1)` with a standard error of `r round(blowfly_results_local$logLik_se[which.max(blowfly_results_local$logLik)],1)`. 
+
+* These repeated stochastic maximizations can also show us the geometry of the likelihood surface in a neighborhood of this point estimate:
+
+## Global likelihood maximization
+
+* Finally we will perform the likelihood maximization on a global scale. It took a lot of time.
+
+```{r global_search,cache=TRUE}
+
+blowfly_box <- rbind(
+  a=c(2.5,4),
+  b=c(0.0004,0.0009),
+  sigma = c(0.7,1.1)
+)
+
+blowfly_fixed_params<-c(N.0=948,e.0=0,phi=1)
+
+stew(file=sprintf("box_eval-%d.rda",run_level),{
+  
+  t_global <- system.time({
+    mifs_global <- foreach(i=1:blowfly_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  mif2(
+      mifs_local[[1]],
+      start=c(apply(blowfly_box,1,function(x)runif(1,x[1],x[2])),blowfly_fixed_params)
+    )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+
+
+stew(file=sprintf("lik_global_eval-%d.rda",run_level),{
+  t_global_eval <- system.time({
+    liks_global <- foreach(i=1:blowfly_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(blowfly_Neval, logLik(pfilter(blowfly,params=coef(mifs_global[[i]]),Np=blowfly_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+
+blowfly_results_global <- data.frame(logLik=liks_global[,1],logLik_se=liks_global[,2],t(sapply(mifs_global,coef)))
+summary(blowfly_results_global$logLik,digits=5)
+```
+
+* Evaluation of the best result of this search gives a likelihood of `r round(max(blowfly_results_global$logLik),1)` with a standard error of `r round(blowfly_results_global$logLik_se[which.max(blowfly_results_global$logLik)],1)`. This took in `r round(t_global["elapsed"]/60,1)` minutes for the maximization and `r round(t_global_eval["elapsed"]/60,1)` minutes for the evaluation.  
+
+* We can have a feel of the global geometry of the likelihood surface from the following plot.
+
+```{r write_params}
+if (run_level>2) 
+  write.table(rbind(blowfly_results_local,blowfly_results_global),
+              file="mif_blowfly_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+
+pairs(~logLik+a+b+sigma,data=subset(blowfly_results_global,logLik>max(logLik)-250))
+```
+
+* We see that optimization attemps from diverse remote starting points end up with comparable likelihoods. This gives us some confidence in our maximization procedure.
+
+
+## Diagnostics
+* Now let's have a look at the diagnostics.
+```{r diagnostic,cache=T}
+plot(mifs_global)
+```
+
+* From the diagnostics we can see that the log-likelihood converges slowly with some fluctuation. The parmameters also seem a little unstable, it might be a result of such a small parameter box. For the filtering part, something might catch our attention at around $t=95$, where there is a sharp peak for e and a drop for the effective sample size, as long as seperation of evaluations for N.
+* Because the parameter estimates seem unstable, it could be a weakly identified parameter subspace. The search for maximization of log-likelihood seems not so successful, indicating that this model might not be a good choice for the blowflies population.
+
+---
+
+# Compare with the Nicholson's equation model and a discrete version
+## Time-delayed model
+* The Nicholson's equation was proposed three decades after the experiments.
+
+$$\frac{dN}{dt}=P\,N(t-\tau)\,exp(-N(t-\tau)/N_0)-\delta\,N(t)$$
+
+* Here $N$ is the adult population and $P$,$N_0$,$\delta$, and $\tau$ are parameters. 
+*This model take in consideration of a time delay regarding the relationship between future adult recruitment and current adult population(Gurney, W. S. C., Blythe, S. P., & Nisbet, R. M. (1980)).
+
+* The discrete version (Wood, S. N. (2010)) is
+$$ N_{t+1} = R_{t} + S_{t}$$
+
+where    $R_t\;\sim\;\mathrm{Poi}(P\,N_{t-\tau}\,exp(-N_{t-\tau}/N_0)\,e_t)$   denotes recruiment and   $S_t\;\sim\;\mathrm{binom}(exp(-\delta\varepsilon_t),N_t)$ denotes survival. Assuming timestep for the stochastic process is 1, environmental stochasticity terms $e_t$ and $\varepsilon_t$ are Gamma-distributed i.i.d. random variables with mean 1 and variances $\sigma_{p}^2$ , $\sigma_{d}^2$. The measurement model is $Y_t\;\sim\;\mathrm{negbin}(N_t,1/\sigma_y^2)$. The egg production is an independent Poisson process for each female and each adult has an independent probability of $exp(\delta\,\varepsilon_t)$.
+
+
+```{r time_delayed,cache=TRUE}
+pompExample(blowflies)
+pf<-replicate(10,pfilter(blowflies1,Np=5000))
+ll<-sapply(pf,logLik)
+ll
+L_pf<-logmeanexp(ll,se=TRUE)
+L_pf
+```
+
+## Comparision using estimated log-likelihood
+
+* The best estimated log-likelihood of the Beverton-Holt model we used in this project is around -1678.5. The estimated log-likelihood of the SARMA model is -1634.39. The estimated log-likelihood of the discrete time-delayed model from 5000 simulations is `r round(L_pf[1],2)`. And see from simulations, the log-likelihood of the time-delayed model is far more stable than the Beverton-Holt model we used.
+
+
+---
+#Conclusion
+## Modeling results
+* The SARMA model didn't catch the fluctuation of the population well, even though it did provide a considerable log-likelihood result. 
+
+* The Beverton-Holt based POMP model did reveal part of the mechanism of the fluctuation, however it didn't take the time delay regarding the relationship between future adult recruitment and current adult population, thus failed in capture some low frequency feature of the fluctuation of the population, which we can see from the diagnostic analysis. The log-likelihood did not completely converge and the parmameters are not so stable.
+
+* The time-delayed discrete model indeed provides a larger converging log-likelihood result than the other two models, indicating a better fit.
+
+## Insights of dynamics of blowfly population
+* The blowfly adult population fluctuations are not only related to proliferation rate per generation and carrying capacity of the environment, but also closely correlated to the relationship between future adult recruitment and current adult population. It indicates that population in generation $t+1$ is a function of population in generation $t$ and other previous generations such as $ t-\tau$. Also the survival rate should be taken into consideration.
+
+
+---
+
+# Reference
+
+Brillinger, D. R. (2012). The Nicholson blowfly experiments: some history and EDA. Journal of Time Series Analysis, 33(5), 718-723. http://www.stat.berkeley.edu/~brill/Papers/jtsa2012.pdf
+Berezansky, L., Braverman, E., & Idels, L. (2010). Nicholson’s blowflies differential equations revisited: main results and open problems. Applied Mathematical Modelling, 34(6), 1405-1417. http://www.sciencedirect.com/science/article/pii/S0307904X09002674
+STATS 531 Winter2016, University of Michigan, Class Notes: 6,11,13,15.
+http://ionides.github.io/531w16/
+Wood, S. N. (2010). Statistical inference for noisy nonlinear ecological dynamic systems. Nature, 466(7310), 1102-1104. http://www.nature.com/nature/journal/v466/n7310/abs/nature09319.html
+Beverton-Holt model on Wikipedia https://en.wikipedia.org/wiki/Beverton%E2%80%93Holt_model

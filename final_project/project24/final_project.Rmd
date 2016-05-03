@@ -1,0 +1,638 @@
+---
+title: "STAT531 Final Project"
+subtitle: "The Association between Recent Cholera Epidemics and Rainfall in Haiti"
+#author: "Yu-Han Kao, kaoyh@umich.edu"
+date: "04/28/2016"
+output:
+  html_document:
+    fig_caption: yes
+    force_captions: yes
+    highlight: pygments
+    number_sections: yes
+    theme: spacelab
+  pdf_document:
+    fig_caption: yes
+    keep_tex: yes
+    number_sections: yes
+csl: mee.csl
+bibliography: references.bib
+---
+<style type="text/css">
+
+body, td {
+   font-size: 16px;
+}
+code.r{
+  font-size: 12px;
+}
+pre {
+  font-size: 12px;
+}
+
+img[alt=SIRW] { 
+width: 300px;
+margin:auto;
+}
+
+</style>
+
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+\newcommand\loglik{\ell}
+\newcommand\R{\mathbb{R}}
+\newcommand\data[1]{#1^*}
+\newcommand\params{\, ; \,}
+\newcommand\transpose{\scriptsize{T}}
+\newcommand\eqspace{\quad\quad\quad}
+\newcommand\lik{\mathscr{L}}
+\newcommand\loglik{\ell}
+\newcommand\profileloglik[1]{\ell^\mathrm{profile}_#1}
+\newcommand\ar{\phi}
+\newcommand\ma{\psi}
+---
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+  # devtools::install_github("cboettig/knitcitations@v1")
+  library(knitcitations); cleanbib()
+  cite_options(citation_format = "pandoc", check.entries=FALSE)
+  library(bibtex)
+  library(ggmap)
+  library(RCurl)
+  library(xts)
+  library(TSA)
+  library(pomp)
+  library(doMC)
+  library(foreach)
+  library(ggplot2)
+```
+
+# Introduction
+
+In the previous [project](https://ionides.github.io/531w16/midterm_project/project3/midterm_project.html), I found that rainfall could be a potential driver for recent cholera epidemics in Hati using preliminary cross-correlation analysis. In order to obtain better insights into the interaction between rainfall and cholera transmission, in this study, I further examine the cross-correlation between transmission (using difference of log incidence as an approximate) and rainfall (smoothened by different functions). As follow-up, I implement a mechanistic model in an effort to explain the possible mechanism regarding how rainfall could drive cholera epidemics in Haiti.
+
+# Data
+
+```{r import data,echo=FALSE}
+file1 <- getURL('https://dl.dropboxusercontent.com/u/14839447/mid_project/daily_incidence_use_new.txt',ssl.verifyhost=FALSE, ssl.verifypeer=FALSE)
+file2 <- getURL('https://dl.dropboxusercontent.com/u/14839447/mid_project/dep1.txt', ssl.verifyhost=FALSE, ssl.verifypeer=FALSE)
+case_data <- read.table(file=textConnection(file1), sep="\t", header=TRUE)
+rain_dep1 <- read.table(file=textConnection(file2), sep="", skip=6, header=TRUE)
+case_data$date <- strptime(case_data$date, "%d_%m_%Y") #make sure the date/time in the data is formatted in R
+rain_dep1$time <- strptime(rain_dep1$time, "%d%b%Y")
+case_data <- case_data[order(case_data$date),] #sort by time
+time  <- intersect(case_data$date, rain_dep1$time) # find the overlapped time between case and rain data
+dep1_case <- case_data$Artibonite[case_data$date %in% time[412:NROW(time)]] # crop desired windows
+dep1_rain <- rain_dep1$precipitation[rain_dep1$time %in% time[412:NROW(time)]]
+
+```
+
+**Case Data**
+Cholera daily incidence by departments is available on Ministere de la Sante Publique et de la Population ([MSPP](http://mspp.gouv.ht/newsite/documentation.php)) website. Report is published everyday in pdf formate. From 2012 to 2015, There are 120 dates missing in the database. Half of the data points appear to be missing at random; however, some of the data missing throughout large segments in time, particularly in October 2013 and June 2014. These missing data may bias the outcomes given the non-systematic distribution of the size of the missing data in time and the fact that the missing points located when the cholera outbreak usually occurs. Data crawling and parsing are managed using `python 2.7.10`.
+
+**Rainfall Data**
+Corresponding daily precipitation estimates are pulled from National Aeronautics and Space Administration (NASA) Tropical Rainfall Measuring Mission ([TRMM](http://gdata1.sci.gsfc.nasa.gov/daac-bin/G3/gui.cgi?instance_id=daily_p_comp)). The coordinate of geographical coverage is longitude [-73.120633, -72.226589] and latitude [18.838958, 19.805066] with resolutions of 0.25° x 0.25°. **Fig 1** below shows rainfall and incidence data in recent outbreaks (01/01/2012-12/31/2015).
+
+
+```{r daily ts plot, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 1: daily cholera incidence and rainfall time series"}
+#plot daily data
+par(mar = c(5, 4, 4, 4)+0.3 )
+plot(as.Date(time[412:NROW(time)]),dep1_case, type='l', ylab='case number', xlab='date (day)', col="black",xaxt="n")
+axis(1, cex.axis=.7,label=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100),at=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100))
+par(new=TRUE)
+plot(dep1_rain, axes=FALSE, type='l', col="red",ylab="", xlab="")
+axis(side=4)
+mtext("rainfall (mm)", side=4, line=3, col="red")
+title(main="daily incidence and daily rainfall")
+```
+<br>
+
+# Analysis
+## Cross-correlation analysis
+
+**Transmission approximate**
+
+* Difference of natural log on incidence is taken as an approximate of cholera transmission (**Fig 2**)
+$$ ln(t_{n+1}) - ln(t_n), n=1,2,3,…$$
+* Unlike the incidence, we can see there are very sharp and narrow peaks from the plot. Most of the peaks occur during summer time/raining season, which is consistent with our hypothesis. However, the abrupt peaks might be owing to some artificial effect of reporting behavior or the setup of the surveillance system. For example, hospitals might tend to report cases once every week; even though the incidence reports publish daily.
+* **Fig 3** is the zoomed plot by cutting off those huge peaks. It is still hard to tell if there is any pattern given all the noises.
+
+<br>
+```{r transmission proxy ,echo=FALSE}
+dep1_logcase <-log(dep1_case+1)
+#dep1_trans <-diff(dep1_logcase)
+dep1_trans <-exp(diff(dep1_logcase))
+dep1_trans[length(dep1_trans)+1]=NA
+```
+```{r plot transmission, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 2: difference of log(incidence)",fig.width=8, fig.height=4 }
+par(mfrow=c(1,2), mar = c(3.5,3.5,3.5,3.5), mgp=c(2,0.2,0))
+plot(as.Date(time[412:NROW(time)]),dep1_trans, type='l', ylab='transmission', xlab='date (day)', col="black",xaxt="n",main='Transmission')
+axis(1, cex.axis=.7,label=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100),at=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100))
+
+plot(as.Date(time[412:NROW(time)]),dep1_trans, type='l', ylab='transmission', xlab='date (day)', col="black",xaxt="n",ylim=c(0,4), main='Transmission (zoom in)') 
+axis(1, cex.axis=.7,label=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100),at=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100))
+```
+<br>
+**Rainfall data smoothing**
+
+I have tried three smoothing methods here:
+
+* Fourier Filtering (FFT)
+     + I first use Fast Fourier Transform `fft`  in order to see the magnitude of frequency in the rainfall data (`Re(fft_rain)`, **Fig 3**). We can sort of see that there are some relative stronger signals before y = 20; however, it is very hard to determine the cutoff of noise. Therefore, I just decide the range by visualizing various cutoff, and here is the smoothing I come out with (**Fig4**)  which will be used in the following analysis.
+
+```{r fft, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 3: daily cholera incidence and rainfall time series"}
+par(mfrow=c(1,1), mar=c(4,4,4,4))
+rain_fft<-fft(dep1_rain)
+plot(Re(rain_fft[1:250]), type='l',ylab='intensity', xlab='frequency')
+rain_fft[60:length(rain_fft)]=0+0i
+rain_ifft<-fft(rain_fft, inverse=TRUE)/length(rain_fft)
+```
+
+<br>
+
+```{r plotfft, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 4: FFT-smoothed rainfall"}
+plot(as.Date(time[412:NROW(time)]),dep1_rain, type='l', ylab='rainfall (mm)', xlab='date (day)', col="red",xaxt="n")
+axis(1, cex.axis=.7,label=seq(from = min(as.Date(time[412:NROW(time)])), to=max(as.Date(time[412:NROW(time)])), by = 100),at=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100))
+par(new=TRUE)
+plot(Re(rain_ifft), axes=FALSE, type='l', col="black",ylab="", xlab="", lwd=2)
+rain_fsmooth<-Re(rain_ifft)
+```
+
+<br>
+
+* Linear interpolation (LI)
+     + I sum up the rainfall data by week and then use linear interpolate function `approxfun` to interpolate the daily points (**Fig5**).
+
+```{r plot lsmooth, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 5: linear-interpolation-smoothed rainfall"}
+###linear interpolation
+#sum up weekly data
+rain_wdep1 <- as.xts(rain_dep1$precipitation, order.by=as.Date(rain_dep1$time))
+weekly_rain <- apply.weekly(rain_wdep1, sum)
+rain_week <- row.names(as.data.frame(weekly_rain))[731:940]
+
+l_int <- approxfun(seq(1,length(rain_week)),weekly_rain[731:940])
+rain_lsmooth <- l_int(seq(1,length(rain_week),(length(rain_week)-1)/1452))
+plot(as.Date(time[412:NROW(time)]),dep1_rain, type='l', ylab='rainfall (mm)', xlab='date (day)', col="red",xaxt="n")
+axis(1, cex.axis=.7,label=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100),at=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100))
+par(new=TRUE)
+plot(rain_lsmooth, axes=FALSE, type='l', col="black",ylab="", xlab="", lwd=2)
+```
+<br>
+
+* Cubic spline interpolation (SP)
+    + The procedure is the same as previous one, but I use `sp_fun` to interpolate instead. (**Fig6**)
+    
+
+```{r plt spsmooth,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 6: spline-interpolation-smoothed rainfall" }
+###spline interpolation
+sp_fun <- splinefun(seq(1,length(rain_week)),weekly_rain[731:940],method="natural")
+rain_spsmooth <- sp_fun(seq(1,length(rain_week),(length(rain_week)-1)/1452))
+plot(as.Date(time[412:NROW(time)]),dep1_rain, type='l', ylab='rainfall (mm)', xlab='date (day)', col="red",xaxt="n")
+axis(1, cex.axis=.7,label=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100),at=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100))
+par(new=TRUE)
+plot(rain_spsmooth, axes=FALSE, type='l', col="black",ylab="", xlab="", lwd=2)
+```
+<br>
+
+* Both linear interpolation and cubic spline interpolation give very similar outcomes. FFT-processed rainfall is smoother given the cutoff point I choose.
+
+<br>
+
+**CCF and pre-whitening CCF**
+
+```{r missing data,echo=FALSE}
+####data without NA/missing data####
+day <- as.numeric(format(time[412:NROW(time)], '%j'))
+year <- as.numeric(format(time[412:NROW(time)], '%Y'))
+temp=data.frame(day,year,dep1_case,dep1_rain,rain_fsmooth, rain_lsmooth, rain_spsmooth, dep1_trans)
+#temp<-temp[!(is.na(temp$dep1_case)),]
+temp<-temp[!(is.na(temp$dep1_trans)),]
+time_day <-c(seq(1,length(day),1))
+sirw_data<-data.frame(time_day,day,year, dep1_case,dep1_rain,rain_fsmooth, rain_lsmooth, rain_spsmooth) # FOR SIRW MODEL
+sirw_data<-sirw_data[!(is.na(sirw_data$dep1_case)),]
+
+```
+
+* Cholera transmission approximates and three smoothed rainfall sereis are used for following cross-correlation analysis. As the first step, I plot  the rainfall seires against cholera transmission series (here i only show the one with FFT-smoothing **Fig 7**). It seems that the peaks of transmission coincide pretty well with peaks in FFT-smoothed rainfall.
+
+```{r trans vs srain,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 7: cholera transmission and smoothed rainfall"  }
+par(mfrow=c(1,1), mar = c(4,4,4,4), mgp=c(2,0.1,0))
+plot(as.Date(time[412:NROW(time)]),dep1_trans, type='l', ylab='case number', xlab='date (day)', col="black",xaxt="n")
+axis(1, cex.axis=.7,label=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100),at=seq(from = min(as.Date(time[412:NROW(time)])), to = max(as.Date(time[412:NROW(time)])), by = 100))
+par(new=TRUE)
+plot(rain_fsmooth, axes=FALSE, type='l', col="red",ylab="", xlab="",lwd=2)
+axis(side=4)
+mtext("rainfall (mm)", side=4, line=3, col="red")
+title(main="daily incidence and daily rainfall(smooth)")
+```
+<br>
+
+* I then run `ccf` on all three rainfall-transmission pairs (**Fig 8**). The CCFs of all three pairs look very similar, and all show very obvious sinusoidal pattern. However the strongest signals from the three plots all suggest that future rainfall (~45 days) is positively correlated with cholera transmission, which is contradicted against what we thought earlier.
+
+```{r ccf,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 8: cross-correlation between smoothed rainfall and cholera transmission" }
+par(mfrow=c(2,2), mar = c(4,4,4,4), mgp=c(2,0.1,0))
+ccf(dep1_rain, dep1_case,na.action=na.pass,lag.max = 300, main="rainfall data and incidence data", xlab="Lag (day)")
+ccf(rain_fsmooth, dep1_trans,na.action=na.pass,lag.max = 300, main="FFT rainfall and transmission", xlab="Lag (day)")
+ccf(rain_lsmooth, dep1_trans,na.action=na.pass,lag.max = 300, main="LI rainfall and transmission", xlab="Lag (day)")
+ccf(rain_spsmooth, dep1_trans,na.action=na.pass,lag.max = 300, main="SP rainfall and transmission", xlab="Lag (day)")
+```
+<br>
+
+* Pre-whitening CCF is also applied to all the rainfall and cholera transmission series (**Fig 9**). All pre-whitening CCF of three smoothed rainfall series and cholera transmission again demonstrate very similar pattern. We can see there are strong (both positive and negative) correlation peaks every other ~100 days among three plots, even thought the the pattern of the strength of the peaks are different (eg. for FFT, the peaks get bigger when lag is longer; however for LI, the peaks are smaller when the lag gets bigger.)
+<br>
+
+```{r pre-wh ccf,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 9: pre-whitening cross-correlation between smoothed rainfall and cholera transmission" }
+par(mfrow=c(2,2), mar = c(4,4,4,4), mgp=c(2,0.1,0))
+pw<-prewhiten(temp$dep1_rain, temp$dep1_case, lag.max=300, main="rainfall and incidence", xlab="Lag (day)")
+pw_sm2<-prewhiten(temp$rain_fsmooth, temp$dep1_trans, lag.max=300, main="FFT rainfall and transmission", xlab="Lag (day)")
+pw_sm4<-prewhiten(temp$rain_lsmooth, temp$dep1_trans, lag.max=300, main="LI rainfall and transmission ", xlab="Lag (day)")
+pw_sm6<-prewhiten(temp$rain_spsmooth, temp$dep1_trans, lag.max=300, main="SP rainfall and transmission", xlab="Lag (day)")
+
+```
+
+<br>
+
+* I also checked the ACF of residual for three rainfall series from pre-whitening CCF (**Fig 10**). Although FFT and SP both have less than 5% of ACFs outside the horizontal lines (LI is around 5%), we can see there are very obvious sinusoidal pattern in all three plots indicating the AR model used in pre-whitening is not very appropriate for modeling the rainfall series. It thus could be misleading to interpret the pre-whitening CCFs.
+<br>
+
+```{r acf check, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 10: AR model diagnostics (Residual ACF)"}
+par(mfrow=c(2,2), mar = c(4,4,4,4), mgp=c(2,0.1,0))
+acf(pw$model$resid, na.action=na.pass, main="rainfall and incidence", lag.max=300)
+acf(pw_sm2$model$resid, na.action=na.pass, main="FFT rainfall and transmission", lag.max=300)
+acf(pw_sm4$model$resid, na.action=na.pass, main="LI rainfall and transmission", lag.max=300)
+acf(pw_sm6$model$resid, na.action=na.pass, main="SP rainfall and transmission", lag.max=300)
+```
+<br> 
+
+## Partially observed Markov process models (POMP) analysis
+
+**SIRW model overview**
+
+* Cross-correlation analysis suggests that rainfall has a time-dependent association with cholera transmission, however, it does not give as details about how and in what stage rainfall affects cholera transmission.  In order to better understand the process, I adapted a SIRW model from `r citep(c("10.1007/s11538-010-9507-6","10.1016/j.epidem.2013.09.004"))` to illustrate the transmission process of cholera. As the model diagram shows,cholera can either be transmitted directly from one individual to another or through contaminated water source. Since increasing rainfall is usually related to more frequent contact with contaminated water, and therefore increase the transmission of cholera, I include rainfall as a forcing function to drive the force of infection ($\beta_w I$) in waterborne transmission pathway. In order to do so, I make force of infection proportional to rainfall by directly multiplying the them together ($\beta_w I R(t_i)$.All the three smoothed rainfall series from previous section have been visually evaluated by fitting each rainfall driven SIWR model into incidence data. It seems the one with LI series fits better, so I only show the results using linear interoperation rainfall function here. Below are the deterministic ODE model equations and SIWR model diagram:![SIRW model](https://dl.dropboxusercontent.com/u/14839447/mid_project/sirw.png)
+
+<br>
+
+$$\frac{dS}{dt}=-\beta _ISW-\beta _WSW$$
+$$\frac{dI}{dt}=\beta _ISW+\beta _WSW-\gamma I$$
+$$\frac{dR}{dt}=\gamma I$$
+$$\frac{dW}{dt}=\xi I-\xi W$$
+
+<br>
+
+* The SIRW model is then implemented into a stochastic model using `pomp` with daily incidence as output. In order to account for measurement error, we assume each data point is drawn based on poisson random variables with mean = $Ik$, where $k$ is reporting rate.
+
+* The initial condition of each state is:
+$$ S(0)=1000000 $$
+$$ I(0)=100$$
+$$W=5$$
+<br>
+
+* $S(0)$ is about 2/3 of Artibonite’s total population (~1,727,524), and I(0) is based on the incidence data with the estimated reporting rate from WHO (5%~10%)`r citep("http://www.who.int/bulletin/volumes/90/3/11-093427/en/")`. W(0) is rather arbitrary, which is decided by fitting the model several times. I do not take R into account here since I assume there is no lose of immunity. $/gamma$ is the recovery rate which is fixed at 0.25 given the estimates from WHO (~4 days)`r citep("http://www.who.int/mediacentre/factsheets/fs107/en/")`.
+<br>
+
+* I play with other parameter values using deterministic model to have better picture of the model's behavior. The SIRW model with rainfall forcing function appears to be able to capture the seasonality of choler incidence with proper $\beta_I$, $\beta_W$ ratio and low $\xi$ (to make sure the rainfall effect from waterborne pathway plays a role) as long as the early epidemics do not burn out the susceptible populations (therefore low $\beta_I$ and $\beta_W$ too). I then fit the deterministic model to daily incidence data from MSPP using Nelder-Mead method with `traj.match`,  Using the fitted parameter values ($\beta_I=2.28e-07$s,$\beta_W=3.23e-07$, $\xi=6.30e-07$,$ k=  3.02e-02$), **Fig 11**, and **Fig 12** show the results of trajectory and simulation produced by deterministic and stochastic process respectively.
+
+```{r siwr model, echo=FALSE}
+covartable <- data.frame(time=sirw_data$time_day, rain=sirw_data$rain_lsmooth)
+#covartable <-data.frame(time=sirw_data$time_day,rain=rep(1,length(sirw_data$time_day))) #no forcing function
+data <- data.frame(time=sirw_data$time_day, Y=(sirw_data$dep1_case))
+
+#model setup
+sirw_statenames <- c("S","I","W")
+sirw_paramnames <- c("beta_I","beta_W","xi","k","gamma")
+sirw_obsnames <- c('Y')
+
+sirw_skel <- "
+DS = -beta_I*I*S-beta_W*W*S*rain;
+DI = beta_I*I*S+beta_W*W*S*rain-gamma*I;
+DW = xi*I-xi*W;
+
+//Rprintf(\"maomao %f %f %f\\n\", DS, DI, DW);
+"
+
+
+sirw_dmeasure <- '
+// Rprintf(\"mao %f %f %f %f\\n\", Y, k, I, lik);
+// if (k<0.0 || I<0.0){lik = dpois(Y,k*I+1e-6,0);}
+// else{lik = dpois(Y,k*I+1e-6,give_log);}
+
+lik = dpois(Y,k*I+1e-6,give_log);
+lik = (give_log) ? lik : exp(lik);
+//if (!R_finite(lik)){ Rprintf(\"mao %f %f %f %f\\n\", Y, k, I, lik);
+// }
+
+// Rprintf(\"mao %f %f %f %f\\n\", Y, k, I, lik);
+
+'
+
+sirw_rmeasure <- "
+Y = rpois(k*I+1e-6);
+//Rprintf(\"mao %f\\n\", Y);
+"
+sirw_rprocess <- "
+double ts_i = rbinom(S,1-exp(-beta_I*I*dt));
+double ti = rbinom(I,1-exp(-dt*gamma));
+double tw = rbinom(W,1-exp(-dt*xi));
+double ts_w = rbinom(S,1-exp(-beta_W*rain*W*dt));
+double ti_w = rbinom(I,1-exp(-dt*xi));
+//Rprintf(\"mao %f %f %f %f %f %f %f %f\\n\", S, I, W, ts_i,ts_w,ti,tw,ti_w);
+S -= ts_i + ts_w;
+I += ts_i + ts_w - ti;
+W += ti_w - tw;
+// S -= 0.5;
+// I += 0.5;
+// W += 0.2 ;
+"
+sirw_fromEstimationScale <- "
+Tbeta_I = exp(beta_I);
+Tbeta_W = exp(beta_W);
+Txi = exp(xi);
+Tk = expit(k);
+"
+sirw_toEstimationScale <- "
+Tbeta_I = log(beta_I);
+Tbeta_W = log(beta_W);
+Txi = log(xi);
+Tk = logit(k);
+"
+sirw_initializer <- "
+I=300;
+S=1000000;
+W=5;
+//Rprintf(\"mao %f %f %f %f \\n\", S, I, W, k);
+"
+
+#creat pomp model
+sirw <- pomp(
+  data=subset(data, (time > 20) &(time<max(time)-20),select=c('time','Y') ),
+  times="time",
+  t0=20,
+  rprocess=euler.sim(
+    step.fun=Csnippet(sirw_rprocess),
+    delta.t=1/12
+  ),
+  rmeasure=Csnippet(sirw_rmeasure),
+  dmeasure=Csnippet(sirw_dmeasure),
+  covar=covartable,
+  tcovar="time",
+  covarnames = c("rain"),
+  skeleton=Csnippet(sirw_skel), skeleton.type="vectorfield",
+  fromEstimationScale=Csnippet(sirw_fromEstimationScale),
+  toEstimationScale=Csnippet(sirw_toEstimationScale),
+  obsnames = sirw_obsnames,
+  statenames=sirw_statenames,
+  paramnames=sirw_paramnames,
+  initializer=Csnippet(sirw_initializer)
+)
+```
+
+
+```{r skeletonfit model, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
+guess.p<-c(beta_I=2.275804e-07,beta_W=3.228829e-07, xi=7.238530e-07, k= 2.983091e-02, gamma=0.25)
+true.p<-c(beta_I=2.275804e-07,beta_W=3.228829e-07, xi=7.238530e-07, k= 2.983091e-02, gamma=0.25)
+res <- traj.match(sirw, start=guess.p, params=true.p, est=c('beta_I','beta_W', 'xi', 'k'), maxit=6000, method="Nelder-Mead", reltol=1e-8)
+#params=c(beta_I=2.272294e-07,beta_W=3.228888e-07, xi=6.296491e-07, k= 3.022118e-02, gamma=0.25)
+k=as.numeric(res@params[4])
+```
+
+```{r traj, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 11: SIRW trajectory"}
+traj <- trajectory(sirw, params=res@params,as.data.frame=TRUE)
+temp_data<-subset(data, (time > 20) &(time<max(time)-20),select=c('time','Y') )
+traj_data<-rbind(temp_data$Y,traj$I, temp_data$time)
+#ggplot(data=traj,aes(x=time,y=I))+geom_line()
+par(mar = c(5, 4, 4, 4)+0.3 )
+plot(traj$time, temp_data$Y,type='l',ylim=c(0,85), xlab='time')
+par(new=TRUE)
+plot(k*(traj$I), axes=FALSE,col='red',,ylab="", xlab="",type='l',lwd=2, ylim=c(0,85))
+axis(side=4)
+mtext("simulated incidence", side=4, line=3, col="red")
+
+```
+
+```{r sims,echo=FALSE, warning=FALSE, message=FALSE, include=FALSE }
+sims<-simulate(sirw,params=res@params,nsim=10,as=TRUE,include=TRUE)
+```
+
+```{r sims_plot ,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 12: SIRW simulation" }
+##load('sims.Rda')
+ggplot(sims,mapping=aes(x=time,y=Y,group=sim,color=sim=="data"))+geom_line()+guides(color=FALSE)
+```
+<br>
+
+* The fits look good (but may have a little bit lag) except for where the data is missing. Especially, SIRW model without forcing function or introduced cases is not able to simulate this kind of  seasonality (not shown here but can be verified with embedded code) or multiple peaks. To better evaluate the model fitting, I also estimate the MLE using `pfilter` with the same fitted parameter set.
+The result of likelihood is shown below:
+
+<br> <br>
+
+
+```{r mle_est,,echo=FALSE, warning=FALSE, message=FALSE }
+stew(file=sprintf("lik_test-%d.rda",6),{
+  t_test_eval <- system.time({
+    liks_test <- foreach(i=1:sirw_Nlocal,.packages='pomp',.combine=rbind) %dopar% {
+      evals <- replicate(sirw_Neval, logLik(pfilter(sirw,params=params,Np=sirw_Np)))
+      test_mean<-logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=900242057,kind="L'Ecuyer")
+results_test <- data.frame(logLik=liks_test[,1],logLik_se=liks_test[,2])
+summary(results_test$logLik,digits=5)
+
+```
+<br>
+
+**Likelihood estimation**
+
+
+* I also run both local and global optimization to see if i can find better model and meanwhile to check the likelihood surface and parameter behaviors around MLE. However, The optimization haven’t finished until now (I did not run it on Flux–my bad–but ran it on one of the machines in our lab using 12 cores.I will send the results as soon as it finishes.) Nevertheless, I provide a toy example by running only `{sirw_Np=200; sirw_Nmif=5; sirw_Neval=10; sirw_Nglobal=10; sirw_Nlocal=10}` to just get a sense what might look like.
+
+```{r comp_setup,echo=FALSE}
+###fixed parameters
+sirw_fixed_params <- c(gamma=0.25)
+
+####setup parallel####
+registerDoMC(cores=2) 
+mcopts <- list(set.seed=TRUE)
+set.seed(396658101,kind="L'Ecuyer")
+
+
+####setup optimizer####
+###comp level
+run_level <- 1
+switch(run_level,
+       {sirw_Np=200; sirw_Nmif=5; sirw_Neval=10; sirw_Nglobal=10; sirw_Nlocal=10},
+       {sirw_Np=5000; sirw_Nmif=200; sirw_Neval=10; sirw_Nglobal=10; sirw_Nlocal=10},
+       {sirw_Np=20000; sirw_Nmif=100; sirw_Neval=10; sirw_Nglobal=10; sirw_Nlocal=10}, 
+       {sirw_Np=50000; sirw_Nmif=280; sirw_Neval=10; sirw_Nglobal=100; sirw_Nlocal=20},
+       {sirw_Np=60000; sirw_Nmif=300; sirw_Neval=10; sirw_Nglobal=100; sirw_Nlocal=20}
+)
+
+###opt param
+sirw_rw.sd <- 0.002 #set up random walk SD
+sirw_cooling.fraction.50 <- 0.6
+
+```
+<br>
+
+**Optimization and parameter estimation**
+
+ * Local optimization
+     + The likelihood has been improved here (~55, it was around 53 before optimizing with iterated filtering algorithm IF2 `mifs` `r citep("10.1073/pnas.1410597112")`. However, while look at the likelihood plot, it is hard to tell if the optimization is successful or the likelihood surface given the small number of iterations.
+     
+<br> 
+
+
+```{r local_opt, ,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 13: Loglike and parameters (local optimization)" }
+stew(file=sprintf("local_search-%d.rda",run_level),{
+  
+  t_local <- system.time({
+    mifs_local <- foreach(i=1:sirw_Nlocal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  {
+      mif2(
+        sirw,
+        start=params,
+        Np=sirw_Np,
+        Nmif=sirw_Nmif,
+        cooling.type="geometric",
+        cooling.fraction.50=0.6,
+        transform=TRUE,
+        rw.sd=rw.sd(
+          beta_I=sirw_rw.sd,
+          beta_W=sirw_rw.sd,
+          xi=sirw_rw.sd,
+          k=sirw_rw.sd
+        )
+      )
+      
+    }
+  })
+  
+},seed=900242057,kind="L'Ecuyer")
+
+#evaluate likelihood for all iterates
+
+stew(file=sprintf("lik_local-%d.rda",5),{
+  t_local_eval <- system.time({
+    liks_local <- foreach(i=1:sirw_Nlocal,.packages='pomp',.combine=rbind) %dopar% {
+      evals <- replicate(sirw_Neval, logLik(pfilter(sirw,params=coef(mifs_local[[i]]),Np=sirw_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=900242057,kind="L'Ecuyer")
+results_local <- data.frame(logLik=liks_local[,1],logLik_se=liks_local[,2],t(sapply(mifs_local,coef)))
+summary(results_local$logLik,digits=5)
+pairs(~logLik+beta_I+beta_W+xi+k+gamma, data=results_local)
+```
+
+<br>
+
+* Global optimization
+     + it seems that from the likelihood plot, the $\beta_I$ has two very close local optimums very (we can see two clusters of dots in those plots), but still, since the iteration and the particle number are too small (also the filter diagnostics is terrible), we still need to wait for the actual job to finish.
+     
+```{r global_opt,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 14: Loglike and parameters (global optimization)"}
+
+### param estimation using mif2 with different starting value
+sirw_box <- rbind(
+  beta_I=c(5*1e-8,1*1e-6),
+  beta_W=c(5*1e-8,1*1e-6),
+  xi=c(5*1e-8,1*1e-6),
+  k=c(5*1e-3,1*1e-1)
+)
+
+
+###optimizer
+stew(file=sprintf("global-%d.rda",run_level),{
+  
+  t_global <- system.time({
+    mifs_global <- foreach(i=1:sirw_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar% { 
+      m_temp<-mif2(
+        sirw,
+        start=c(apply(sirw_box,1,function(x) exp(runif(1,log(x[1]),log(x[2])))),sirw_fixed_params),
+        Np=sirw_Np,
+        Nmif=sirw_Nmif,
+        cooling.type="geometric",
+        cooling.fraction.50=sirw_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd=rw.sd(
+          beta_I=sirw_rw.sd,
+          beta_W=sirw_rw.sd,
+          xi=sirw_rw.sd,
+          k=sirw_rw.sd)
+      ) 
+      #m_temp <- continue(m_temp, Nmif=300, cooling.fraction=0.35)
+    }
+  })},seed=1270401374,kind="L'Ecuyer")
+
+#estimate likelihood
+stew(file=sprintf("lik_global_eval-%d.rda",run_level),{
+  t_global_eval <- system.time({
+    liks_global <- foreach(i=1:sirw_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(sirw_Neval, logLik(pfilter(sirw,params=coef(mifs_global[[i]]),Np=sirw_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+
+results_global <- data.frame(logLik=liks_global[,1],logLik_se=liks_global[,2],t(sapply(mifs_global,coef)))
+#summary(results_global$logLik,digits=5)
+#save likelihood optimization logs 
+if (run_level>0) 
+  write.table(results_global,
+              file="mif_sirw_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+save(results_global,file='results_global.Rda')
+save(mifs_global,file="mifs_global.Rda")
+pairs(~logLik+beta_I+beta_W+k+xi,data=subset(results_global,logLik>max(logLik)-250))
+
+```
+
+<br>
+
+```{r global_plot,echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.cap="Fig 15: Filtering diagnostics (global optimization)" }
+plot(mifs_global)
+```
+
+<br>
+
+
+# Conclusions
+
+* The cross-correlation analysis shows that rainfall somewhat associates with cholera transmission with certain time dependence. It does not tell us more than that, especially it does not suggest rainfall can be a precedent driver for cholera transmission. However, as we can see from the diagnostic plots for pre-whitening CCF, those AR models do not describe rainfall pattern very well. The pre-whitening CCF might not be a very tool to look at the correlation for rainfall and cholera transmission.
+
+* Even though difference of $log(incidence)$ could be a good way to approximate disease transmission, it could still be biased by some measurement errors. The sudden sharp peaks could either be from large transmission or simply the delay of reporting.
+
+* The SIWR model seems to do a decent job in terms of explaining the recent cholera epidemics in Haiti. However, it makes sense that models with any seasonal forcing function (eg. cos( ), sin ( ), or bspline( ) will fit well to data with similar seasonality. To better illustrate the issue, we can:
+      + comparing model with rainfall forcing function with other model with seasonality forcing function to see if the one with rainfall gives better fit or productivity
+      + we can also compare model with both other seasonal forcing function and rainfall forcing function with the one with only rainfall forcing function to check if adding rainfall explains the incidence data better.
+
+* Also, the way I implement rainfall function in this model is very naive (by simply multiply rainfall and force of infection together). I do not consider any effects of lags or any other why rainfall could interaction with cholera transmission. Moreover, as I mentioned in previous project, increasing rainfall could have opposite influence on cholera transmission (eg. excess amount of water can also dilute the pathogen in the water). Therefore, it is important to think about more detailed method to refine the model, so the model can better explain the data and also help us better understand the effect of rainfall on disease transmission process.
+
+* Furthermore, I need to think more carefully about the interpretation and scaling of the SIWR model. For example, it is hard to explain the parameter and state values, especially even though the value of W can be seen as a abstract representation of pathogen concentration, I cannot explain what the value really means in practice, which might make it hard to measure it in the real life (if we need to).
+
+* The last but not the least. I had a hard time to find reasonable ranges for parameter without exploding iterated filtering optimizer (usually it happens when some of the states go to negative..). I will need to find a better way to set up the optimizer for future use.
+
+<br>
+
+
+# Packages
+
+* All the analyses are done using `R version 3.2.4 (2016-03-10)` `r citep(citation())`
+
+1. `knitcitations`  `r citep(citation("knitcitations"))`
+2. `RCurl`  `r citep(citation("RCurl"))`
+3. `xts`  `r citep(citation("xts"))`
+4. `TSA`  `r citep(citation("TSA"))`
+5. `bibtex`  `r citep(citation("bibtex"))`
+6. `pomp`  `r citep(citation("pomp"))`
+7. `doMC`  `r citep(citation("doMC"))`
+8. `foreach`  `r citep(citation("foreach"))`
+9. `ggplot2`  `r citep(citation("ggplot2"))`
+
+
+# References
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE} 
+  write.bibtex(file="references.bib")
+```
+
+
+
+

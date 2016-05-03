@@ -1,0 +1,584 @@
+---
+title: "Time Series Analysis of JP Morgan stock price"
+author: "Yue Song    UMID:74267931"
+date: "April 23, 2016"
+output: 
+  html_document:
+    toc: true
+---
+
+##1. Introduction
+
+The scientific question motivating my work is how to predict the stock price using time series, and based on our prediction models, how the stock price will behave in future. However, the common view about stock price prediction is that the daily returns are independent so that there is no chance for someone to make profit with a precise prediction model. The underlying reason is that if the prediction model tells that the stock price will go up and then people will buy more which will push up the price and eliminate the favorable situation (Lecture notes 15, Stats 531, Ed Ionides). Instead, in this project, we will study the volatility of the returns which might be predictable. Based on volatility of major companies' stock price, we aim to fit applicable time series models which may predict the future behavior of the stock price. 
+
+##2. Data
+ 
+In this project, we use the adjusted close price for JP Morgan Chase & Co. from 2000 to 2016 from www.finance.Yahoo.com. The goal is to identify the best model to make a prediction for the volatility of this price. The reason we use he adjusted close price is that it is more meaningful when examining historical returns "because it gives analysts an accurate representation of the firm's equity value beyond the simple market price and it accounts for all corporate actions such as stock splits, dividends/distributions and rights offerings" (www.investopedia.com). We will use the data from 2000 to 2013 as the training data to build the model and use the rest as test data to see that whether the model gives a reasonable prediction.
+
+Firstly, we have a glimpse of the raw data of adjusted close price of JP Morgan. From the plot of training data, we can see that overall there is an increasing trend with some obvious fluctuation around the year of 2002 and 2008 which due to the financial crisis in Argentina and America, respectively. Additionally, the histogram shows that the distribution of adjusted close price is approximately normal. 
+
+```{r, echo=F,message=F,warning=F}
+library(dplyr)
+library(forecast)
+mydata <- read.csv("table-2.csv",header = T)
+jpm=arrange(mydata,-row_number())
+jpmnew=jpm[4046:7566,]
+plot(jpmnew$Adj.Close,type="l",las=1)
+title(main="Adjusted close for JPM from 2000 to 2013")
+hist(jpmnew$Adj.Close)
+```
+
+Next, we calculate the difference of the log adjusted close price. As shown below, the large log differences occur around the year of 2002 and 2008 and the mean of the log differences is about 0. Moreover, according to the QQ-plot, our data roughly follows a normal distribution with slight long right tail.
+
+```{r, echo=F,message=F}
+diff_jpm=log(jpmnew$Adj.Close[2:3520])-log(jpmnew$Adj.Close[1:3519])
+plot(diff_jpm,type="l",las=1)
+qqnorm(jpmnew$Adj.Close)
+qqline(jpmnew$Adj.Close)
+```
+
+
+##3.Fit Models
+###3.1 ARIMA Models
+
+We first take the advantage of ARIMA model, but should expect a terrible fit due to the common view about the independence of returns while ARIMA model assume there is correlation between daily returns although here we are dealing with the volatility. We do the model selection based on BIC values. According to the BIC table below, we choose ARIMA(1,1,1).
+
+```{r, echo=F,message=F}
+bic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P) {
+    for(q in 0:Q) {
+      table[p+1,q+1] <- Arima(data,order=c(p,0,q))$bic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>", sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+jpm_bic_table <- bic_table(diff_jpm,5,5)
+require(knitr)
+kable(jpm_bic_table,digits=2)
+min(jpm_bic_table)
+```
+
+
+After fitting the ARIMA$(1,1,1)$ model, we do the acf and pacf plots, the correlation is  not significant as shown for most lags, so we can confirm that the model has no seasonal period. There is also a significant correlation at lag1 in acf. The pacf shrinks slowly. These information suggests that a simple model without seasonality might be adequate. Thus, we can specify our multiplicative ARIMA(1,1,1). The log likelihood for model m1 is 7652.29.
+
+```{r, echo=F,message=F}
+#Try to fit ARIMA
+acf(diff_jpm, lag.max = 160, type = "correlation", plot = T, main = "ACF of the First Differenced jpm",ci.type="ma")
+pacf(diff_jpm, lag.max = 160, plot = T, main = "PACF of the First Differenced jpm")
+#m1
+m1= Arima(diff_jpm, order = c(1, 1, 1))
+```
+
+
+###3.2 ARIMA(1,1,1) Diagnostic check
+The plot of residuals suggests some major irregularities with the model (relatively large residuals for the years of 2002 and 2008 again). The histogram of residuals looks normal. Acf and pacf show that residuals of the fitted model have some serial correlation, and thus we cannot accept that they are independent. This undesirable fitting might be due to the violation of underlying assumption for ARIMA models. To get a better fitting, we may consider to use other models.
+
+```{r, echo=F,message=F}
+#Diagnostic check
+library(TSA)
+plot(rstandard(m1),main="Residuals from ARIMA(3,1,1) Model",type="l")
+abline(h=0)
+acf(rstandard(m1),lag.max = 60,main="ACF of Residuals from ARIMA(3,1,1) Model")
+pacf(rstandard(m1),lag.max = 60,main="PACF of Residuals from ARIMA(3,1,1) Model")
+#no obviuos significant correlation
+hist(rstandard(m1),breaks=100,main="Hist of Residuals")
+
+
+spec=spec.pgram(rstandard(m1))
+#the ACF and PACF OF the residuals of SARIMA model suggest that the residuals have little serial correlation, a white noise modle is appropriate for these data 
+#white noise
+```
+
+
+###3.3 GARCH Models
+
+Our next approach is using GARCH models. We try to fit the residuals of fitted ARIMA model into a GARCH model and see the performance of residuals of GARCH. The eacf of absolute residuals and squared residuals below suggest GARCH(1,1) and GARCH(1,2) respectively. The AIC for GARCH(1,1) is -17699.21 and AIC for GARCH(1,2) is -17657.67. Here we choose GARCH(1,1) which has the smaller AIC and also GARCH(1,1) model is a popular choice (Cowpertwait and Metcalfe 2009, Edward Ionides). 
+
+```{r, echo=F,message=F,warning=F}
+#GARCH
+require(tseries)
+res=m1$residuals
+quartz()
+par(mfrow=c(2,2))
+acf(res,lag.max=50,main="Sample ACF of Residuals")
+pacf(res,lag.max=50,main="Sample PACF of Residuals")
+#serially uncorrelated but admit a higher-order indepence, volatility clustering and a heavy-tailed distribution
+pacf(abs(res),lag.max=50,main="Sample PACF OF Absolute Value of Residuals")
+pacf(res^2,lag.max=50,main="Sample PACF OF Square Value of Residuals")
+
+#residuals of ARIMA ARE NOT iid
+#eacf(res) #no clear info
+eacf(abs(res))# suggest GARCH(1,1)
+eacf(res^2) # suggest GARCH(2,2)
+g=garch(res,order=c(1,1))
+#summary(g)
+#AIC(g) 
+```
+
+
+###3.4 GARCH(1,1) Diagnostic check
+
+The histogram of residuals of GARCH(1,1) shows perfect normality. The qq plot of residuals of GARCH(1,1) still suggests some heavily-tailed distribution, but it slightly improved compared with the qq plot of reiduals of fitted ARIMA model. The acf plots of absolute and squared residuals of GARCH(1,1) show that both absolute residuals and squared residuals have little serial correlation. We may conclude that GARCH(1,1) gives a better fit than ARIMA(1,1,1) 
+
+
+```{r, echo=F,message=F}
+plot(residuals(g),type="h",ylab="Standardized Residuals for GARH(2,2)",main="Standardized Residuals for GARCH(1,1)")
+hist(residuals(g))
+qqnorm(residuals(g))
+qqline(residuals(g))
+acf(residuals(g),na.action=na.omit)
+acf(abs(residuals(g)),na.action=na.omit)
+acf((residuals(g)^2),na.action=na.omit)
+```
+
+All p-values of generalized portmanteau tests are higher than 5%, which confirms that the standardized residuals from the fitted GARCH(1,1) model are uncorrelated. Hence, they may be independent. Also, We get the periodogram of the residuals of the GARCH(1,1) model shown below. The periodogram of the residuals of the GARCH(1,1) has no significant trend, which suggests white noise. This 3-parameter model has a maximized log likelihood of -36373.6.
+
+```{r, echo=F,message=F}
+spec=spec.pgram(residuals(g),na.action=na.remove)
+#Likelihood
+require(tseries)
+fit.garch <- garch(jpm$Adj.Close,grad = "numerical", trace = FALSE)
+L.garch <- logLik(fit.garch)
+
+```
+
+
+
+
+###3.5 POMP Models
+The last method we use is POMP model. Since the plot of volatility is quite similar to the plot in the lecture notes 15(Edward Ionides), we first try the model as following:
+
+$$
+Y_n = \exp\{H_{n}/2\} \epsilon_n,\\
+H_n = \mu_h(1-\phi) + \phi H_{n-1} + \beta_{n-1}R_n\exp\{-H_{n-1}/2\} + \omega_n,\\
+G_n = G_{n-1}+\nu_n,\\
+$$
+where $\beta_n=Y_n\sigma_\eta\sqrt{1-\phi^2}$, $\{\epsilon_n\}$ is an iid N(0,1) sequence, $\{\nu_n\}$ is an iid N(0,$\sigma_{\nu}^2$) sequence and $\{\omega_n\}$ is an iid N(0,$\sigma_\omega^2$) sequence.
+
+Here we choose the algorithmic parameters based on the MIF2 convergence diagnostics. However, after trying several seemly reasonable parameters, we fail to reach a convincing result. Under this circumstance, we decide to fix some of those algorithmic parameters and see whether other parameters and log likelihood converge. Here, we let $G_0=0,H_0=0,\mu_h=-8,\sigma_\eta=1$. We deduce those information based on a level  3 diagnostics and the reason we fix these four parameters is that they converge fast before the other two parameters converge. Since $\phi$ and $\sigma_\nu$ carry the most important information in our financial model, it is acceptable to only tune these two parameters.  Moreover, we change the cooling.fraction.50 to 0.1 to make parameters converge faster. The MIF2 convergence diagnostics plots below indicate that all log likelihood, $\phi$ and $\sigma_\nu$ converges after about 10 MIF iteration.
+
+
+```{r, echo=F,message=F,warning=F}
+
+#POMP
+
+require(pomp)
+jpm_statenames <- c("H","G","Y_state")
+jpm_rp_names <- c("sigma_nu","mu_h","phi","sigma_eta")
+jpm_ivp_names <- c("G_0","H_0")
+jpm_paramnames <- c(jpm_rp_names,jpm_ivp_names)
+jpm_covarnames <- "covaryt"
+rproc1 <- "
+  double beta,omega,nu;
+  omega = rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-tanh(G)*tanh(G)));
+  nu = rnorm(0, sigma_nu);
+  G += nu;
+  beta = Y_state * sigma_eta * sqrt( 1- phi*phi );
+  H = mu_h*(1 - phi) + phi*H + beta * tanh( G ) * exp(-H/2) + omega;
+"
+rproc2.sim <- "
+  Y_state = rnorm( 0,exp(H/2) );
+ "
+
+rproc2.filt <- "
+  Y_state = covaryt;
+ "
+jpm_rproc.sim <- paste(rproc1,rproc2.sim)
+jpm_rproc.filt <- paste(rproc1,rproc2.filt)
+jpm_initializer <- "
+  G = G_0;
+  H = H_0;
+  Y_state = rnorm( 0,exp(H/2) );
+"
+jpm_rmeasure <- "
+   y=Y_state;
+"
+
+jpm_dmeasure <- "
+   lik=dnorm(y,0,exp(H/2),give_log);
+"
+jpm_toEstimationScale <- "
+  Tsigma_eta = log(sigma_eta);
+  Tsigma_nu = log(sigma_nu);
+  Tphi = logit(phi);
+"
+
+jpm_fromEstimationScale <- "
+  Tsigma_eta = exp(sigma_eta);
+  Tsigma_nu = exp(sigma_nu);
+  Tphi = expit(phi);
+"
+jpm.filt <- pomp(data=data.frame(y=diff_jpm,
+                     time=1:length(diff_jpm)),
+              statenames=jpm_statenames,
+              paramnames=jpm_paramnames,
+              covarnames=jpm_covarnames,
+              times="time",
+              t0=0,
+              covar=data.frame(covaryt=c(0,diff_jpm),
+                     time=0:length(diff_jpm)),
+              tcovar="time",
+              rmeasure=Csnippet(jpm_rmeasure),
+              dmeasure=Csnippet(jpm_dmeasure),
+              rprocess=discrete.time.sim(step.fun=Csnippet(jpm_rproc.filt),delta.t=1),
+              initializer=Csnippet(jpm_initializer),
+              toEstimationScale=Csnippet(jpm_toEstimationScale), 
+              fromEstimationScale=Csnippet(jpm_fromEstimationScale)
+)
+
+expit<-function(real){1/(1+exp(-real))}
+logit<-function(p.arg){log(p.arg/(1-p.arg))}
+
+run_level <-2
+jpm_Np <-          c(100,500,2e3)
+jpm_Nmif <-        c(50, 200,200)
+jpm_Nreps_eval <-  c(4,  10,  20)
+jpm_Nreps_local <- c(10, 10, 20)
+jpm_Nreps_global <-c(10, 10, 100)
+cores = 4
+require(doParallel)
+registerDoParallel(cores)
+
+
+jpm_rw.sd_rp_nu <- 0.02
+jpm_rw.sd_rp_mu <- 0.02
+jpm_rw.sd_rp_phi <- 0.02
+jpm_rw.sd_rp_eta <- 0.05
+jpm_rw.sd_ivp <- 0.1
+jpm_cooling.fraction.50 <- 0.1
+
+
+fix_params=c(G_0=0,H_0=0,mu_h=-8,sigma_eta=1)
+
+jpm_box <- rbind(
+ phi = c(0.8,0.99),
+ sigma_nu=c(0,0.5)
+)
+
+stew(file="box_eval_wade.rda",{
+  t.box <- system.time({
+    if.box <- foreach(i=1:jpm_Nreps_global[run_level],.packages='pomp',.combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        jpm.filt,
+        start=c(apply(jpm_box,1,function(x)runif(1,x)),fix_params),
+        Np=jpm_Np[run_level],
+        Nmif=jpm_Nmif[run_level],
+        cooling.type="geometric",
+        cooling.fraction.50=jpm_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd = rw.sd(
+  
+         
+          phi       = 0.02,
+          sigma_nu = 0.009
+         
+         
+        )
+        
+      )
+    
+    L.box <- foreach(i=1:jpm_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                      .options.multicore=list(set.seed=TRUE)) %dopar% {
+                        set.seed(87932+i)
+                        logmeanexp(
+                          replicate(jpm_Nreps_eval[run_level],
+                                    logLik(pfilter(jpm.filt,params=coef(if.box[[i]]),Np=jpm_Np[run_level]))
+                          ), 
+                          se=TRUE)
+                      }
+  })
+},seed=290860873,kind="L'Ecuyer")
+
+
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+if(run_level>1) write.table(r.box,file="jpm_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.box$logLik,digits=5)
+plot(if.box)
+```
+
+The profile likelihood of $\sigma_\nu$ is shown below. From the plot, we find that the log likelihood achieves its maximum when $\sigma_\nu$ is between 0.001 and 0.002, which is really close to zero. This might be due to those fixed algorithmic parameters and the searching area (from 0 to 0.2) but the result is still acceptable since the 95% confidence interval for $\sigma_\nu$ does not contain zero.
+
+```{r, echo=F,message=F,warning=F}
+#############Profile
+##########sigma nu ###########
+mcopts <- list(set.seed=TRUE)
+
+It=20
+nprof=10
+profile.box <- profileDesign(  
+  sigma_nu = seq(0,0.2,length.out=It),
+  lower=c(phi=0.8),
+  upper=c(phi=0.99),
+  nprof=nprof
+)
+
+stew(file=sprintf("profile sigma_nu-%d.rda",It),{
+  
+  t_global.4 <- system.time({
+      prof.llh<- foreach(i=1:(It*nprof),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+        # Find MLE
+        mif2(
+          jpm.filt,
+          cooling.type="geometric",
+          cooling.fraction.50=jpm_cooling.fraction.50,
+          start=c(unlist(profile.box[i,]),fix_params),
+          Np=500,Nmif=50,
+          transform=TRUE,
+          rw.sd = rw.sd(
+            phi = 0.02
+          )
+        )->mifs_global.4
+        # evaluate llh
+        evals = replicate(10, logLik(pfilter(mifs_global.4,Np=1000)))
+        ll=logmeanexp(evals, se=TRUE)        
+        
+        data.frame(as.list(coef(mifs_global.4)),
+                   loglik = ll[1],
+                   loglik.se = ll[2])
+      }
+  })
+},seed=931129,kind="L'Ecuyer")
+## filiter again on the maxima
+require(plyr)
+prof.llh %>% 
+  ddply(~sigma_nu,subset,rank(-loglik)<=10) %>%
+  subset(select=jpm_paramnames) -> pars
+
+
+## mif2 again
+stew(file=sprintf("profile beta-2-%d.rda",It),{
+  
+  t_global.5 <- system.time({
+    prof.llh<- foreach(i=1:(nrow(pars)),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+      # Find MLE
+      mif2(
+        jpm.filt,
+        cooling.type="geometric",
+        cooling.fraction.50=jpm_cooling.fraction.50,
+        start=unlist(pars[i,]),
+        Np=500,Nmif=50,
+        transform=TRUE,
+        rw.sd = rw.sd(
+          phi = 0.02
+        )
+      )->mifs_global.5
+      # evaluate llh 
+      pf= replicate(10,pfilter(mifs_global.5,Np=1000))
+      evals=sapply(pf,logLik)
+      ll=logmeanexp(evals, se=TRUE)  
+      nfail=sapply(pf,getElement,"nfail")
+      
+      data.frame(as.list(coef(mifs_global.5)),
+                 loglik = ll[1],
+                 loglik.se = ll[2],
+                 nfail.max=max(nfail))
+    }
+  })
+},seed=931129,kind="L'Ecuyer")
+prof.llh %<>%
+  subset(nfail.max==0) %>%
+  mutate(sigma_nu=exp(signif(log(sigma_nu),5))) %>%
+  ddply(~sigma_nu,subset,rank(-loglik)<=1)
+
+a=max(prof.llh$loglik)
+b=a-1.92
+CI=which(prof.llh$loglik>=b)
+c=prof.llh$sigma_nu[min(CI)]
+d=prof.llh$sigma_nu[max(CI)]
+
+library(ggplot2)
+prof.llh %>%
+  ggplot(aes(x=sigma_nu,y=loglik))+
+  geom_point()+
+  geom_smooth(method="loess")+
+  geom_hline(aes(yintercept=a),linetype="dashed")+
+  geom_hline(aes(yintercept=b),linetype="dashed")+
+  geom_vline(aes(xintercept=c),linetype="dashed")+
+  geom_vline(aes(xintercept=d),linetype="dashed")
+```
+
+
+We apply the same method to $\phi$ and the profile likelihood is shown below. Again, the maximal log likelihood is achieved around the boundary of $\phi$  when the searching area is from 0.8 to 0.99. Although the result is not perfectly desirable, we conclude that the 95% confidence interval for $\phi$ is [0.97, 0.98].
+
+```{r, echo=F,message=F,warning=F}
+##########phi ######################################################
+mcopts <- list(set.seed=TRUE)
+
+It=20
+nprof=10
+profile.box <- profileDesign(  
+  phi = seq(0.8,0.99,length.out=It),
+  lower=c(sigma_nu=0),
+  upper=c(sigma_nu=0.5),
+  nprof=nprof
+)
+
+stew(file=sprintf("profile phi-%d.rda",It),{
+  
+  t_global.4 <- system.time({
+      prof.llh<- foreach(i=1:(It*nprof),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+        # Find MLE
+        mif2(
+          jpm.filt,
+          cooling.type="geometric",
+          cooling.fraction.50=jpm_cooling.fraction.50,
+          start=c(unlist(profile.box[i,]),fix_params),
+          Np=500,Nmif=50,
+          transform=TRUE,
+          rw.sd = rw.sd(
+            sigma_nu = 0.002
+          )
+        )->mifs_global.4
+        # evaluate llh
+        evals = replicate(10, logLik(pfilter(mifs_global.4,Np=1000)))
+        ll=logmeanexp(evals, se=TRUE)        
+        
+        data.frame(as.list(coef(mifs_global.4)),
+                   loglik = ll[1],
+                   loglik.se = ll[2])
+      }
+  })
+},seed=931129,kind="L'Ecuyer")
+
+## filiter again on the maxima
+require(plyr)
+prof.llh %>% 
+  ddply(~sigma_nu,subset,rank(-loglik)<=10) %>%
+  subset(select=jpm_paramnames) -> pars
+
+
+## mif2 again
+stew(file=sprintf("profile beta-3-%d.rda",It),{
+  
+  t_global.5 <- system.time({
+    prof.llh<- foreach(i=1:(nrow(pars)),.packages='pomp', .combine=rbind, .options.multicore=mcopts) %dopar%{
+      # Find MLE
+      mif2(
+        jpm.filt,
+        cooling.type="geometric",
+        cooling.fraction.50=jpm_cooling.fraction.50,
+        start=unlist(pars[i,]),
+        Np=500,Nmif=50,
+        transform=TRUE,
+        rw.sd = rw.sd(
+          sigma_nu = 0.02
+        )
+      )->mifs_global.5
+      # evaluate llh 
+      pf= replicate(10,pfilter(mifs_global.5,Np=1000))
+      evals=sapply(pf,logLik)
+      ll=logmeanexp(evals, se=TRUE)  
+      nfail=sapply(pf,getElement,"nfail")
+      
+      data.frame(as.list(coef(mifs_global.5)),
+                 loglik = ll[1],
+                 loglik.se = ll[2],
+                 nfail.max=max(nfail))
+    }
+  })
+},seed=931129,kind="L'Ecuyer")
+prof.llh %<>%
+  subset(nfail.max==0) %>%
+  mutate(phi=exp(signif(log(phi),5))) %>%
+  ddply(~phi,subset,rank(-loglik)<=1)
+
+a=max(prof.llh$loglik)
+b=a-1.92
+CI=which(prof.llh$loglik>=b)
+c=prof.llh$phi[min(CI)]
+d=prof.llh$phi[max(CI)]
+
+library(ggplot2)
+prof.llh %>%
+  ggplot(aes(x=phi,y=loglik))+
+  geom_point()+
+  geom_smooth(method="loess")+
+  geom_hline(aes(yintercept=a),linetype="dashed")+
+  geom_hline(aes(yintercept=b),linetype="dashed")+
+  geom_vline(aes(xintercept=c),linetype="dashed")+
+  geom_vline(aes(xintercept=d),linetype="dashed")
+```
+
+##4. Simulation using POMP Model
+
+After obtaining the estimates of the algorithmic parameters, we can evaluate our model by comparing the original data with simulation results given by our model. If all simulation plots follow the patterns of the original data, we can say that our model give a reasonable fit and will provide a meaningful predication. As shown below, the blue plot stands for our original data and three black plots are the results of our simulation. Generally, the patterns of the simulation results are similar to the pattern of our original data. Moreover, we plot the confidence intervals (red in the plots) for the original data (blue in the plots) with simulated volatility. As we can see, most data are contained in our confidence interval except the data from the year of 2003, which are identified as a year with financial crisis. In all, the model provides a acceptable fit with some imperfections.
+
+```{r, echo=FALSE,warning=FALSE, message=FALSE}
+jpm_statenames <- c("H","G","Y_state")
+jpm_rp_names <- c("sigma_nu","mu_h","phi","sigma_eta")
+jpm_paramnames <- c(jpm_rp_names)
+
+stochStep <- Csnippet("
+ 
+double beta,omega,nu;
+  omega = rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-tanh(G)*tanh(G)));
+  nu = rnorm(0, sigma_nu);
+  G += nu;
+  beta = Y_state * sigma_eta * sqrt( 1- phi*phi );
+  H = mu_h*(1 - phi) + phi*H + beta * tanh( G ) * exp(-H/2) + omega;
+  Y_state = rnorm( 0,exp(H/2) );
+")
+
+
+
+params<- c(
+     mu_h = -8,       
+     phi = 0.97,     
+     sigma_eta = 1,
+     H.0=0,
+     G.0=0,
+     sigma_nu=0.02,
+     Y_state.0=0
+  )
+
+simulation=pomp(data.frame(y=diff_jpm,time=1:length(diff_jpm)), times="time",
+t0=0,rprocess=discrete.time.sim(step.fun=stochStep,delta.t=1),paramnames=jpm_paramnames,statenames=jpm_statenames) 
+
+S=simulate(simulation,nsim=4,seed=54321,params=params,as.data.frame=TRUE,states=TRUE,include.data=TRUE)
+
+S$simula=c(S$y[which(S$sim=="data")],S$Y_state[which(S$sim!="data")])
+
+V1=(exp(S$H[which(S$sim==1)]))^(1/2)
+V2=(exp(S$H[which(S$sim==2)]))^(1/2)
+V3=(exp(S$H[which(S$sim==3)]))^(1/2)
+V4=(exp(S$H[which(S$sim==4)]))^(1/2)
+quartz()
+par(mfrow=c(2,2))
+
+plot(seq(100,1000),diff_jpm[100:1000],type="l",col="blue",ylab="original data",xlab="Date")
+plot(seq(100,1000),(S$Y_state[which(S$sim==2)])[100:1000],type="l",ylab="sim1",xlab="Date")
+plot(seq(100,1000),(S$Y_state[which(S$sim==1)])[100:1000],type="l",ylab="sim2",xlab="Date")
+plot(seq(100,1000),(S$Y_state[which(S$sim==3)])[100:1000],type="l",ylab="sim3",xlab="Date")
+
+quartz()
+par(mfrow=c(2,2))
+plot(seq(100,1000),diff_jpm[100:1000],type="l",col="blue",ylab="original data",xlab="Date")
+lines(seq(100,1000),2*V1[100:1000],type="l",col="red",ylab="sim1")
+lines(seq(100,1000),-2*V1[100:1000],type="l",col="red",ylab="sim1")
+
+plot(seq(100,1000),diff_jpm[100:1000],type="l",col="blue",ylab="original data",xlab="Date")
+lines(seq(100,1000),2*V2[100:1000],type="l",col="red",ylab="sim2")
+lines(seq(100,1000),-2*V2[100:1000],type="l",col="red",ylab="sim2")
+
+plot(seq(100,1000),diff_jpm[100:1000],type="l",col="blue",ylab="original data",xlab="Date")
+lines(seq(100,1000),2*V3[100:1000],type="l",col="red",ylab="sim3")
+lines(seq(100,1000),-2*V3[100:1000],type="l",col="red",ylab="sim3")
+
+plot(seq(100,1000),diff_jpm[100:1000],type="l",col="blue",ylab="original data",xlab="Date")
+lines(seq(100,1000),2*V4[100:1000],type="l",col="red",ylab="sim4")
+lines(seq(100,1000),-2*V4[100:1000],type="l",col="red",ylab="sim4")
+```
+
+##5.Conclusion and future work
+Comparing all three models above, we may conclude that POMP model is the best one. ARIMA(1,1,1) is undesirable is due to the fact that it assume that there is a correlation between consecutive data. GARCH(1,1) seems to be better than ARIMA(1,1,1) but it is hard to be interpreted and there is no useful information we can draw from it. By constructing a POMP model, we can get the estimated parameters, such as $Y_n$ and $\sigma_\nu$, which are meaningful in our financial model and provide detailed explanation for the volatility. The advantage of POMP model is that we can still make improvement of the model by tuning the parameters or enlarge the number of iteration. Due to the considerable amount of computation and limited time, we are not able to identify the best estimates of all algorithm parameters (which are the things we can do next). In a word, we will stay with the POMP model and try more combinations of algorithm parameters to find the best ones to interpret our data.
+
+
+##6.Reference
+[1]Lecture notes/Homework Solution of Stats 531 (Winter 2016) ‘Analysis of Time Series’, instructor: Edward L. Ionides (http://ionides.github.io/531w16/)
+
+[2]Investopedia (http://www.investopedia.com/)
+
+[3]Bretó, C. 2014. On idiosyncratic stochasticity of financial leverage effects. Statistics & Probability Letters 91:20–26.

@@ -1,0 +1,310 @@
+---
+title: "A Partially Observed Markov Process Model for Pulmonary Tuberculosis"
+subtitle: Stat 531 Final Project
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+    pandoc_args: --number-offset=0
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+---
+  
+```{r knitr-opts,include=FALSE,cache=FALSE,purl=FALSE}
+library(knitr)
+prefix <- "intro"
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache_extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+)
+
+set.seed(2050320976)
+```
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  encoding="UTF-8"
+)
+```
+
+# Background
+
+Tuberculosis (TB) is an infectious disease caused by the bacteria *mycobacterium tuberculosis*. While TB primarily affects a person's lungs, it is known to affect other organs such as kidneys and bones. The disease spreads through coming into contact with tiny water droplets from coughing or sneezing of persons with the bacteria. TB is particularly deadly to people with fragile immune systems, these mostly being very young children, the elderly, and persons infected with the Human Immunodeficiency Virus (HIV). It is a serious world health concern, affecting mostly developing nations. Worldwide, about 9 million new cases of TB develop and about 1.7 million deaths are due to TB annually.
+
+Once a person is infected with *myobacterium tuberculosis*, he then is a *carrier* of the bacteria, and in most cases does not immediately experience symptoms of the disease. After an *incubation period* of two to twelve weeks, this *inactive TB* becomes *active TB* and only then are they able to spread the disease and experience symptoms such as chest pains, coughing up blood, or extreme fatigue. It should be noted that there exist individuals with inactive TB who may never transition to active TB individuals during their lifetimes.
+
+India is said to be the country that bears the highest economic burden of TB worldwide. In 2014 along, there were 9 million people globally who were reported to have active TB, out of these, 2.2 million cases belonged to India. This has been estimated to cost the Indian economy USD 340B annually. Developing effective strategies to combat the spread of TB is difficult as it is believed to be heavily underdiagnosed in India. To quote an article in http://www.tbfacts.org/tb-india/, "Case notification is estimated to be only 58%. Over one third of cases are not diagnosed, or they are diagnosed but not treated, or they are diagnosed and treated but not notified to the RNTCP (Revised National Tuberculosis Control Program)". 40% of the Indian population is estimated to carry mycobacterium tuberculosis, although majority of carriers have inactive TB. 
+
+Being able to accurately estimate the actual number of TB cases and their trend in a particular region is imperative, especially for a government with scarce resources, and who needs to surgically target its meager economic resources to a few big wins.
+
+# Previous work on TB Epidemiological Models
+
+It is customary to model the spread of a disease via *[compartment models](https://en.wikipedia.org/wiki/Compartmental_models_in_epidemiology)*. A compartment model divides the whole population under consideration into mutually exclusive and collectively exhaustive compartments. A simple compartment model is what is called an S-I-R model where individuals in a population seen to flow from a stage of being **S**usceptible, **I**nfected, and then **R**ecovered. Researchers in the past have used this and the following deterministic models to describe the spread of TB among individuals in a population:
+
+1. **S**usceptible $\longrightarrow$ **I**nfected $\longrightarrow$ **S**usceptible
+2. **S**usceptible $\longrightarrow$ **E**xposed $\longrightarrow$ **I**nfected $\longrightarrow$ **R**ecovered
+3. **S**usceptible $\longrightarrow$ **E**xposed $\longrightarrow$ **I**nfected $\longrightarrow$ **Q**uarantined $\longrightarrow$ **R**ecovered $\longrightarrow$ **V**accinated $\longrightarrow$ **S**usceptible
+4. **S**usceptible $\longrightarrow$ **L**atent TB $\longrightarrow$ **A**ctive TB $\longrightarrow$ **D**iagnosed $\longrightarrow$ **T**reated $\longrightarrow$ **R**recovered $\longrightarrow$ Relapse or Reinfection to **A**ctive TB
+
+The shortcoming of an SIR or an SEIR model is that they assume permanent immunity of people who have recovered from an active TB infection. However, this is not the case in practice. Moreover, the models above assume that we have access to *fully observed* TB case data. However, the reality is that active TB cases are not all reported and as latent TB carriers exhibit no symptoms, its exact number is even more difficult to estimate. Because this framework is deterministic, it does not account for the stochastic variability in the flow of persons from one compartment to another.
+
+Other researchers have applied stochastic methods to analyze TB case data. For example, Kumar et al. [5] fit a SARMA time series model to TB case data gathered from a hospital in Delhi to study the existence of seasonality of the disease in that area. Wah et al. [6] fit a linear regression model with covariates and SARIMA errors to Singapore TB case data and determined subpopulations where TB indicence rates were higher than the rest of the population.
+
+Again, like the deterministic compartment model approach, this assumes that complete TB case data are available. Where TB cases are unreported, time series models constructed using the conventional ARMA framework will not explain the true underlying mechanism that drive the spread of TB. Moreover, there is the issue of interpretability of the class of ARMA models. Once we obtain estimates of the parameters of ARMA models, these do not help in identifying which one of the stages of the spread of TB in the compartment models above have most impact on the spread of TB.
+
+This brings us to the need to model TB case data using a framework that will account for the *partially observed* TB case data that is typically available in ministries of health and is interpretable.
+
+# The Data Set
+
+From the paper of Kumar, V, et al. [5], we obtain a data set of the number of pulmonary TB cases reported in January 2007 (*month 1*) to December 2012 (*month 72*) at a Directly Observed Treatment Short Course Center of Fatehpur Beri primary health care center located in the southern district of Delhi, India's capital region located in the northern part of the Indian subcontinent. The treatment center caters to a population of 64,000 and people within this region may seek TB treatment at alternative treatment centers. The treatment center administers spatum smear examinations for acid-fast-bacilli in accordance with RNTCP guidelines and results of these examinations were recorded. A positive *case* is recorded during the first month a person records a positive smear test result.
+
+```{r load_data, echo=TRUE}
+set.seed(73800112)
+require(pomp)
+require(foreach)
+require(ggplot2)
+
+delhi <- read.csv("delhi.csv",head=T)
+month <- delhi$month
+cases <- delhi$cases
+plot(month,cases,type='o',
+     main="Monthly Reported TB Cases in Delhi (2007-2012)",
+     xlab="Months",ylab="No. of Reported Cases")
+```
+
+We observe that the number of TB cases recorded at the treatment center fluctuates and peaks towards the last or the first few months of each year. There also seems to be a decreasing overall trend after six years.
+
+# Objectives of this Project
+
+In this report, we build a **Partially Observed Markov Process (POMP)** model to describe *partially observed* TB case data for the southern Delhi area. A [POMP](http://kingaa.github.io/sbied/) model combines the interpretable elements of the compartment model approach to modeling spread of diseases and incorporates a probabilistic model for the unobserved data, as well as the underlying true stochastic process that generated the case data. With this model, we aim to answer the following questions:
+
+* Does this model describe the spread of TB well?
+
+* Is this model an improvement over conventional time series approaches such as fitting a simple SARMA model of the data to model spread of the disease?
+
+
+# The SEIQRV Tuberculosis Transmission Model
+We use Mishra and Srivastava's [4] TB transmission model as the deterministic skeleton of our POMP model. Compared to more common models, it differentiates itself through adding a 'Quarantined' compartment. Quarantining TB positive patients is seen to control the rate of transmission ofthe disease and hence provide an improvement in modeling accuracy over the more common compartment models while remaining parsimonious. The following are the compartments:
+
+
+* Susceptible (S): The total number of individuals in the population who are not immune to the disease.
+* Exposed (E): This refers to individuals who are not fully infectious, but who exhibit symptoms of the disease. 
+* Infected (I): These are individuals who have active pulmonary TB and are being subjected to an intensive six month directly observed  treatment short course (DOTS) therapy
+* Quarantined (Q): These are individuals who are quarantined after receiving six month DOTS therapy
+* Recovered (R): These are individuals who are no longer infectious and have recovered from TB disease
+* Vaccinated (V): These are individuals who have been vaccinated.
+
+The flow of people between these compartments are visualized in the diagram below (obtained from figure 1 of [4]). The quantities listed in the arrows below represent rates of transfer of people from one compartment to another while $\Lambda$, $d$, and $\delta$ represent birth rate, natural mortality rate, and mortality rate due to TB, respectively. In this project, we do not concern ourselves with demographics and assume these quantities to be equal to zero.
+
+<center>
+![Caption for the picture.](C:\Users\User\Google Drive\Winter 2016\STAT 531 - Time Series Analysis\Final Project\R Code\compartmentmodel.jpg)
+</center>
+
+In the above, the model parameters are specifically defined to be:
+
+$\beta =$ ineffectivity contact rate
+
+$\sigma =$ vaccinating rate coefficient for susceptible population
+
+$\gamma =$ rate of transmission from E to I
+
+$\alpha =$ rate of transmission from I to Q
+
+$\phi =$ rate of transmission from I to R
+
+$\eta =$ rate of recovery
+
+$\epsilon =$ rate of transfer from R to S
+
+$\rho =$ rate of transmission from V to S
+
+# The Deterministic Skeleton of the POMP Model
+
+We use Euler's Method as to numerically approximate the ordinary differential equations used by Mishra and Srivastava in [4] to describe their SEIQRV model. These approximations are given below:
+
+<center>
+$S(t) = S(0) -N_{SE}(t)-N_{SV}(t)+N_{VS}(t)+N_{RS}(t)$
+
+$E(t) = E(0) -N_{EI}(t) + N_{SI}(t)$
+
+$I(t) = I(0) - N_{IQ}(t) + N_{IR}(t) + N_{EI}(t)$
+
+$Q(t) = Q(0) -N_{QR}(t)+N_{IQ}(t)$
+
+$R(t) = R(0) - N_{RS}(t) + N_{IR}(t) + N_{QR}(t)$
+
+$V(t) = V(0) - N_{VS}(t) + N_{SV}(t)$
+</center>
+
+# Modelling rProcess: Transitions of Individuals Among Compartments
+
+We approximate the counts of the number of persons moving from one compartment to another as follows. For $t=k\delta$, $k$ a positive integer and $\delta$ a fixed positive number:
+
+<center>
+$\tilde{N}_{SE}(t+\delta) = \tilde{N}_{SE}(t) + \Delta N_{SE}$ where
+$\Delta N_{SE} \sim Binomial(S(t),1-exp(-\beta E(t) \delta))$ and $\beta = \lambda /N$, $N$ is the total number of susceptible individuals assumed to be equal to 64,000.
+
+$\tilde{N}_{EI}(t+\delta) = \tilde{N}_{EI}(t) + \Delta N_{EI}$ where
+$\Delta N_{EI} \sim Binomial(S(t),1-exp(-\gamma I(t) \delta))$
+
+$\tilde{N}_{IQ}(t+\delta) = \tilde{N}_{IQ}(t) + \Delta N_{IQ}$ where
+$\Delta N_{IQ} \sim Binomial(S(t),1-exp(-\alpha Q(t) \delta))$
+
+$\tilde{N}_{QR}(t+\delta) = \tilde{N}_{QR}(t) + \Delta N_{QR}$ where
+$\Delta N_{QR} \sim Binomial(S(t),1-exp(-\eta R(t) \delta))$
+
+$\tilde{N}_{SV}(t+\delta) = \tilde{N}_{SV}(t) + \Delta N_{SV}$ where
+$\Delta N_{SV} \sim Binomial(S(t),1-exp(-\sigma V(t) \delta))$
+
+$\tilde{N}_{VS}(t+\delta) = \tilde{N}_{VS}(t) + \Delta N_{VS}$ where
+$\Delta N_{VS} \sim Binomial(S(t),1-exp(-\rho S(t) \delta))$
+
+$\tilde{N}_{RS}(t+\delta) = \tilde{N}_{RS}(t) + \Delta N_{RS}$ where
+$\Delta N_{RS} \sim Binomial(S(t),1-exp(-\epsilon S(t) \delta))$
+
+$\tilde{N}_{IR}(t+\delta) = \tilde{N}_{IR}(t) + \Delta N_{IR}$ where
+$\Delta N_{IR} \sim Binomial(S(t),1-exp(-\phi R(t) \delta))$
+</center>
+
+# Modeling the Measurement Model
+We assume that the recorded cases of TB in the data set correspond to the number of individuals that go from compartment E to I, in which they are reported to health authorities. The recorded cases of TB we have thus are a sample of the true number of TB cases in the southern Delhi region. So, we model the case data C as
+
+<center>
+$C_t \sim Binomial (H(t) - H(t-1), \psi)$
+</center>
+
+We set $\psi = 0.58$, the estimated TB case notification rate of India.
+
+# Model Fitting
+We are now ready to combine the above elements discussed into a POMP model. We do this in the code below:
+
+```{r pompchunk}
+##---r process----------------------------------------------------
+sir_step <- Csnippet("
+  double dN_SE = rbinom(S,1-exp(-lambda*E/N*dt));
+  double dN_EI = rbinom(E,1-exp(-gamma*I*dt));
+  double dN_IQ = rbinom(I,1-exp(-alpha*Q*dt));
+  double dN_QR = rbinom(Q,1-exp(-eta*R*dt));
+  double dN_SV = rbinom(S,1-exp(-sigma*V*dt));
+  double dN_VS = rbinom(V,1-exp(-rho*S*dt));
+  double dN_RS = rbinom(R,1-exp(-epsilon*S*dt));
+  double dN_IR = rbinom(I,1-exp(-phi*R*dt));
+  S -= dN_SE - dN_SV + dN_VS + dN_RS;
+  E += dN_SE - dN_EI;
+  I += dN_EI - dN_IQ - dN_IR;
+  Q += dN_IQ - dN_QR;
+  R += dN_QR - dN_RS + dN_IR;
+  V += dN_SV - dN_VS;
+  H += dN_EI;
+")
+
+##---initialize variables in r process----------------------------
+sir_init <- Csnippet("
+  S = N-1;
+  E = 1;
+  I = 0;
+  Q = 0;
+  R = 0;
+  V = 0;
+  H = 0;
+")
+
+##---create pomp object
+seirqv <- pomp(delhi,times = "month", t0=1,
+               rprocess=euler.sim(sir_step,delta.t=1/2),
+               initializer=sir_init,
+               paramnames=c("lambda","gamma","alpha","eta",
+                            "sigma","rho","epsilon","phi","N"),
+               statenames=c("S","E","I","Q","R","V","H"))
+
+##---add dmeasure and r measure into pomp object------------------
+dmeas <- Csnippet("lik = dbinom(cases,H,psi,give_log);")
+rmeas <- Csnippet("cases = rbinom(H,psi);")
+seirqv <- pomp(seirqv,rmeasure=rmeas,dmeasure=dmeas,
+               statenames="H",zeronames="H",paramnames="psi")
+```
+
+# Results
+
+Mishra and Srivastava in [4] use the parameters $\lambda = 38,400$, $\gamma=0.3$, $\alpha=0.1$, $\eta=0.4$,$\sigma=0.3$,$rho=0.6$,$\epsilon=0.3$,$\phi=0.68$ which they solved from their set of differential equations via Runge Kuttamethods to run simulations for their dynamical model. We use these same values as parameter inputs in out POMP model when we simulate from the POMP model and plot the simulated values againstthe data below.
+
+```{r simul1}
+##---simulate from pomp model we created--------------------------
+sims <- simulate(seirqv,
+                 params=c(N=64000,psi=0.58,
+                          lambda=38400,gamma=0.3,alpha=0.1,eta=0.4,
+                          sigma=0.3,rho=0.6,epsilon=0.3,phi=0.68),
+                 nsim=1000,as=TRUE,include=TRUE)
+
+ggplot(sims,aes(x=time,y=cases,group=sim,color=sim=="data"))+
+  geom_line()+guides(color=FALSE)
+```
+
+The above graph shows the simulated values as red lines that do not coincide with the plot of the data in blue. This indicates that either the SEIQRV model is inadequate as a deterministic skeleton to our POMP model, that demigraphics or people migration play a bigger role than thought, or that the parameter values used are grossly inappropriate. Out of the three possibilities mentioned, it is the second mentioned that seems most likely: In 2014, the population of Delhi was 16,787,941 in 2012, while in 2007 the figure was at 14.3 million. The influx of about 2,487,941 people in the six year time span could have affected disease transmission dynamics and increased out simulated estimates the number of TB positive cases in the region.
+
+We evaluate the loglikelihood of the above model with the specified parameters below:
+
+```{r loglik}
+##---evaluate log likelihood--------------------------------------
+p <- c(N=64000,psi=0.58, lambda=38400,gamma=0.3,alpha=0.1,eta=0.4,
+                          sigma=0.3,rho=0.6,epsilon=0.3,phi=0.68)
+t <- c(1:72)
+t0 <- 0
+x0 <- init.state(seirqv,params=p,t0=t0)
+x <- rprocess(seirqv,xstart=x0,times=c(t0,t),params=p,offset=1)
+y <- rmeasure(seirqv,params=p,x=x,times=t)
+ll <- dmeasure(seirqv,y=y,x=x,times=t,params=p,log=TRUE)
+ell <- apply(ll,1,sum)
+summary(exp(ell))
+logmeanexp(ell,se=TRUE)
+```
+
+# Fitting a SARIMA model
+We also fit a SARIMA model with the parameters below chosen by the AIC criterion and perform a forecast 12 months into the future. Model diagnostics below show no autocorrelation among residuals at all lags, a statistically significant fit. Moreover, the model yields a log likelihood of -132.96. However, we must keep in mind that this only models *reported* cases of TB.
+
+```{r sarima}
+require(astsa)
+ts <- sarima(delhi$cases,p=3,d=0,q=3,P=1,D=0,Q=1,S=12)
+ts$AIC
+ts$fit
+ts.forecast <- sarima.for(delhi$cases,n.ahead=12,p=2,d=0,q=2,P=1,D=0,Q=1,S=12)
+```
+
+# Conclusion
+
+The comparison between the POMP model and the SARIMA Model is inconclusive from what we see above. The POMP approach to analyzing this data set is promising, however, in the future, tweaks to the deterministic skeleton are needed to take demographics as well as other factors. 
+
+These other factors which affect TB transmission which can be included are: patient behaviour in following through with prescribed medication, patients who self-cure, differentiation of patients with different strains of TB, such as multi-drug resistant TB, and the possibility of co-infection with HIV which further decreases patient survival probability.
+
+# References
+
+1. http://www.tbfacts.org/tb-india/
+2. http://www.tbfacts.org/tb-statistics-india/
+3. Mandal, S. and Arinaminpathy, N., "Transmission Modeling and Health Systems:  the Case of TB in India", Int Health 2015; 7: 114-120, http://www.ncbi.nlm.nih.gov/pubmed/25733561
+4. Mishra, B. and Srivastava, J., "Mathematical Model on Pulmonary and Multi-Drug Resistant Tuberculosis Patients with Vaccination", Journal of the Egyptian Mathematical Society (2014) 22, 311-316, http://www.sciencedirect.com/science/article/pii/S1110256X13000965
+5. Kumar, V, et al, "Seasonality of Tuberculosis in Delhi, India: A Time Series Analysis", Tuberculosis Research and Treatment (2014), http://dx.doi.org/10.1155/2014/514093
+6. Wah, W. et al, "Time series analysis of demographic and temporal trends of tuberculosis in Singapore", BMC Public Health (2014), http://bmcpublichealth.biomedcentral.com/articles/10.1186/1471-2458-14-1121
+
+

@@ -1,0 +1,333 @@
+---
+title: "Forecasting intermittent demand of slow-moving low shelf-life SKU's"
+author: ""
+date: "April 28, 2016"
+output: html_document
+---
+
+## Contents
+1) Abstract
+2) Learnings from mid-term project
+3) Data description and data summary
+4) Croston's Method
+5) Classification of time series
+6) Forecasting using Croston's method
+7) Cost function and optimization in Croston's method
+8) Zero-inflated time series models
+9) Zero-inflated poisson autoregression
+10) Zero-inflated negative binomial autoregression
+11) Dynamic zero-inflated models
+12) Conclusions
+13) Challenges faced and learnings from the project
+14) References
+
+# Abstract
+
+SKU forecasting has been used extensively by retail chains even before the emergence of the field of analytics and is an important aspect of the retail business. 
+Forecasting and Inventory optimization is successful for especially products with high demand and high shelf life.
+Over the period of times, the type of products available to the customer has increased exponentially . Few products are fast moving and other are relatively slow moving .Forecasting sales for slow moving SKU's has been found to be quite difficult.
+The problem is furthur aggravted if the SKU's have lower shelf life (perishable goods like fruits and vegetables) and are slow moving ( goods that serve a niche segment of customer or are bought occasionally)
+
+#Learnings from the Mid term project
+
+In the midterm project we observed that , linear state space models as well as holt winter's smoothing method worked fine with the SKU's which were fast moving.
+However, a large fraction of SKU's in our dataset has demand which is intermittent at various levels.
+Using conventional time series methods to forecast time series with intermittent demand introduces a bias in estimation . The extent of bias depends on the number of zeroes, pattern of their occurance and variance of the entire series . Therefore, we need to specify our model in a different way for such time series .
+
+This part of the project was more experimental in nature as we did not know exactly what may work  . We may still not be in a situation to coment that what is the best way to forecast such time series but the journey of exploration was quite interesting and insightful at the same time.
+
+#Dataset
+
+For this part of project we have selected those SKU's with intermittent demand at different levels and analysing those time series would be the major focus of this part of project . We select a subset of 15 SKU's with different degree of intermittance.
+
+#Data Summary
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+require(knitr)
+require("reshape2")
+require("stringr")
+require("forecast")
+require("tsintermittent")
+setwd("./")
+
+data<-read.csv("sales.csv",header=TRUE,stringsAsFactors=FALSE)
+
+data1 = data[,c(2,3,11,17,18,19,23,28,29,39,43,56,58,64,71)]
+
+head(data1)
+summary(data1)
+```
+
+We now see the distribution of each of these SKU's
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+par(mfrow=c(2,2))
+for (i in 1:15) {
+  hist(data1[,i], main= colnames(data1)[i], col = "blue") 
+}
+```
+
+From the above histograms we observe that the frequency of 0's and 1's is high for most of the SKU's we have chosen.
+
+## Croston's method
+
+One of the novel and earliest methods for forecasting intermittent demand time series was suggested by Croston in 1972 and various modification of the method have been introduced later.
+
+Instead of treating an intermittent demand time series as a single series, it divides the series into two parts 
+
+1) The non zero demand size $z_t$ 
+2) The inter demand intervel $x_t$ ( can be specified as a binary flag variable)
+
+Both these series are independently modelled and respective parameters are estimated independently . Though there have been papers suggesting that the independence assumptions does not hold true in many case. However, for majority of time series this works fine.
+
+The forecasted value $y_t$ is given by $z_t$  / $x_t$
+
+An import point to make here is the forecasted values we obtain are not actual demand values , rather they can be called "Demand rate " .
+The forecasted value  is the average expected demand in each future period. For example a forecast of 0.2 should be seen as a demand of 2 unit over 10 periods, a demand rate of 0.2.
+
+Why demand rate makes more sense ?
+
+1) It is hard to obtain a point forecast for each point due to the intermittent nature of data . Demand rate provides more confidence to the consumer of forecast results as compared to the point foreasts.
+
+2) Demand forecasts are usually used for inventory optimization . Inventory is optimized over a longer period than just a day (so not having a great point forecast doesn't make us terrible ). In fact, Croston' method derives it's popularity from the same idea. It does a really poor job in providing accurate point estimates but does a good job after the forecasts are aggregated over lead time (a week or a month). We will see in the plots that point forecasts are very off from the actual data . The reason goes back to the optimization and cost function of Croston method. We will discuss about it later.
+(N. Kourentzes, 2014, International Journal of Production Economics, 156: 180-190.)
+
+# Classification of demand series based on the structure of time series 
+
+Even though we observe that all series we analyse have intermittent demand to some extent. However , the degree varies. We know that in forecasting "One size fits all approach" doesn't work too well. Different forecasting approaches work well for different kinds of time series.
+
+We classify our time series based on approach discussed by (G. Heineckea, A.A. Syntetosc, W. Wangd) in the paper "Forecasting-based SKU classification" (Link to paper avialable in the references)
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+idclass(data1,type='PK',outplot='detail')
+idclass(data1,type='SBC')
+
+```
+
+We see above that the 15 series we analyse are classified for analysis by two different methods Croston and SBA .
+The method classifies time series into 4 categories 
+
+1) Smooth
+2) Erratic
+3) Lumpy
+4) Intermittent
+
+We see that most of our time series lie in lumy or smooth category .So, now we know which of the methods within the Croston family of models is best for each .
+
+The way this classification works is based on two factors as it can be seen from the above figure.
+
+1) $Cv$ is the coefficient of variation of the time series
+2) $p$ is the average inter demand intervel for a time series
+
+## Forecasts for each SKU 
+
+Forecasts based on Croston's method
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+for (i in c(7 , 8,  9, 10, 12, 13, 14 ,15)) {
+  print(colnames(data1)[i])
+  crost(data1[,i],type='croston',h=5,outplot=TRUE) 
+}
+
+```
+
+Forecast based on SBA method (a modificaton of Croston's method)
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+for (i in c(1 , 2 , 3 , 4 , 5 , 6, 11)) {
+  print(colnames(data1)[i])
+  crost(data1[,i],type='SBA',h=5,outplot=TRUE) 
+}
+
+```
+
+##Optimization and cost function 
+
+Discussion on optimization and cost function is important in this case as the forecasts we get are not directly interpretable as forecasts by any other method.
+
+As we know that the commonly used cost functions are not holy grail and this is one interesting problem where the cost function is decided based on the problem we are trying to address, i.e , inventory optimization.
+
+Means square error is the most commonly used cost function but is susceptible to be influenced by extreme points.
+Mean absolute error is another which is robust to extreme points but is influenced by the zeroes in the data and so again is not suitable for our case
+
+In order to address these issues Wallstrom and Segerstedt (2010) introduced a new metric called Period of Stock (PIS) which is total number of periods a unit is instock or out of stock . This can be treated as a measure of error in forecast and hence could be used in optimization.
+(N. Kourentzes, 2014, International Journal of Production Economics, 156: 180-190.)
+
+$$\begin{equation}
+PIS = n|\sum_{i=1}^{h} \sum_{j=1}^{i} (y_i - \hat{y_j})|/ \sum_{k=1}^{n} y_k
+\end{equation}$$
+
+This is the reason that this cost function might not lead to the best point estimate but an optimum estimate over the lead time of inventory .
+
+
+## Models for zero inflated data
+
+As we discussed that having zero inflation in data is not uncommon in industry .
+Not accounting for zero inflation in data may lead to biased estimates and spurious associations and poor forecasts in turn.
+
+We first discuss Zero inflated poisson autoregression 
+
+## Zero inflated poisson autoregression
+
+As done in Croston's method we model our time series as two series , one is the demand series and the other the series of inter demand intervels .
+
+Building on similar idea , ZIP is a hierarchical time series model 
+
+It is a mixture model with one of the component being poisson distribution ( to model actual demand counts) and other component being a degenerate distribution with point mass at zero ( to model zeroes)
+
+$u_t$ is the binary variable which indicates if a value is a positive demand value or not. This is considered as unobserved.
+
+$Y_t$ is the observed value and is poisson distributed given the value of $u_t$
+
+$$\begin{equation}
+u_t \sim Bernoulli(w_t)
+\end{equation}$$
+
+$$\begin{equation}
+Y_t \sim Poisson(\lambda_t, u_t)
+\end{equation}$$
+
+```{r bunch_o_figs_pointsize, fig.height=4, fig.width=8, dev.args=list(pointsize=18),echo=FALSE, warning=FALSE, message=FALSE}
+require("ZIM")
+
+setwd("./")
+
+data<-read.csv("sales.csv",header=TRUE,stringsAsFactors=FALSE)
+
+data1 = data[,c(2,3,11,17,18,19,23,28,29,39,43,56,58,64,71)]
+err = numeric()
+par(mfrow =c(1,2))
+for (i in 1:15) {
+
+s = data1[,i]
+count <- s
+
+ar1 <- bshift(count > 0)
+
+trend <- 1:length(count) / 1000
+
+a = zim(count ~ ar1 + trend | trend)
+
+c = a$fitted.values
+ 
+error = mean(abs(as.vector(s[-1]) - as.vector(c) ) )
+
+err = append(err,error)
+plot(s[-1], main = colnames(data1)[i],col =3,ylab = "Actual and Predicted")
+points(c,col = 4)
+
+}
+```
+
+
+The below is the table showing the errors
+
+
+```{r kable , echo=FALSE, warning=FALSE, message=FALSE}
+require(knitr)
+x = as.data.frame(cbind(colnames(data1),err))
+kable(x)
+```
+
+##Observation from the model 
+
+We observe that the errors are on the higher side, though the inclusion of zero inflation distribution helps to reduce effect of zeroes on the estimates but we see that the data has a problem of over dispersion and the poisson model kind of underestimates the value of observation in general.
+We will try the same class of models with hierarchical negative binomial models
+
+## Zero inflated negative binomial autoregression
+
+It is a mixture model with one of the component being Negative binomial distribution ( to model actual demand counts) and other component being a degenerate distribution with point mass at zero ( to model zeroes)
+
+$u_t$ is the binary variable which indicates if a value is a positive demand value or not. This is considered as unobserved.
+
+Negative binomial distribution helps in modeling the over dispersion and we have observed that our data is over dispersed in many cases so we hope that it shows better results as compared to poisson error distribution
+
+$Y_t$ is the observed value and is Negative binomial distributed given the value of $u_t$
+
+$$\begin{equation}
+u_t \sim Bernoulli(w_t)
+\end{equation}$$
+
+$$\begin{equation}
+Y_t \sim NegBinom(\lambda_t, u_t)
+\end{equation}$$
+
+
+Let us see the results from this model
+
+
+```{r bunch_o_figs_negbinom, fig.height=4, fig.width=8, dev.args=list(pointsize=18),echo=FALSE, warning=FALSE, message=FALSE}
+
+
+err = numeric()
+par(mfrow =c(1,2))
+for (i in c(1:5,7:10,12:15)) {
+
+s = data1[,i]
+count <- s
+
+ar1 <- bshift(count > 0)
+
+trend <- 1:length(count) / 1000
+
+a = zim(count ~ ar1 + trend | trend, dist = "zinb")
+
+c = a$fitted.values
+ 
+error = mean(abs(as.vector(s[-1]) - as.vector(c) ) )
+
+err = append(err,error)
+plot(s[-1], main = colnames(data1)[i],col =3,ylab = "Actual and Predicted")
+points(c,col = 4)
+
+}
+```
+
+Let us see the errors for this model
+
+```{r kable_negbinom , echo=FALSE, warning=FALSE, message=FALSE}
+require(knitr)
+x = as.data.frame(cbind(colnames(data1),err))
+kable(x)
+```
+
+## Observations from negative binomial model
+
+We see that this model accounts for the over dispersion in the data and does slightly better than the poisson model .
+However, we see that the these models are still not adaptively learn the sudden changes in th series unlike the structural time series models analysed in the mid term project though these models do a good job in penalizing the effect of zeroes on model fit.
+
+This provides us motivation to build a family of models that considers zero inflation as well as are dynamic in nature and are able to learn abrupt changes in th series .
+
+We will analyze dynamic zero inflated poisson and negative binomial models. These use plug and play methods to estimate the parameters using sequential monte carlo . Therefore, it won't be possible to run them for all the series due to enormous amount of computation time required.
+
+## Dynamic zero-inflated models
+
+I tried fitting a combination of state space model and zero inflated model in non-linear pomp framework  but the code broke multiple times till the last moment . It took almost 7 hours for the iteration to run on a single SKU so I did not find it feasible to run and analyse them .
+However, I am going to work on these models during summers and update you on the progress.
+However, I found that this can be done in R with ZIM package but the package is incredibly slow and unstable as of now.
+
+## Conclusion
+
+We conclude that a combination of zero inflated models along with state space modeling framework can yield best results. A very importatnt learning is that in such problems collaboaration with domain experts (supply chain in this case) can help build better models.
+Another very important thing to conclude was , it is hard to comment in such a problem about the forecast error without prior knowledge of lead time as it may be possible that even with a poor point forecast in general a model may do well on forecast over the lead time (aggregrated forecast) and a model with good point forecast may be inferior at the level of lead time . This makes us conclude that forecasting and inventory optimization has to go hand in hand in such problems.
+
+## Challenges faced and learning in the project
+
+a) The non linear methods are computationally intensive which does not allow a      lot of experimentation . Running a single model takes about 7 hours .
+   Secondly,Less understnading of non linear POMP package  and sequential Monte     carlo techniques restricts trying new ideas. 
+   It is easier to build models similar to present in case studies , However , it    is difficult to build a model with a dataset like mine with not so thourough     understanding of pomp internally.
+
+b) This also serves as a motivation to make an effort to thoroughly understand      liklihood evaluation through sequential monte carlo techniques.
+
+c) This project taught me that sometimes conventional statistical                   diagnostics/error functions may not yield desired results and it becomes         imminent in such cases to collaboare with domain experts for right model         selection and getting outputs that can be used by the end users .
+
+##References
+http://ir.uiowa.edu/cgi/viewcontent.cgi?article=3166&context=etd
+https://cran.r-project.org/web/packages/ZIM/ZIM.pdf
+http://www.bauer.uh.edu/gardner/docs/pdf/Forecasting%20intermittent%20demand%20R2%20(JBR)%203.pdf
+http://www.sciencedirect.com/science/article/pii/S092552731400190X
+http://kourentzes.com/forecasting/2014/06/11/on-intermittent-demand-model-optimisation-and-selection/
+
+

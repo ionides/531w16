@@ -1,0 +1,494 @@
+---
+title: "California Measles - Late 1980s / Early 1990s"
+author: ""
+date: "April 25, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+## Measles in Contemporary Society / Motivation
+
+[Measles](https://en.wikipedia.org/wiki/Measles) is a highly contagious disease with many potential complications. While the fatality rate is generally not very high in developed countries (~0.3%), the serious complications that can occur and the high rate of infection make prevention a priority for any government or public health organization.
+
+Given that there does exist a [rather effective](https://en.wikipedia.org/wiki/Measles_vaccine) measles vaccine with about a 95% rate of immunity for children of 12 months, it may seem like a waste of resources to focus on modelling the disease's epidemiology. This is not the case. A simple [google search](https://www.google.com/webhp?sourceid=chrome-instant&ion=1&espv=2&ie=UTF-8#q=measles%20outbreak) reveals that outbreaks in developed countries where vaccines are readily available are not uncommon. Herd immunity, the percentage of a population that must be immune to a disease to protect those who cannot be vaccinated and against outbreaks, of measles is established at around 95%. Given the numerous controversies surrounding vaccination, it's not unreasonable to imagine that the proportion of the population immune to the disease could dip below that. Coupling this fact with possible connections [between socioeconomic status and vaccination](http://www.jpmi.org.pk/index.php/jpmi/article/view/1391), it feels as if establishing herd immunity permanently could be a long way off. 
+
+With this in mind, an analysis of the epidemiology of measles should have many benefits. If an outbreak is identified, resources could be appropriated with care. This would result in money, and likely even lives, saved. However, analyses of the spread of measles in post-vaccination society is not widely available, hence a motivation for this project.
+
+I will be analyzing an [outbreak of measles in late 80s and early 90s](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC1022280/) from California. The data was pulled from [Project Tycho](https://www.tycho.pitt.edu) and is freely available. Much of this analysis will be based on an analysis by [Aaron King](http://kingaa.github.io/sbied/measles/measles.html) and [He et al](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2842609/).
+
+<hr />
+
+## Data Exploration
+
+To begin, we will look at the data available from Project Tycho. We will view the cases from 1989-1992. Cases were recorded weekly, with some data missing.
+
+```{r}
+# setwd("C:/Users/zkeller/Google Drive/stats_531/final_project")
+library(pomp)
+library(dplyr)
+library(magrittr)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(DiagrammeR)
+##--  Read In Data --##
+mca <- read.csv("measles_ca.csv", skip=2, header=T, na.strings="-")
+names(mca) <- c("year", "week", "cases")
+
+##--  Format Data --##
+##--  Remove 0s that occur between spikes --##
+require(dplyr)
+mca <- mca %>%
+  filter(year >= 1989 & year <= 1991) %>%
+  mutate(time = year +  week/52) %>%
+  select(time,cases)
+
+orig <- mca
+
+plot(orig, type="l", main="Measles Outbreak in California", xlab="Time", ylab="Cases", xaxt = "n")
+axis(1, at=c(1989,1990,1991,1992))
+```
+
+An initial look reveals more than just the aforementioned missing data, we see that cases recorded during the peak of the epidemic vary greatly, from 100s one week to close to 0 the next. This begs the question: "Could measles really spread in such a varying fashion?" Intuition, and advice from those more experienced in epidemiology than myself, leads to one answer: *No*. In order to better model the spread of the disease, the wild variations were removed. Specifically, any week with $\leq 1$ case recorded sandwiched in between two weeks with $>100$ cases recorded has been removed. 
+
+With the specified data removed, we see a somewhat less varying plot of the data below with the removed data in black and the data being used for our analysis in red:
+
+```{r}
+mca.over.lim <- mca$cases >= 100
+mca$cases[c(mca.over.lim[2:nrow(mca)], F) & c(F, mca.over.lim[1:(nrow(mca)-1)]) & (mca$cases <= 1)] <- NA
+mca <- mca[complete.cases(mca),]
+##--  Plot Data --##
+plot(orig$time, orig$cases, type="l", xaxt = "n", ylab="Cases", xlab="Time", main="California Measles Outbreak \n Removed Data in Black")
+axis(1, at=c(1989,1990,1991,1992))
+lines(mca$time, mca$cases, col="red")
+```
+<hr />
+## Covariates
+
+Prior analysis by [Aaron King](http://kingaa.github.io/sbied/measles/measles.html) used two main covariates for modeling measles: birth rates and population sizes. The population data is available from the [United States Census website](https://www.census.gov/popest/data/historical/index.html) and the birth rates from the [California Department of Public Health](http://www.cdph.ca.gov/data/statistics/Pages/default.aspx). Similar to the King analysis, the covarites were obtained yearly, and smoothed over each year to get a weekly value. Below we can see the data as points and the smoothed values as the red line. Birthrate is in number of Births per year and population is for children under 10 years old.
+
+The selection of the population of children under 10 years should be addressed. There were two main motivations here. Firstly, a [post-epidemic analysis (Dales et al 1993)](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC1022280/) shows that over 60% of the cases recorded during the peak epidemic years, 1989 and 1990, were in children under 10 years old. This is markedly higher than earlier years in the decade, where children of that age accounted for ~40% of all cases. Given this, it is reasonable to focus on this group as the main demographic of susceptibles in our analysis. Secondly, using the entirety of California's population leads to a very small proportion of susceptibles, which makes it more difficult to identify the effect changes in our covariates and parameters have on our model. With this in mind, finding a way to lessen the population, given sufficient reason, is a logical next step.
+
+```{r, fig.width=10, cache=T}
+read.census.data.pre91 <- function(dat.url, yr){
+  pop.data <- read.table(dat.url, skip=29, header=F)
+  names(pop.data) <- c("FIPS", "State","Age", "Pop", "Male", "Female")
+  pop.data <- pop.data %>% 
+    select(State, Pop, Age) %>%
+    filter(State == "CA", Age<=9) %>%
+    group_by(State) %>%
+    summarize(pop = sum(Pop)) %>%
+    mutate(year = yr)
+  
+  return(pop.data)
+}
+
+# pop87 <- read.census.data.pre91("https://www.census.gov/popest/data/state/asrh/1980s/tables/stiag787.txt", 1987)
+# pop88 <- read.census.data.pre91("https://www.census.gov/popest/data/state/asrh/1980s/tables/stiag788.txt",1988)
+# pop89 <- read.census.data.pre91("https://www.census.gov/popest/data/state/asrh/1980s/tables/stiag789.txt",1989)
+# pop90 <- read.census.data.pre91("https://www.census.gov/popest/data/state/asrh/1980s/tables/stiag490.txt", 1990)
+pop87 <- read.table("pop87.txt", stringsAsFactors = F)
+pop88 <- read.table("pop88.txt", stringsAsFactors = F)
+pop89 <- read.table("pop89.txt", stringsAsFactors = F)
+pop90 <- read.table("pop90.txt", stringsAsFactors = F)
+## next data from "https://www.census.gov/popest/data/state/asrh/1990s/tables/ST-99-08.txt"
+
+pop91 <- c("CA", 2664214+2296748, 1991)
+pop92 <- c("CA",2752513+2314709, 1992)
+pop93 <- c("CA",2807471+2344063, 1993)
+tot.pop <- rbind(pop87, pop88, pop89, pop90, pop91, pop92, pop93)
+tot.pop$year <- as.numeric(tot.pop$year)
+
+
+##
+## Births
+##
+
+## Data from: http://www.cdph.ca.gov/data/statistics/Documents/VSC-2005-0201.pdf
+
+births <- as.data.frame(list("births"=c(503376, 532708, 569308, 611666, 609228, 600838, 584483),
+                             "year"=c(1987, 1988, 1989, 1990, 1991, 1992, 1993)))
+
+## smoothing
+demog <- inner_join(tot.pop, births, by=c("year"))
+
+demog %>% 
+  summarize(
+    time=seq(from=min(year),to=max(year),by=1/52),
+    pop=predict(smooth.spline(x=year,y=pop),x=time)$y,
+    birthrate=predict(smooth.spline(x=year,y=births),x=time)$y 
+      ) -> covar
+
+birthrate_lag1 <- covar %>% select(time, birthrate) %>% mutate(time = time+1) %>% dplyr::rename(birthrate_lag1=birthrate) 
+birthrate_lag05 <- covar %>% select(time, birthrate) %>% mutate(time = time+0.5) %>% dplyr::rename(birthrate_lag05=birthrate)
+
+covar <- inner_join(covar, birthrate_lag1, by=c("time")) %>% inner_join(birthrate_lag05, by=c("time")) %>% filter(time >= 1989 & time <= 1992)
+
+par(mfrow=c(1,2))
+
+plot(pop~time, data=covar, type="l", col="red", main="California Population over Time \n Under 10 Years", xlab="Time", ylab="Population", xaxt = "n")
+points(pop~year, data=demog)
+axis(1, at=c(1989,1990,1991,1992))
+
+# plot(birthrate~time, data=covar, type="l", col="red", main="California Birthrate over Time", xlab="Time", ylab="Population", xaxt = "n")
+# points(births~year, data=demog)
+plot(births~year, xlim=c(1989,1992), data=demog, main="California Birthrate over Time", xlab="Time", ylab="Population", xaxt = "n", ylim=c(560000,620000))
+axis(1, at=c(1989,1990,1991,1992))
+lines(birthrate~time, data=covar, col="red")
+```
+
+Here we see both smoothed lines do not perfectly capture the yearly estimates, but they do sufficiently well to able to measure the effect that changes may have on our model. It also should be noted that in our analysis, we will be working with lagged birthrate; both at the 6 month and 1 year lag. Reasons for this selection will be specified in the next section.
+
+<hr />
+
+## Model Creation
+
+To model the disease, a slight variation on the standard SEIR compartment model was used.
+```{r}
+# library(DiagrammeR)
+# DiagrammeR::grViz("digraph SEIR {
+#            graph [rankdir=TD, overlap=false, fontsize = 10]
+#            node[shape=egg, label='B'] b;
+#            subgraph {
+#            rank=same;
+#            node[shape=oval, label='S'] S;
+#            node[shape=oval, label='E'] E;
+#            node[shape=oval, label='I'] I;
+#            node[shape=oval, label='R'] R;
+#            S->E E->I I->R S->R
+#            }
+#            node[shape=diamond, label='dead'] d;
+#            b->S
+#            {S E I R}->d
+#            }",height=300,width=800)
+```
+
+![](figures/seir.png)
+
+$b = \text{births}$  
+$S = \text{susceptibles}$  
+$E = \text{exposed, non-infectious, incubating}$  
+$I = \text{Infectious}$  
+$R = \text{Recovered}$  
+[(King, A. 2015)](http://kingaa.github.io/sbied/measles/measles.html)
+
+Our model has the earmarks of a susceptible-exposed-infectious-recovered(SEIR) model. Births migrate to our susceptible pool at each time step at a specified rate. The effect of measles on the death rate is negligible, so our death rate at each department is kept equal. The main deviation here from the standard SEIR model is the arrow from $S \rightarrow R$. This is to model vaccinations, where someone in compartment $S$ may be vaccinated and go straight to compartment $R$, where they are modeled as immune.
+
+Analysis was conducted using the [POMP](http://kingaa.github.io/pomp/docs.html) framework. This is useful in that it allows for modeling of non-linear processes, which is a trait of epidemiological systems (King, A. 2015). It also will allow much more flexibility in the creation of a model, which is helpful when modeling a complex process such as the spread of a disease, possibly including numerous parameters.
+
+Assuming the [reader's familiarity with non-linear POMP models](http://ionides.github.io/531w16/notes11/notes11.html), we will begin by introducing the process model below. This model borrowed heavily from [Aaron King's](http://kingaa.github.io/sbied/measles/measles.html) implementation of the model put forth by [He et al. 2010](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2842609/). Any parameters not specified in this study can be found at either of the two above resources.
+
+```{r, eval=F, echo=T}
+rproc <- Csnippet("
+                  double beta, br, seas, foi, dw, births, vac;
+                  double rate[6], trans[6];
+                  
+                  // term-time seasonality
+                  t = (t-floor(t))*365.25;
+                  if ((t>=7&&t<=100) || (t>=115&&t<=199) || (t>=252&&t<=300) || (t>=308&&t<=356))
+                  seas = 1.0+amplitude*0.2411/0.7589;
+                  else
+                  seas = 1.0-amplitude;
+                  
+                  // transmission rate
+                  beta = R0*(gamma+mu)*seas;
+                  // expected force of infection
+                  foi = beta*pow(I+iota,alpha)/pop;
+                  // white noise (extrademographic stochasticity)
+                  dw = rgammawn(sigmaSE,dt);
+                  
+                  rate[0] = foi*dw/dt;  // stochastic force of infection
+                  rate[1] = mu;			    // natural S death
+                  rate[2] = sigma;		  // rate of ending of latent stage
+                  rate[3] = mu;			    // natural E death
+                  rate[4] = gamma;		  // recovery
+                  rate[5] = mu;			    // natural I death
+                  
+                  // Poisson births
+                  births = rpois(birthrate_lag05*dt);
+
+                  // Vaccination
+                  vac = nearbyint(vr*birthrate_lag1*.95*dt);
+
+                  // transitions between classes
+                  reulermultinom(2,S,&rate[0],dt,&trans[0]);
+                  reulermultinom(2,E,&rate[2],dt,&trans[2]);
+                  reulermultinom(2,I,&rate[4],dt,&trans[4]);
+
+                  if (vac > S - trans[0] - trans[1]){
+                    vac = S - tran[0] - tran[1];
+                  }
+
+                  S += births   - trans[0] - trans[1] - vac;
+                  printf(\" births are: %f,  S is: %f \",births, S);
+                  E += trans[0] - trans[2] - trans[3];
+                  I += trans[2] - trans[4] - trans[5];
+                  R = pop - S - E - I + vac;
+                  W += (dw - dt)/sigmaSE;  // standardized i.i.d. white noise
+                  C += trans[4];           // true incidence
+                  ")
+
+initlz <- Csnippet("
+  double m = pop/(S_0+E_0+I_0+R_0);
+                   S = nearbyint(m*S_0);
+                   E = nearbyint(m*E_0);
+                   I = nearbyint(m*I_0);
+                   R = nearbyint(m*R_0);
+                   W = 0;
+                   C = 0;
+                   ")
+
+##  Measurement Model  ##
+dmeas <- Csnippet("
+  double m = rho*C;
+                  double v = m*(1.0-rho+psi*psi*m);
+                  double tol = 1.0e-18;
+                  if (cases > 0.0) {
+                  lik = pnorm(cases+0.5,m,sqrt(v)+tol,1,0)-pnorm(cases-0.5,m,sqrt(v)+tol,1,0)+tol;
+                  } else {
+                  lik = pnorm(cases+0.5,m,sqrt(v)+tol,1,0)+tol;
+                  }
+                  ")
+
+rmeas <- Csnippet("
+  double m = rho*C;
+                  double v = m*(1.0-rho+psi*psi*m);
+                  double tol = 1.0e-18;
+                  cases = rnorm(m,sqrt(v)+tol);
+                  if (cases > 0.0) {
+                  cases = nearbyint(cases);
+                  } else {
+                  cases = 0.0;
+                  }
+                  ")
+```
+
+To briefly review the process model, we'll start at the beginning. Major departures from the original model will be made clear and decisions to keep what were there will be explained.
+
+* The seasonality component of the model is kept, as the inclusion of vaccination in the modelling of a disease spreading presents no obvious reason to remove seasonality for the model.
+* A discrepancy between King's model and the above is the exclusion of a cohort-entry component. The cohort component was originally included to model the beginning of a child's school year as the introduction of a large number of new susceptible (He et al. 2010). Analysis of the outbreak has shown that nearly 20% of the cases during peak years were in children less than 1 year old, and over 50% of the cases were in children less than 5. However, the percentage of cases in older children (5-9 years) during this time is less than 9%. With the assumption that children under 5 years attend school at a low rate combined with the concentration of cases in this age group - a cohort effect may not be appropriate to include in the model. Moreover, of the cases that had the source of infection identified, only 14% of them were from schools. If schools do not play a large role in the spread of infection, a cohort effect may be inappropriate for the model (Dales et al. 1993).
+* The modelling of transmission rate, force of infection, and extrademographic stochasticity is exactly as specified in King's original model. 
+* Births here are calculated using the birthrate from a half year prior. This is to model maternal immunity, which generally lasts about six months ([Drucker, R. 2010](http://www.jwatch.org/pa201006020000002/2010/06/02/how-long-does-passive-immunity-measles-last)).
+* $vac$ is the number of vaccinated individuals that would move from $S \rightarrow R$. The vaccination rate, $vr$, is a parameter of our model. This is multiplied by a [vaccination effectiveness](https://en.wikipedia.org/wiki/Measles_vaccine) of 95%. We then multiply both of these by the birthrate lagged one year, as that is when children are typically vaccinated for measles. An inelegant bit of the model is the last if-statement before the updates to the compartments are made. Given the variation allowed in our parameters during maximization (shown later in this analysis), it's possible to imagine a scenario where the parameters have been created such that our $vac$ count at a specific time step is higher than the count in $S$ less those individuals transitioning to $I$ and $\text{dead}$ compartments. This statement is a safe-guard against this, ensuring that our $S$ compartment does not become negative. This is, admittedly, a shortcoming of the model that could be improved upon in the future.
+
+<hr />
+
+## Model Fitting
+
+To investigate a decent fit for our model, we perform two analyses. First, we carry out a local search of model parameters based on prior estimates given in He et al. Our second analysis is based on a global search where our initial parameters are varying and compare them to our local search. We will specify the parameters in question below before moving on to our analysis.
+
+### Parameters
+
+Below are the parameters we want to estimate with brief definitions:  
+
+* $R0$: "the expected number of secondary infections engendered by an infective introduced into a fully susceptible population" (He et al. 2010). This term helps parameterize $\beta$, the transmission rate, in our rprocess model. A higher $R0$ would signify a higher transmission rate.
+* $\gamma$: Our rate of recovery  
+* $\alpha$: A mixing parameter; the closer to one, the more homogeneous mixing is in the population
+* $\iota$: "the mean number of infectives visiting the population at any given time" (He et al. 2010)
+* $\rho$: Our reporting rate
+* $\psi$: Overdispersion parameter in the reporting process, found in the measurement model above.
+* $\sigma$: Our rate of ending the latent stage
+* $\sigma_{\text{SE}}$: Extrademographic stochasticity affecting the force of infection
+* $vr$: Our vaccination rate
+* $amplitude$: Our seasonality parameter
+
+### Local Search
+
+In order to perform a local search, initial values for our parameters must be selected before using the iterated filtering algorithm ([mif2](http://www.inside-r.org/node/372055)) in the pomp package to find local maximums for these parameters. These initial values were based on an initial investigation performed by He et al.(2010). Their paper modeled the epidemiology of measles in 20 different cities around England prior to the vaccinations availability, and found parameter estimates for their very similar model; the basis by which we've established the model above. The parameter estimates for each city were evaluated with the model above using the California data.
+
+Our initial step was to perform particle filtering on these maximum likelihood estimates in order to find a suitable set of initial parameters. A few alterations were made to these parameters before running the particle filter. Firstly, a $vr$ parameter needed to be assigned - it was set to 0.80, based on an 0.82 US vaccination rate estimate by the [World Health Organization](http://apps.who.int/immunization_monitoring/globalsummary/coverages?c=USA) in 1991. Another parameter that was changed was $\mu$, our death rate. This was set at 0.007, the value given by [the California Department of Publich Health](https://www.cdph.ca.gov/data/statistics/Documents/VSC-2005-0101.pdf) for 1990.
+
+After performing particle filter, we can see the maximum likelihood estimates below for the California data and the model above with the parameters from each of the 20 cities given by He et al(2010). An interval of $\pm 1.96$ standard errors of the estimate are given by the error bars.
+
+```{r, fig.width=10}
+load("pf1-2.rda")
+require(ggplot2)
+ggplot(param_mles, aes(town, ell, ymin=ell-1.96*se, ymax=ell+1.96*se, color=town)) + 
+  geom_errorbar() +
+  xlab("Towns") +
+  ylab("Log Likelihood Interval") + 
+  ggtitle("Initial Parameter Likelihood for Ca Measles") +
+  theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust = 0.2)) + 
+  theme(legend.position="none")
+```
+
+We see many low-varying estimates with log-likelihood values > -1000. Moving ahead, we'll use those of Bedwellty in order to initialize our local search.
+
+```{r}
+read.csv(text=
+         "town,loglik,loglik.sd,mu,delay,sigma,gamma,rho,R0,amplitude,alpha,iota,cohort,psi,S_0,E_0,I_0,R_0,sigmaSE
+         Bedwellty,-1125.1,0.14,0.02,4,57.9,146,0.311,24.7,0.16,0.937,0.0396,0.351,0.951,0.0396,2.64e-05,2.45e-05,0.96,0.0611
+         Birmingham,-3239.3,1.55,0.02,4,45.6,32.9,0.544,43.4,0.428,1.01,0.343,0.331,0.178,0.0264,8.96e-05,0.000335,0.973,0.0611
+         Bradford,-2586.6,0.68,0.02,4,45.6,129,0.599,32.1,0.236,0.991,0.244,0.297,0.19,0.0365,7.41e-06,4.59e-06,0.964,0.0451
+         Bristol,-2681.6,0.5,0.02,4,64.3,82.6,0.626,26.8,0.203,1.01,0.441,0.344,0.201,0.0358,9.62e-06,5.37e-06,0.964,0.0392
+         Cardiff,-2364.9,0.73,0.02,4,39,143,0.602,34.4,0.223,0.996,0.141,0.267,0.27,0.0317,1.01e-05,9.21e-06,0.968,0.0539
+         Consett,-1362.9,0.73,0.02,4,42.6,172,0.65,35.9,0.2,1.01,0.0731,0.31,0.406,0.0322,1.83e-05,1.97e-05,0.968,0.0712
+         Dalton.in.Furness,-726.1,0.3,0.02,4,73.6,257,0.455,28.3,0.203,0.989,0.0386,0.421,0.818,0.0387,2.23e-05,2.36e-05,0.961,0.0779
+         Halesworth,-318.6,0.51,0.02,4,49.6,210,0.754,33.1,0.381,0.948,0.00912,0.547,0.641,0.0526,1.99e-05,2.82e-05,0.947,0.0748
+         Hastings,-1583.7,0.21,0.02,4,56.3,74.1,0.695,34.2,0.299,1,0.186,0.329,0.396,0.0233,5.61e-06,3.4e-06,0.977,0.0955
+         Hull,-2729.4,0.39,0.02,4,42.1,73.9,0.582,38.9,0.221,0.968,0.142,0.275,0.256,0.0371,1.2e-05,1.13e-05,0.963,0.0636
+         Leeds,-2918.6,0.23,0.02,4,40.7,35.1,0.666,47.8,0.267,1,1.25,0.592,0.167,0.0262,6.04e-05,3e-05,0.974,0.0778
+         Lees,-548.1,1.1,0.02,4,45.6,244,0.612,29.7,0.153,0.968,0.0311,0.648,0.681,0.0477,2.66e-05,2.08e-05,0.952,0.0802
+         Liverpool,-3403.1,0.34,0.02,4,49.4,39.3,0.494,48.1,0.305,0.978,0.263,0.191,0.136,0.0286,0.000184,0.00124,0.97,0.0533
+         London,-3804.9,0.16,0.02,4,28.9,30.4,0.488,56.8,0.554,0.976,2.9,0.557,0.116,0.0297,5.17e-05,5.14e-05,0.97,0.0878
+         Manchester,-3250.9,0.66,0.02,4,34.4,56.8,0.55,32.9,0.29,0.965,0.59,0.362,0.161,0.0489,2.41e-05,3.38e-05,0.951,0.0551
+         Mold,-296.5,0.25,0.02,4,67.4,301,0.131,21.4,0.271,1.04,0.0145,0.436,2.87,0.064,2.61e-05,2.27e-05,0.936,0.0544
+         Northwich,-1195.1,2.25,0.02,4,45.6,147,0.795,30.1,0.423,0.948,0.0602,0.236,0.402,0.0213,1.32e-05,1.58e-05,0.979,0.0857
+         Nottingham,-2703.5,0.53,0.02,4,70.2,115,0.609,22.6,0.157,0.982,0.17,0.34,0.258,0.05,1.36e-05,1.41e-05,0.95,0.038
+         Oswestry,-696.1,0.49,0.02,4,37.3,168,0.631,52.9,0.339,1.04,0.0298,0.263,0.476,0.0218,1.56e-05,1.61e-05,0.978,0.0699
+         Sheffield,-2810.7,0.21,0.02,4,54.3,62.2,0.649,33.1,0.313,1.02,0.853,0.225,0.175,0.0291,6.04e-05,8.86e-05,0.971,0.0428
+         ",stringsAsFactors=FALSE,strip.white=T) -> mles
+
+## ----mle-----------------------------------------------------------------
+paramnames <- c("R0","mu","sigma","gamma","alpha","iota",
+                "rho","sigmaSE","psi","amplitude",
+                "S_0","E_0","I_0","R_0", "vr")
+
+mles$S_0 <- 0.03
+mles$vr <- 0.8
+mles$mu <- 0.007 # death rate
+
+require(knitr)
+
+mles %>% subset(town=="Bedwellty") -> mle
+mle$loglik <- param_mles$ell[mles$town == "Bedwellty"]
+mle$loglik.sd <- param_mles$se[mles$town == "Bedwellty"]
+mle %>% subset(select=-c(S_0,E_0,I_0,R_0)) %>%
+  knitr::kable(row.names=FALSE)
+init_param <- unlist(extract(mles[which(param_mles$town =="Bedwellty"),], paramnames))
+```
+
+With our initial parameters, we can now begin our local search using the iterated filtering algorithm specified above. Below we can look at the likelihood results from our local search and a pairs plot of the resulting parameter estimates.
+
+```{r, figure.width=10}
+load("local_search-2.rda")
+load("lik_local-2.rda")
+
+results_local <- data.frame(logLik=liks_local[,1],logLik_se=liks_local[,2],t(sapply(mifs_local,coef)))
+summary(results_local$logLik,digits=5)
+
+pairs(~logLik+R0+sigma+gamma+alpha+iota+rho+sigmaSE+psi+amplitude,data=subset(results_local,logLik>max(logLik)-50))
+```
+
+### Global Search
+
+Next we will conduct a global search using the same iterated filtering algorithm used above. The difference being that we randomly and uniformly select initial parameters from a specified range and run the mif2 algorithm. Below are the boxes we let the parameters vary over - the limits were created by using approximate results from He et al. and intuition regarding reasonable values for the parameters.
+
+```{r, echo=T}
+measles_box <- rbind(
+  R0=c(29,40),
+  gamma=c(60,169),
+  alpha=c(.7,1),
+  iota=c(0,.4),
+  rho=c(.15,.65),
+  psi=c(.15,.5),
+  sigma=c(41,56),
+  sigmaSE=c(.03,.09),
+  vr=c(0.85,.95),
+  amplitude=c(0.2, 0.5)
+)
+
+
+```
+
+After iterated filtering was run, particle filtering was used and likelihood estimates obtained. We can see the results below:
+
+```{r, fig.width=10}
+load("box_eval-2.rda")
+load("lik_global_eval-2.rda")
+results_global <- data.frame(logLik=liks_global[,1],logLik_se=liks_global[,2],t(sapply(mifs_global,coef)))
+summary(results_global$logLik,digits=5)
+
+pairs(~logLik+R0+sigma+gamma+alpha+iota+rho+sigmaSE+psi+amplitude,data=subset(results_global,logLik>max(logLik)-50))
+```
+
+We can see that the maximum likelihood obtained slightly lower than what was found in our local search. This is disappointing and the reason behind this is worth further investigation.
+
+<hr />
+
+## Remarks and Conclusions
+
+Firstly, it should be noted that because of computational issues, only 20 mifs were ran for both the local and global searches with 200 mif iterations. All conclusions made ought to be taken in this context. Moreover, this could be the reason behind our finding a greater likelihood in our local search than our global search.
+
+Initially we observe a few interesting results from our local and global searches. As mentioned, the local search reached a slightly higher likelihood than our global search. This is unexpected, as a search initializing at many different parameter values would seem as if it should reach a higher maximum. We also see a smaller variance in the likelihood of our global search; this further contradicts general intuition, as one would expect varying initial values would result in a larger range of likelihoods estimates from our mifs.
+
+Looking at our pairs plot for both local and global searches, we see what looks like a trade off between $\sigma_{\text{SE}}$ and $\alpha$. We can look more closely at this result below, from our global results:
+
+```{r, fig.width=10}
+ggplot(data=results_global, aes(alpha, sigmaSE, color=logLik)) + scale_colour_gradient(low="blue", high="red") + geom_point(size=3)
+```
+
+We $\sigma_{\text{SE}}$ and $\alpha$ seem to trade off while maintaining likelihood.
+
+Moving on, we can look at our diagnostic plots for our mif2 maximization procedure.
+
+```{r, fig.width=10}
+plot(mifs_global)
+```
+
+There are a number of specific parameters that stand out. With the exception of one mif, we see that $\rho$ converges to a very low value, suggesting a low reporting rate. We see $\sigma_{\text{SE}}$ jumping to ~0.3 for most mifs. This is notably higher than the parameter estimates obtained by He et al. This may not be surprising, as one could imagine in a diverse and populous state such as California, extra demographic stochasticity may be quite large. We also see estimates for $\alpha$ generally sink quite low, suggesting heterogeneous mixing in our population. Analysis by [Dales et al.](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC1022280/) seems to corroborate this finding, suggesting that cases of measles may have been concentrated in minority communities and, as previously noted, young children. 
+
+### Further Investigation
+
+Depending on the interest of the reader or future researcher, any number of analysis may prove helpful. Generally speaking, running more mifs at more iterations would be helpful. A number of computational issues came about during this project which lead to this shortcoming; future analysis improving upon this alone would be useful as it could lead to different results.
+
+#### Updated Compartment Models
+Firstly, given additional computational power and epidemiological knowledge, a different compartment model could be used. It may be useful to separate infants after 6 months into a completely different susceptible pool. Given their larger susceptibility to the disease relative to older susceptibles, a separate compartment may be able to capture some disease dynamics that this compartment model was unable to investigate. The proposed model may look as follows:
+
+```{r}
+# DiagrammeR::grViz("digraph SEIR {
+#            graph [rankdir=TD, overlap=false, fontsize = 10]
+#            node[shape=egg, label='B'] b;
+#            subgraph {
+#            rank=same;
+#            node[shape=oval, label='S1'] S1;
+#            node[shape=oval, label='S2'] S2;
+#            node[shape=oval, label='E'] E;
+#            node[shape=oval, label='I'] I;
+#            node[shape=oval, label='R'] R;
+#            S1->S2 S2->E S1->E E->I I->R S1->R
+#            }
+#            node[shape=diamond, label='dead'] d;
+#            b->S1
+#            {S1 S2 E I R}->d
+#            }",height=300,width=800)
+```
+
+![](figures/sseir.png)
+
+Here, $\text{S1}$ would model young children who are at a much higher level of susceptibility than older children and adults. These young children could move to either an exposed compartment, $\text{E}$, or, upon successful vaccination, to a recovered compartment, $\text{R}$. This type of model would need the inclusion of more of the population (i.e., not just children under ten years old), but may be worth investigating in the future.
+
+#### Likelihood Profiles
+
+Depending on the researchers parameter of interest, creating a likelihood profile may be quite useful. Developing some certainty in the estimate of parameters like $R0$ would help quantify the force of a disease. It's quite possible that a post-vaccination measles may have different infective properties than the disease prior to the widespread use of vaccinations. If the force of infection, reflected in a change in $R0$, were to change, knowledge of this and the degree to which it has changed would help better prepare any public health institution for a future outbreak. Similarly, knowledge of our vaccination rate, $vr$, would help determine whether or not additional resources may need to be allocated to getting the population better vaccinated. If a likelihood profile for vaccination rates revealed that the rate was significantly lower than desired - that would flag a need for these additional resources.
+
+#### Additional Parameter Estimation
+
+Many assumptions were made in this report regarding fixed model specifications/rates that could be estimated in a future model. A couple proposals are below:  
+
+* Vaccination Effectiveness: In this study, vaccination effectiveness was held at 95%. It is possible to imagine a virus mutation or a batch of faulty vaccinations that would result in a low vaccination effectiveness. If this were the case, modelling vaccination effectiveness during an outbreak would be useful. Identification of a low effectiveness rate and, consequently, its cause could help prevent future outbreaks.  
+* Susceptible Pool Entrance: A 6 month lag into the susceptible pool after birth was based on prior research on maternal immunity (Drucker 2010). A number of factors may contribute to this lag being different: not all mothers breastfeed, some mothers may not have measles antibodies, and maternal immunity length may not be uniform for all people. With this in mind, varying this lag to find a better fitting model may be reasonable.  
+
+## References
+
+King, A. (2015, June 7). Case study: Measles in large and small towns. Retrieved from http://kingaa.github.io/sbied/measles/measles.html
+
+He, D., Ionides, E. L., & King, A. A. (2010). Plug-and-play inference for disease dynamics: measles in large and small populations as a case study. Journal of the Royal Society Interface, 7(43), 271-283. http://doi.org/10.1098/rsif.2009.0151
+
+Dales, L. G., Kizer, K. W., Rutherford, G. W., Pertowski, C. A., Waterman, S. H., & Woodford, G. (1993). Measles epidemic from failure to immunize. Western Journal of Medicine, 159(4), 455-464.
+
+Drucker, R. (2010). How Long Does Passive Immunity to Measles Last in Infants. NEJM Journal Watch. Retrieved from http://www.jwatch.org/pa201006020000002/2010/06/02/how-long-does-passive-immunity-measles-last
+
+Population Estimates. (n.d.). Retrieved April 26, 2016, from https://www.census.gov/popest/data/historical/index.html
+
+Statistics. (n.d.). Retrieved April 26, 2016, from http://www.cdph.ca.gov/data/statistics/Pages/default.aspx
+
+Ahmad, S., Zahid, S., & Jan, A. (2013). The impact of parental education and socioeconomic status on routine childhood vaccination: An obsevational study. Journal Of Postgraduate Medical Institute (Peshawar - Pakistan), 27(3). Retrieved from http://www.jpmi.org.pk/index.php/jpmi/article/view/1391/1367
+
+Measles vaccine. (n.d.). Retrieved April 26, 2016, from https://en.wikipedia.org/wiki/Measles_vaccine
+
+Measles. (n.d.). Retrieved April 26, 2016, from https://en.wikipedia.org/wiki/Measles

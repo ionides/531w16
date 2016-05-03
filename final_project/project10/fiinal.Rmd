@@ -1,0 +1,438 @@
+---
+title: "STATS 531 Final Project"
+author: "Using Different Model On Fitting Beaver Population"
+date: "Apr 17, 2016"
+output:
+  html_document:
+    toc: true
+    theme: flatly
+  
+
+---
+#1.The Introduction of the project
+This project is mainly concerning using different model to fit the population of beaver, which is a kind of mammal living around the river. Since Beaver is the protected animals, thus studying the population of Beaver is kind of useful here.
+We are mainly concerning to use ARIMA model and POMP model for the population. For the POMP part, we are trying to use Ricker model, Hassell model and the blowflies model in our experiments.
+<br />
+<br />
+Generally speaking, there are several things we are going to do in our project.        
+1.Basic time series analysis about beaver population.
+<br />
+2.Fitting ARIMA model for beaver population.
+<br />
+3.Fitting POMP model for beaver population with different models.
+<br />
+
+#2.Introduction to the original data
+For our data, we get the data from [here](http://www3.imperial.ac.uk/cpb/databases/gpdd). Our dataset is No.9721, which is the population of castor canadensis beaver. Since it is really hard to get the population data of animals with specific restriction, thus the data here is not the best one, but the one we can use.
+<br />
+First of all, let's look at the plot of our data.
+```{r, warnings = F}
+library(pomp)
+library(forecast)
+library(mFilter)
+library(plyr)
+library(reshape2)
+library(ggplot2)
+library(doParallel)
+
+Org_Data = read.csv("Beaver.csv")
+plot(Org_Data[,-1],type = "l", main = "Population Data of Beaver", col = "red")
+```
+<br />
+The plot here reveal that ARIMA model might not be a good model here. What’s more, there are not strongly trend or seasonal pattern in the population data of beaver. In order to confirm our assumption, we would like to use HP-filter and local linear regression to detrend and decompose our data, trying to find some evidence.
+
+```{r}
+Org_Data_HP <- hpfilter(Org_Data$Population, freq=10,type="lambda",drift=F)$cycle
+plot(Org_Data$Year,Org_Data_HP,type="l",xlab="Index",ylab="", main = "HP-filter of Population")
+```
+<br />
+The HP-filter shows that there are not a seasonal pattern in our data. Moreover, we are trying to use local regression to decompose our data as below:
+```{r}
+Org_Data_Unmodified = Org_Data
+
+spectrum(Org_Data_Unmodified$Population,span = c(3,3))
+
+Org_loess <- loess(Population~Year,span=0.5,data= Org_Data)
+plot(Org_Data$Year,Org_Data$Population,type="l",col="red")
+lines(Org_loess$x,Org_loess$fitted,type="l")
+
+Org_low <- ts(loess(Population~Year,span=0.5,data= Org_Data)$fitted)
+Org_hi <- ts(Org_Data$Population - loess(Population~Year,span=0.1,data= Org_Data)$fitted)
+Org_cycles <- Org_Data$Population - Org_low - Org_hi
+plot(ts.union(Org_Data$Population, Org_low,Org_hi,Org_cycles),
+     main="Decomposition of retail revenue as trend + Sesonal + Fluctuation")
+
+```
+The plot here shows that, the long term trend first increasing, then have a decreasing at about 1800. And in high frequency domain and medium frequency domain, there are not some obvious pattern in our data. Now, we will turn to use ARIMA model for our fitting here.
+
+
+#3.ARIMA for beaver population
+From now on, we are trying to fit an ARIMA model for our population data. Since ARIMA is not our key point in this project. Thus we simply set our model for SARIMA(3,0,3)(1,0,1) for fitting the data, trying to illustrate the performance of ARIMA, especially compared with POMP model latter.
+```{r}
+Org_Result_1 = Arima(Org_Data$Population,order=c(3,0,3),seasonal=list(order=c(1,0,1)))
+
+plot(Org_Result_1$x,type="l", main = "Original Data and Fitted Result")
+lines(fitted(Org_Result_1),col="red")
+
+test = forecast.Arima(Org_Result_1,h=20)
+plot(test, main = "Testing about the prediction of SARIMA")
+lines(Org_Data$Population, type= "l", col = "red")
+```
+<br />
+The fitted value seems to indicate that ARIMA is a good fitting, however when we look at the plot of SARIMA prediction, we can find out that the prediction result is really poor, which is not what we are looking for in this case.
+<br />
+Thus, from now on, we will pay more attention on POMP model instead of using ARIMA model.
+
+#3.POMP model on beaver population data
+POMP is the abbreviation of partially observed markov process, which include latent markov process and observation process. For our specific data, we will try to use Ricker model, Hassell model and the blowflies model in our cases.
+<br />
+Now, we will try to introduce the theory of our models. Firstly let talk about the Ricker model. The Ricker model with stochasticity may have the equation:
+<br />
+$${{\quad\quad}\displaystyle P}_{n+1} = r\,P_{n}\,\exp(-P_{n}+\varepsilon_{n}), \qquad \varepsilon_{n}\;\sim\;\mathrm{Normal}(0,\sigma^2)$$
+<br />
+which is based on [here](http://ionides.github.io/531w16/notes11/notes11.html)
+We also used the Hassel model, which is 
+<br />
+$$P_{n+1} = \frac{a\,P_n}{(1+b\,P_n)^\alpha}\,\varepsilon_n$$,which 
+<br />
+$$\varepsilon_t \sim \mathrm{Lognormal}(-\tfrac{1}{2}\sigma^2,\sigma^2)$$
+<br />
+The [Hassel model](https://en.wikipedia.org/wiki/Ricker_model) is a more general version of stochastic Beverton-Holt model, which is introduced in [lecture notes](http://ionides.github.io/531w16/notes11/notes11.html).
+<br />.
+The Hassel model is mainly construct by myself own based on the previous homework expericience, though the later analysis shows that it didn't give us a good result.
+Third one is model which is already built in pomp package.
+<br />
+$$R_{t+1} \sim \mathrm{Poisson}(PN_{t-tau}exp(-N{t-tau}/N0)e_{t+1}dt)$$
+<br />
+$$S_{t+1} \sim \mathrm{binomial}(N_{t}\,exp(-\delta\epsilon_{t+1}dt))$$
+<br />
+And
+<br />
+$$N_{t} = R_{t}+S_{t}$$
+<br />
+There are several thins we are going to do here. First is to use the simulation results to justify which kind of models we should use for further analysis. Then there are some slightly modify we can make in our model.
+<br />
+Firstly we look at the simulation plot of Ricker model. In the model we used here, the n represent the population of beaver, and r represent the growth rate of the population, K represent the capacity of the location where we are discussing. The detail code and result are shown below:
+```{r}
+Org_Data_Pomp = Org_Data[,-1]
+Beaver <- pomp(Org_Data_Pomp, times = "Year", t0 = 1752)
+
+stochStep <- Csnippet("e = rnorm(0,sigma);
+                      N = r*N*exp(-N/k+e);")
+pomp(Beaver, rprocess = discrete.time.sim(step.fun = stochStep, delta.t = 3), paramnames = c("r", "k","sigma"), statenames = c("N","e")) -> Beaver
+
+rmeas <- Csnippet("Population = rpois(phi*N);")
+dmeas <- Csnippet("lik = dpois(Population, phi*N, give_log);")
+
+pomp(Beaver, rmeasure = rmeas, dmeasure = dmeas, statenames = c("e","N"), paramnames = c("phi")) -> Beaver
+coef(Beaver) <- c(e.0 = 1,N.0 = 30000, r =2, k = 100000, phi = 2,sigma = 0.1)
+
+sims <- simulate(Beaver, nsim = 3, as.data.frame = TRUE, include.data = TRUE)
+
+ggplot(data = sims, mapping = aes(x = time, y = Population)) + geom_line() + facet_wrap(~sim)
+```
+<br />
+The simulation of Ricker model shows that, obviously, the original Ricker model with Poisson measure is not a good model here.
+<br />
+Now we turn to the Hassel model. Since there are several different parameters we need to tune, in the report we only shows the best one we can find here:
+```{r}
+Org_Data_Pomp = Org_Data[,-1]
+Beaver_2 <- pomp(Org_Data_Pomp, times = "Year", t0 = 1752)
+stochStep_2 <- Csnippet("epsN = rlnorm(0, sigma*sigma);
+                        N = (a*N/pow(1+N/b,alpha))*epsN;")
+
+pomp(Beaver_2, rprocess = discrete.time.sim(step.fun = stochStep_2, delta.t = 1), paramnames = c("a", "b","sigma","alpha"), statenames = c("N","epsN")) -> Beaver_2
+rmeas <- Csnippet("Population = rpois(phi*N);")
+dmeas <- Csnippet("lik = dpois(Population,phi*N,give_log);")
+
+pomp(Beaver_2, rmeasure = rmeas, dmeasure = dmeas, statenames = c("N"), paramnames = c("phi")) -> Beaver_2
+coef(Beaver_2) <- c(N.0 = 30000, epsN.0 = 1, a =3, b = 60000, phi = 1.5,sigma = 0.4,alpha = 1.2)
+
+sims <- simulate(Beaver_2, nsim = 3, as.data.frame = TRUE, include.data = TRUE)
+
+ggplot(data = sims, mapping = aes(x = time, y = Population)) + geom_line() + facet_wrap(~sim)
+```
+The simulation of Hassel model indicate that, the simulation is better than before, however, it is still not very good at all. Thus now we will pay more attention of the blowflies model.
+<br />
+The blowflies model is created in pomp package, we take it out and do some small modified. Since the step function, rmeasure and dmeasure are wrote in C file, and I put many effort on changing the code. Nevertheless, the code still can't run, thus I gave up and try to fit the blowflies model with some slightly changed. Firstly we changed the measurement model from negative binomial to Poisson.
+```{r}
+
+pomp(
+  data=Org_Data_Pomp,
+  times="Year",
+  t0=1752,
+  rprocess=euler.sim(
+    step.fun="_blowfly_simulator_one"
+    # Csnippet("
+    #   R = rpois(P*N1[14]*exp(-N1[14]/N0)*e);
+    #   S = rbinom(N1[0],exp(-delta*eps));
+    #   e = rgammawn(sigma.P,1);
+    #   eps = rgammawn(sigma.d,1);
+    #   for (k = 14; k > 0; k--) N1[k] = N1[k-1];
+    #   N1[0] = R+S;"
+    # )
+    ,
+    delta.t=1,
+    PACKAGE="pomp"
+  ),
+  rmeasure=Csnippet(" 
+                    Population = rpois(sigma_y+N0);"),
+  dmeasure= 
+    # lik = dpois(Population,(1.0/sigma_y/sigma_y),(1.0/sigma_y/sigma_y)/((1.0/sigma_y/sigma_y)+N0),give_log);")
+    Csnippet(" 
+             lik = dpois(Population,sigma_y+N0,give_log);")
+  
+  ,
+  PACKAGE="pomp",
+  paramnames=c("P","N0","delta","sigma.P","sigma.d","sigma_y"),
+  statenames=c("N1","R","S","e","eps"),
+  y.init=with( ## initial data
+    Org_Data_Pomp,
+    approx(x=Year,y=Population,xout=seq(from=1752,to=1766,by=1),rule=2)$y
+  ),
+  toEstimationScale=function(params,...) {
+    log(params)
+  },
+  fromEstimationScale=function(params,...) {
+    exp(params)
+  },
+  initializer=function (params, t0, y.init, ...) {
+    ntau <- length(y.init)
+    n <- y.init[ntau:1]
+    names(n) <- paste("N",seq_len(ntau),sep="")
+    c(n,R=0,S=0,e=0,eps=0)
+  }
+    ) -> Beaver1
+
+
+## mle from search to date
+coef(Beaver1,transform=TRUE) <- c(
+  P = 4, 
+  delta = -1.8, 
+  N0 = 10, 
+  sigma.P = 0.3, 
+  sigma.d = -0.3, 
+  sigma_y = -3.6
+)
+
+  sim1 <- simulate(Beaver1,nsim=1)
+  plot(obs(sim1)['Population',],ty='l', ylab = "Population", main =  "Simulation of bloflies model")
+  lines(obs(Beaver1)['Population',],col = "red")
+```
+<br />
+The simulation result here is not very good at all, partially because we changed the measurement model from negative binomial to poisson distribution. Thus we may expected that the original model may give us better results:
+```{r}
+pomp(
+  data=Org_Data_Pomp,
+  times="Year",
+  t0=1752,
+  rprocess=euler.sim(
+    step.fun="_blowfly_simulator_one"
+    # Csnippet("
+    #   R = rpois(P*N1[14]*exp(-N1[14]/N0)*e);
+    #   S = rbinom(N1[0],exp(-delta*eps));
+    #   e = rgammawn(sigma.P,1);
+    #   eps = rgammawn(sigma.d,1);
+    #   for (k = 14; k > 0; k--) N1[k] = N1[k-1];
+    #   N1[0] = R+S;"
+    # )
+    ,
+    delta.t=1,
+    PACKAGE="pomp"
+  ),
+  rmeasure="_blowfly_rmeasure",
+  dmeasure= "_blowfly_dmeasure"
+#     Csnippet(" 
+#              lik = dnbinom(Population,(1.0/sigma_y/sigma_y),(1.0/sigma_y/sigma_y)/((1.0/sigma_y/sigma_y)+N0),give_log);")
+  ,
+  PACKAGE="pomp",
+  paramnames=c("P","N0","delta","sigma.P","sigma.d","sigma_y"),
+  statenames=c("N1","R","S","e","eps"),
+  y.init=with( ## initial data
+    Org_Data_Pomp,
+    approx(x=Year,y=Population,xout=seq(from=1752,to=1766,by=1),rule=2)$y
+  ),
+  toEstimationScale=function(params,...) {
+    log(params)
+  },
+  fromEstimationScale=function(params,...) {
+    exp(params)
+  },
+  initializer=function (params, t0, y.init, ...) {
+    ntau <- length(y.init)
+    n <- y.init[ntau:1]
+    names(n) <- paste("N",seq_len(ntau),sep="")
+    c(n,R=0,S=0,e=0,eps=0)
+  }
+    ) -> Beaver1
+  
+coef(Beaver1,transform=TRUE) <- c(
+  P = 4, 
+  delta = -1.8, 
+  N0 = 6.5, 
+  sigma.P = 0.3, 
+  sigma.d = -0.3, 
+  sigma_y = -3.6
+)
+
+  sim1 <- simulate(Beaver1,nsim=1)
+  plot(obs(sim1)['Population',],ty='l', ylab = "Population", main =  "Simulation of bloflies model")
+  lines(obs(Beaver1)['Population',],col = "red")
+```
+Definitely, the simulation this time give us the better results. We can find out that the simulation here fit all of the peaks of our data. It is reasonable since the model here considering both the recruitment parts and survival parts, which fit different model. However, the previous analysis just doing simple simulations for our data. Compared with the above simulation, we would like to use the latest one for our further analysis, which is the built-in model in pomp package for blowflies.
+
+#4.liklyhood analysis
+In this part, we are going to do some analysis of the parameter tuning.
+<br />
+The whole process doesn't show in the report here. We briefly introduced the procedure here. Firstly, we use level1 to test whether our model work well or not, in order to make sure that we will not waste the running time. Then, we will set initial values of our parameters. In this case, we used the initial values as the built-in example used. However, there are something we need to have a slightly change due to the change of data. We increase the value of N0 since there are more population of beaver. Then, we do times of level2 search, in order to find out an interval of our parameters for global search.
+<br />
+Now, we are going to reveal our results in detail:
+```{r,eval = F}
+run_level <- 2
+switch(run_level,
+       {beaver_Np=100; beaver_Nmif=10; beaver_Neval=10; beaver_Nglobal=10; beaver_Nlocal=10}, 
+       {beaver_Np=20000; beaver_Nmif=100; beaver_Neval=10; beaver_Nglobal=10; beaver_Nlocal=10}, 
+       {beaver_Np=60000; beaver_Nmif=300; beaver_Neval=10; beaver_Nglobal=100; beaver_Nlocal=20}
+)
+beaver_box <- rbind(
+  P = c(50,55), 
+  delta = c(0.1,0.3), 
+  N0 = c(50000,55000), 
+  sigma.P = c(0.1,0.4), 
+  sigma.d = c(0.1,0.2), 
+  sigma_y = c(3,3.5)
+)
+
+beaver_mle<- c(
+  P = 55, 
+  delta = 0.17, 
+  N0 = 50000, 
+  sigma.P = 0.1, 
+  sigma.d = 0.1, 
+  sigma_y = 3
+)
+
+require(doParallel)
+cl <- makeCluster(4)
+registerDoParallel(cl)
+mcopts <- list(set.seed=TRUE)
+set.seed(396658101,kind="L'Ecuyer")
+```
+
+```{r}
+stew(file=sprintf("LS.rda"),{
+  t_local <- system.time({
+    mifs_local <- foreach(i=1:beaver_Nlocal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  {
+      mif2(
+        Beaver1,
+        start=beaver_mle,
+        Np=beaver_Np,
+        Nmif=beaver_Nmif,
+        cooling.type="geometric",
+        cooling.fraction.50=0.5,
+        transform=T,
+        rw.sd=rw.sd(
+          P = 0.02, 
+          delta = 0.02, 
+          N0 = 0.02, 
+          sigma.P = 0.02, 
+          sigma.d = 0.02, 
+          sigma_y = 0.02
+        )
+      )
+      
+    }
+  })
+  
+},seed=900242057,kind="L'Ecuyer")
+plot(mifs_local)
+```
+<br />
+The local search result shows that, our choice of parameters in local search is not good at all. We still need to make some slightly change for our data.
+<br/>
+The pair plot of local search of the log likelihood function are shown below:
+```{r}
+stew(file=sprintf("LL.rda"),{
+  t_local_eval <- system.time({
+    liks_local <- foreach(i=1:beaver_Nlocal,.packages='pomp',.combine=rbind) %dopar% {
+      evals <- replicate(beaver_Neval, logLik(pfilter(Beaver1,params=coef(mifs_local[[i]]),Np=beaver_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=900242057,kind="L'Ecuyer")
+
+results_local <- data.frame(logLik=liks_local[,1],logLik_se=liks_local[,2],t(sapply(mifs_local,coef)))
+plot(results_local)
+summary(results_local$logLik,digits=5)
+```
+<br />
+Now, we are going to do the global search here. We didn't do the transformation when we select initial points. The global results are shown below:
+```{r}
+stew(file=sprintf("GS.rda"),{
+  
+  t_global <- system.time({
+    mifs_global <- foreach(i=1:beaver_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  mif2(
+      mifs_local[[1]],
+      start=apply(beaver_box,1,function(x)runif(1,x[1],x[2]))
+    )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+plot(mifs_global)
+```
+<br />
+The plot of global search shows that, though it seems like not convergence, we choose the initial values in a very small intervals. Thus most of the parameters do converge. However, some of the value of parameters still have some fluctuation. And now we are going to do some exploration about the log likelihood function of global search:
+```{r}
+stew(file=sprintf("GL.rda"),{
+  t_global_eval <- system.time({
+    liks_global <- foreach(i=1:beaver_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(beaver_Neval, logLik(pfilter(Beaver1,params=coef(mifs_global[[i]]),Np=beaver_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+results_global <- data.frame(logLik=liks_global[,1],logLik_se=liks_global[,2],t(sapply(mifs_global,coef)))
+
+plot(results_global)
+```
+<br />
+The plot here shows that, most of the parameters converge since they are shown in a group instead of scatter.
+<br />
+#5.Conclusion
+In a nut shell, we can conclude that our pomp model do well in the fitting problem, the log likelihood function reveal that our model is kind of stable, and the values of parameters are also stable. Compared with other pomp model, the blowflies model also shows dramatic performance. The ARIMA model does provide us kind of good fit here, however when we try to use ARIMA model to do prediction, we can find out that ARIMA is not a good model here. Thus overall, we would prefer to use POMP model, specifically using blowflies model for fitting the beaver population.
+<br />
+Due to the lack of time, we are unable to provide the analysis based on profile likelihood function, since the server in our department was using as about 100% at these day, and the I didn't receive the flux authorization. For the profile likelihood function analysis, it is similar as HW9, which can be used to construct confidence interval of every parameters. We do believe that if we have enough time, the analysis of profile likelihood function can be done.
+<br />
+Furthermore, we also can do some further analysis in the POMP model we didn't use, such like Hassel model. However, since every time running in the sever is really a time consuming work, we just select one of them to do the likelihood function analysis.
+<br />
+Overall, POMP model is really an impressive model, especially in the ecology study, we can definitely find out the power of POMP model. I do like to try to apply POMP model in more different aspect, such like financial data.
+
+#6.Reference
+1.A. J. Nicholson (1957) The self-adjustment of populations to change. Cold Spring Harbor Symposia on Quantitative Biology, 22, 153–173.
+
+2.Y. Xia and H. Tong (2011) Feature Matching in Time Series Modeling. Statistical Science 26, 21–46.
+
+3.E. L. Ionides (2011) Discussion of “Feature Matching in Time Series Modeling” by Y. Xia and H. Tong. Statistical Science 26, 49–52.
+
+4.S. N. Wood (2010) Statistical inference for noisy nonlinear ecological dynamic systems. Nature 466, 1102–1104.
+
+5.W. S. C. Gurney, S. P. Blythe, and R. M. Nisbet (1980) Nicholson's blowflies revisited. Nature 287, 17–21.
+
+6.D. R. Brillinger, J. Guckenheimer, P. Guttorp and G. Oster (1980) Empirical modelling of population time series: The case of age and density dependent rates. in G. Oster (ed.), Some Questions in Mathematical Biology, vol. 13, pp. 65–90. American Mathematical Society, Providence.
+
+7."NERC Centre for Population Biology, Imperial College (2010) The Global Population Dynamics Database Version 2. http://www.sw.ic.ac.uk/cpb/cpb/gpdd.html". 
+
+8."NERC Centre for Population Biology, Imperial College (1999) The Global Population Dynamics Database. http://www.sw.ic.ac.uk/cpb/cpb/gpdd.html".
+
+9.[Ricker model introduction](https://en.wikipedia.org/wiki/Ricker_model)
+
+10.[Lecturn notes of STATS 531, hw8 ](http://ionides.github.io/531w16/hw/hw08.html)
+
+
+11.[Lecturn notes of STATS 531, hw9 ](http://ionides.github.io/531w16/hw/hw09.html)
+
+12.[Lecturn notes of STATS 531, Notes 11 ](http://ionides.github.io/531w16/notes11/notes11.html)
+
+13.[Lecturn notes of STATS 531, Notes 13 ](http://ionides.github.io/531w16/notes13/notes13.html)
+
+14.[Lecturn notes of STATS 531](http://ionides.github.io/531w16/)
+

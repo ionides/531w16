@@ -1,0 +1,351 @@
+---
+title: "Stats531 Final Project"
+author: ""
+date: "4/23/2016"
+output: html_document
+---
+##  1 Question Description
++ I am interested in how stock price changes with time. However, my midterm project shows that today's stock price could not be predicted by history stock price perfectly. The residual of ARIMA model is not normally distributed.
++ One explanation for this is that the volatility for different stock price follows "volatility smile" instead of constant. When graphing volatilities against strike prices, we could see the volatility goes down when strike price goes up at first, then goes up. 
++ Volatility is a very important factor in stock market. Thus, I would like to use stochastic volatility model to predict volatility.  In financial mathematics and financial economics, stochastic volatility is typically modeled in a continuous-time setting which is advantageous for derivative pricing and portfolio optimization.[1]
++ The standard stochastic volatility model as introduced by Taylor (1982) is given by
+$$y_t = e^{h_t/2}u_t, u_t \sim N(0,1)$$
+$$h_t = \mu + \phi (h_{t-1} -  \mu) + \eta_t, \eta_t \sim N(0,\sigma_{\eta}^2)$$
++ where $y_t$ denotes the log return at time t, $t = 1,2,...T$, and $h_t$ is the log volatility which is assumed to follow a stationary AR(1) process with parameter $-1<\phi<1$. The error term $u_t$ and $eta_t$ follows Guassian white noise sequence.
+
+##  2 Data Description
++ First we read in the data, which can be downloaded from [yahoo finance](http://finance.yahoo.com/q/hp?s=^GSPC+Historical+Prices). It is SPX 500 historical time series data in recent 5 years. The data set consists of 1553 observations and 7 variables. It records SPX 500 index changes from 2011 to 2016. I am interested in SPX 500 index's closed price every business day, so I mainly focus on closed price.
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, warning=FALSE)
+```
+
+```{r chunk_without_code, echo=FALSE}
+setwd("F:/study/graduates/Winter_Semester_in_2016/STATS_531/final_project")
+dat <- read.csv(file="SPX500.csv",header=TRUE)
+SPX_statenames <- c("Y_state","H")
+SPX_rp_names   <- c("mu","phi","sigma_eta")
+SPX_ivp_names  <- c("H_0")
+SPX_paramnames <- c(SPX_rp_names,SPX_ivp_names)
+SPX_covarnames <- "covarft"
+```
++ Then we can plot the closed price over time to study its pattern. Since $y_t$ denotes the log return at time t, we plot the log form of SPX500 index.
+```{r}
+N <- nrow(dat)
+SPX_dat <- dat$Close[N:1] # data are in reverse order in spx500.csv
+par(mfrow=c(1,2))
+plot(SPX_dat,type="l")
+plot(log(SPX_dat),type="l")
+```
+
++ Considering volatility model, we ususally use the difference between log(index) to construct the model, so I demean the data of log(index)
+```{r}
+SPX_demean_dat <- log(SPX_dat[2:N])-log(SPX_dat[1:N-1])
+```
+
+## 3 Stochastic Volatility Model
+### 3.1 Stochastic Volatility Model Theory
++ As I shown before, the standard stochastic volatility model as introduced by Taylor (1982) is given by
+$$y_t = e^{h_t/2}u_t, u_t \sim N(0,1)$$
+$$h_t = \mu + \phi (h_{t-1} -  \mu) + \eta_t, \eta_t \sim N(0,\sigma_{\eta}^2)$$
++ where $y_t$ denotes the log return at time t, $t = 1,2,...T$, and $h_t$ is the log volatility which is assumed to follow a stationary AR(1) process with parameter $-1<\phi<1$. The error term $u_t$ and $eta_t$ follows Guassian white noise sequence.
++ Since $u_t$ follows standard normal distribution, $y_t$ follows normal distribution with mean 0 and standard error $e^{h_t/2}$. Thus, the demeasure would be normal density function of y with mean 0 and standard error $e^{h_t/2}$.
++ Since the parameter satisfies $-1<\phi<1$, and $eta_t<1$, I choose a logit and expit transform for these two parameters. And $\mu$ is a unbounded parameter, so I choose not to transform $\mu$.
++ The stochastic process is defined as follow:
+```{r}
+rproc1 <- "
+  double eta_t = rnorm(0,sigma_eta);
+  H = mu + phi * (H-mu) + eta_t;
+"
+
+rproc2.sim <-"
+  Y_state = rnorm(0,exp(H/2));
+"
+
+rproc2.filt <-"
+  Y_state = covarft;
+"
+
+SPX_rproc.sim <- paste(rproc1,rproc2.sim)
+SPX_rproc.filt <- paste(rproc1,rproc2.filt)
+
+SPX_initializer <-"
+  H = H_0;
+  Y_state = rnorm(0,exp(H_0/2));
+"
+
+SPX_rmeasure <- "
+  y = Y_state;
+"
+
+SPX_dmeasure <- "
+  lik = dnorm(y,0,exp(H/2),give_log);
+"
+
+SPX_toEstimationScale <- "
+ Tmu = mu;
+ Tphi = logit(phi);
+ Tsigma_eta = logit(sigma_eta);
+"
+
+SPX_fromEstimationScale <- "
+ Tmu = mu;
+ Tphi = expit(phi);
+ Tsigma_eta = expit(sigma_eta);
+"
+
+expit<-function(real){1/(1+exp(-real))}
+logit<-function(p.arg){log(p.arg/(1-p.arg))}
+```
+
+### 3.2 Test the model with a specific parameter test
+#### 3.2.1 Define SPX filter
+```{r}
+require(pomp)
+SPX.filt <- pomp(data=data.frame(y=SPX_demean_dat,
+                                   time=1:length(SPX_demean_dat)),
+                   statenames=SPX_statenames,
+                   paramnames=SPX_paramnames,
+                   covarnames=SPX_covarnames,
+                   times="time",
+                   t0=0,
+                   covar=data.frame(covarft=c(0,SPX_demean_dat),
+                                    time=0:length(SPX_demean_dat)),
+                   tcovar="time",
+                   rmeasure=Csnippet(SPX_rmeasure),
+                   dmeasure=Csnippet(SPX_dmeasure),
+                   rprocess=discrete.time.sim(step.fun=Csnippet(SPX_rproc.filt),delta.t=1),
+                   initializer=Csnippet(SPX_initializer),
+                   toEstimationScale=Csnippet(SPX_toEstimationScale), 
+                   fromEstimationScale=Csnippet(SPX_fromEstimationScale)
+)
+plot(SPX.filt)
+```
+
+#### 3.2.2 Test the model with a specific parameter test
++ After defining the stochastic volatility model, we can test the previous model by a set of parameter: $\mu=-9, \phi = 1, \sigma_{eta}=0.1, H_0=0$
+```{r}
+params_test <- c(
+  mu = -9,
+  phi = 1,       
+  sigma_eta = 0.1,
+  H_0 = 0
+)
+
+sim1.sim <- pomp(SPX.filt, 
+                 statenames=SPX_statenames,
+                 paramnames=SPX_paramnames,
+                 covarnames=SPX_covarnames,
+                 rprocess=discrete.time.sim(step.fun=Csnippet(SPX_rproc.sim),delta.t=1)
+)
+
+sim1.sim <- simulate(sim1.sim,seed=493536993,params=params_test)
+plot(sim1.sim)
+```
+
++ Similiarly, we could plot the simulation fiter as below:
+```{r}
+sim1.filt <- pomp(sim1.sim, 
+                  covar=data.frame(
+                    covarft=c(obs(sim1.sim),NA),
+                    time=c(timezero(sim1.sim),time(sim1.sim))),
+                  tcovar="time",
+                  statenames=SPX_statenames,
+                  paramnames=SPX_paramnames,
+                  covarnames=SPX_covarnames,
+                  rprocess=discrete.time.sim(step.fun=Csnippet(SPX_rproc.filt),delta.t=1)
+)
+plot(sim1.filt)
+```
+
++ We could see that the simulation filter is quite different to the original SPX filter. Thus, we need to maximize log likelihood to determine parameters (i.e $\sigma_{eta}, \mu, \phi, H_0$).
+
+### 3.3 Parameters Determination with initial values
++ Let us use the previous parameters as the intitial value to maximize the log likelihood process.
+```{r}
+run_level <- 3
+sp500_Np <-          c(100,1e3,2e3)
+sp500_Nmif <-        c(10, 100,200)
+sp500_Nreps_eval <-  c(4,  10,  20)
+sp500_Nreps_local <- c(10, 20, 20)
+sp500_Nreps_global <-c(10, 20, 100)
+
+## ----parallel-setup,cache=FALSE------------------------------------------
+require(doParallel)
+cl <- makeCluster(4)
+registerDoParallel(cl)
+clusterExport(cl,c("sim1.sim","sim1.filt","run_level","sp500_Nreps_eval","sp500_Nmif", "params_test", "sp500_Np","SPX.filt"))
+
+cores <- 4  # The number of cores on this machine 
+# registerDoParallel(cores)
+mcopts <- list(set.seed=TRUE)
+set.seed(396658101,kind="L'Ecuyer")
+## ----pf1-----------------------------------------------------------------
+stew(file=sprintf("pf1_level3.rda",run_level),{
+  t.pf1 <- system.time(
+    pf1 <- foreach(i=1:sp500_Nreps_eval[run_level],.packages='pomp',
+                   .options.multicore=list(set.seed=TRUE)) %dopar% try(
+                     pfilter(sim1.filt,Np=sp500_Np[run_level])
+                   )
+  )
+},seed=493536993,kind="L'Ecuyer")
+(L.pf1 <- logmeanexp(sapply(pf1,logLik),se=TRUE))
+
+## ----mif1-----------------
+
+stew("mif1_level3.rda",{
+  t.if1 <- system.time({
+    if1 <- foreach(i=1:sp500_Nreps_local[run_level],
+                   .packages='pomp', .combine=c,
+                   .options.multicore=list(set.seed=TRUE)) %dopar% try(
+                     mif2(SPX.filt,
+                          start=params_test,
+                          Np=sp500_Np[run_level],
+                          Nmif=sp500_Nmif[run_level],
+                          cooling.type="geometric",
+                          cooling.fraction.50=0.5,
+                          transform=TRUE,
+                          rw.sd = rw.sd(
+                            mu  = 0.02,
+                            phi      = 0.02,
+                            sigma_eta = 0.02,
+                            H_0       = ivp(0.1)
+                          )
+                     )
+                   )
+    
+    L.if1 <- foreach(i=1:sp500_Nreps_local[run_level],.packages='pomp',
+                     .combine=rbind,.options.multicore=list(set.seed=TRUE)) %dopar% 
+                     {
+                       logmeanexp(
+                         replicate(sp500_Nreps_eval[run_level],
+                                   logLik(pfilter(SPX.filt,params=coef(if1[[i]]),Np=sp500_Np[1]))
+                         ),
+                         se=TRUE)
+                     }
+    
+  })
+},seed=318817883,kind="L'Ecuyer")
+
+r.if1 <- data.frame(logLik=L.if1[,1],logLik_se=L.if1[,2],t(sapply(if1,coef)))
+if (run_level>1) 
+  write.table(r.if1,file="sp500_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.if1$logLik,digits=5)
+
+pairs(~logLik+mu+phi+sigma_eta,data=subset(r.if1,logLik>max(logLik)-500))
+stopCluster(cl)
+```
+
++ The pair plot shows that there's no significant correlation between $\mu$, $\phi$, and $sigma_{\eta}$. Meanwhile, we could use it to find proper  $\mu$, $\phi$, and $sigma_{eta}$. 
++ Meanwhile, we could find that the parameter $\phi$ is approximately a vertical line. This is because I maybe choose $\phi$ perfectly for accident, and the code could not go out of the peak for parameter $\phi$, thus this parameter did not change in the whole process. This phenomenon indicates that $\phi$ is approximately 1.
++ Looking at the figure, we could find that $\mu$ is a parameter less than 0, $\phi$ is approximately 1, and $\sigma_{\eta}$ is located in the interval of 0.2 to 0.3.
++ To obtain more detailed information, I need to run the code without knowing the initial value $H_0$.
+
+### 3.4 Parameters Determination with undetermined initial values
++ From the analysis given above, we could know that $\mu$ is a parameter less than 0, $\phi$ is approximately 1, and $\sigma_{\eta}$ is located in the interval of 0.2 to 0.3.
++ To get a more accurate result, I choose $\mu$ to be a parameter between -15 and 0, $\mu$ to be a parameter between 0.75 and 1, $\sigma_{\eta}$ to be a parameter between 0.05 and 0.5, and $H_0$ is a unbounded parameter.
+```{r}
+require(doParallel)
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+sp500_box <- rbind(
+  mu    =c(-15,0),
+  phi = c(0.75,1.05),
+  sigma_eta = c(0.05,0.5),
+  H_0 = c(-5,5)
+)
+
+clusterExport(cl,c("sim1.sim","sim1.filt","run_level","sp500_box", "if1","sp500_Nreps_eval","sp500_Nmif", "params_test", "sp500_Np","SPX.filt"))
+
+cores <- 4  # The number of cores on this machine 
+# registerDoParallel(cores)
+mcopts <- list(set.seed=TRUE)
+set.seed(396658101,kind="L'Ecuyer")
+
+
+stew(file="box_eval_level3_new_para.rda",{
+  t.box <- system.time({
+    if.box <- foreach(i=1:sp500_Nreps_global[run_level],.packages='pomp',.combine=c,
+                      .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        if1[[1]],
+        start=apply(sp500_box,1,function(x)runif(1,x))
+      )
+    
+    L.box <- foreach(i=1:sp500_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                     .options.multicore=list(set.seed=TRUE)) %dopar% {
+                       set.seed(87932+i)
+                       logmeanexp(
+                         replicate(sp500_Nreps_eval[run_level],
+                                   logLik(pfilter(SPX.filt,params=coef(if.box[[i]]),Np=sp500_Np[run_level]))
+                         ), 
+                         se=TRUE)
+                     }
+  })
+},seed=290860873,kind="L'Ecuyer")
+
+
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+if(run_level>1) write.table(r.box,file="sp500_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.box$logLik,digits=5)
+plot(r.box$logLik)
+```
+
++ We could see the distribution of log likelihood in the figure. 
++ From the figure given above, we could find that most parameter sets have a log likelihood at about 5120. However, there's some sets' log likelihood is less than 5100, and there's no sets have a log likelihood between 5100 and 5110. It seems that there's some "jump" in the parameters.
+
+```{r}
+index <- which.max(r.box$logLik)
+print(index)
+print(r.box[index,])
+```
+
++ We could obtain the maximum log likelihood by searching these plots.
++ From the result given above, we could find that the maximum log likelihood is 5126.167, and in this case, the parameters would be: $\mu = -9.644, \phi = 0.915, \sigma_{\eta}=0.361$, and initial value is: $\H_0 = -3.497$
++ To look at these parameters more clearly, we could draw a box pair plot.
+
+```{r}
+## ----pairs_global--------------------------------------------------------
+pairs(~logLik+mu+phi+sigma_eta+H_0,data=subset(r.box,logLik>max(logLik)-250))
+```
+
++ There's some interesting result from the pair plot. First, there's a jump in $\phi - log likelihood$ figure. This is hard to explain why $\phi$ cannot take values in that gap.
++ Another one we could observe is $sigma_{\eta}$ and $H_0$ have strong correlation. This is because:
+$$h_t = \mu + \phi (h_{t-1} -  \mu) + \eta_t, \eta_t \sim N(0,\sigma_{\eta}^2)$$
+Thus, it is reasonable to have this strong correlation.
++ The pair plot shows that there's no significant correlation between $\mu$, $\phi$, $sigma_{\eta}$, and . Meanwhile, we could use it to find proper  $\mu$, $\phi$, $sigma_{eta}$, and $H_0$, which gives the same result as before. The if box plot could give us other information.
+
+```{r}
+plot(if.box)
+```
+
++ From the filter diagnostic graph, we could observe the efficient sample size is sufficient large, and Y state is very similiar to the original SPX filter.
++ From MIF2 convergence diagnostics graph, we could see that $\mu$, $\phi$, $\sigma_{\eta}$ converges after about 150 iterations. $H_0$ convergences after about 100 iterations.
+
+## 4 Comparing to GARCH model and conclusion
++ We could use garch benchmark to get the loglikelihood of garch model. Garch model is given below.
+```{r}
+## ----garch_benchmark-----------------------------------------------------
+require(tseries)
+fit.garch.benchmark <- garch(SPX_demean_dat,grad = "numerical", trace = FALSE)
+L.garch.benchmark <- logLik(fit.garch.benchmark)
+L.garch.benchmark
+```
+
++ From the result given above, log likelihood of garch model is 4946.96 with degree of freedom 3.
++ The log likelihood of stochastic volatility model is 5126.167, which is slightly larger than garch model. Here, AIC favors the stochastic volatility model.
++ The main objective of this study is to present the most important specifications of discrete-time SV models, and to show how to implement these techniques to estimate SV models.
++ We can use the stochastic volatility model to give a prediction of volatility given historical SPX500 index.
++ The best parameter is of stochastic volatility model is: $\mu = -9.644, \phi = 0.915, \sigma_{\eta}=0.361$, and initial value is: $\H_0 = -3.497$.
+
+
+## Reference
+[1] Discrete-Time Stochastic Volatility Models and MCMC-Based Statistical Inference, Nikolaus Hautsch, 2008
+
+[2] Roman Liesenfeld & Robert C. Jung, 2000. "Stochastic volatility models: conditional normality versus heavy-tailed distributions," Journal of Applied Econometrics, John Wiley & Sons, Ltd., vol. 15(2), pages 137-160.
+
+[3] [wikipedia: Stochastic Volatility](https://en.wikipedia.org/wiki/Stochastic_volatility)
+
+[4] Markov Chain Monte Carlo Methods for Generalized Stochastic Volatility Models (with Siddhartha
+Chib and Neil Shephard), Journal of Econometrics 2002, 108, 281-316. 

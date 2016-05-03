@@ -1,0 +1,749 @@
+---
+title: "Financial Volatility of three Main Stock Market Indexes"
+output: html_document
+---
+
+
+
+
+###Introduction
+The data we will analyze in this report include the recent five years information of three main US stock market indexes which are Dow Jones Industrial Average, NASDAQ composite and S&P 500. All of those three are a kind of a measurement of how the stock market in general behaves though each of them has its own focus. The return in the stock market is the thing investors are most cares about, if there is any clue to use the previous return to forcast the return in the furture, then that will create huge profit for the people who are willing to take advantage of that. Although under assumption of perfect market, there should not exit such kind of relation, the real-world data are always not perfectly indepedent with each other since the volatility clustering is a really common phenomenon is financial world. Indeed, the emperic tells us that there actually has some realtionship between the return and the volatility of the stock price. Based on that, people build multiple models in order to get some insight of how they are related (to what extent they depend on each other) and to do the prediction of the volatility.
+The volatility of the stock market is critical for the theoretical pricing of various kinds of derivatives based on that stock which makes the prediction of that a hot area. That topic has been widely reasearched from all angles, what I am going to do here is to try two models which are GARCH model and Asymmetric SV model to check the relation and build the model.
+
+
+
+###GARCH model
+The stochatic process of the stock market is like the following:
+$$dS_t = S_t \mu(S,t) dt + S_t \sigma(S,t) d B_t$$
+where $B_t$ is the standard Brownian motion. By the Ito formula we can tranform the equation to a more preise way,
+$$dln(S_t) =  (\mu(S,t)-r) dt +  \sigma(S,t) d B_t$$
+For a short time, we assume that the $\mu(S,t)$ is a constant. That means that the demeaned log-return of the stock should be a Normal $N(0,\sigma^2)$. What we believe is that the \sigma^2 is not independent along time horizon, they are in some way correlated with each other, sometimes even correlated with the prevoius return value which makes it intuitively for the following model. Commonly, we use $V_n$ to demote the volatility of the time n which just means ${\sigma_n}^2$
+$$
+Y_n = \epsilon_n \sqrt{V_n}, \\
+V_n = \alpha_0 + \sum_{j=1}^p \alpha_j Y_{n-j}^2 + \sum_{k=1}^q \beta_k V_{n-k}\\
+$$
+where \epsilon_n ~ N(0,1)
+Then we are going to analyze the NASDAQ Index from the year 2010-07 to 2016-03 to firstly have a general picture of how the log-return of that timeseries data looks.
+All through this report, our discussion and analyze mainly focus on the beviours of 
+$Y_n$ which is the demeaned log return of the stock index.
+$$X_n = log(S_n) - log(S_{n-1}) $$
+$$ Y_n = X_n - mean( X_n) $$
+The plot below shows the $Y_n$ and the auto-correlation of $Y_n$ and ${Y_n}^2$
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+data=read.csv(file="NASDAQ.txt",sep=",")
+
+data=data[seq(1442,1),]
+data$Return=c(0,diff(log(data$Adj.Close),lag=1))
+data$Date=as.Date(data$Date)
+NASDAQ=data$Return[-1]-mean(data$Return[-1])
+#plot(data$Date[-1],data$Return[-1],type="l",ylab="Daily Return")
+quartz()
+plot(data$Date[-1],NASDAQ,type="l",ylab="Daily Return",xlab="DATE")
+
+NASDAQ_t=data[(which(data$Date<as.Date("2016-01-01"))),]
+NASDAQ_t=NASDAQ_t$Return[-1]
+NASDAQ_t=NASDAQ_t-mean(NASDAQ_t)
+
+
+NASDAQ_test=data[(which(data$Date>=as.Date("2016-01-01"))),]
+NASDAQ_test=NASDAQ_test$Return
+
+# acf(data2011$Return,ylab="ACF of 2011 Return")
+# acf((data2011$Return)^2)
+# 
+# 
+# acf(data2012$Return,ylab="ACF of 2012 Return")
+# acf((data2012$Return)^2)
+# acf(data2013$Return,ylab="ACF of 2013 Return")
+# acf((data2013$Return)^2)
+# acf(data2014$Return,ylab="ACF of 2014 Return")
+# acf((data2015$Return)^2)
+# 
+
+
+require(tseries)
+
+require(fGarch)
+quartz()
+acf(NASDAQ_t,main="ACF of NASDAQ log return")
+acf(NASDAQ_t^2,main="ACF of NASDAQ squared log return")
+#Box.test((data$Return)^2)
+```
+
+
+From what shown on the plot, we have the reason to believe that $Y_n$ has no trend over these five years (although our assumption is that under a short period that $(\mu(S,t)-r)$ is a constant, since the data gives this property for a rather long time, we can just continue our study on this long period). There is no significant correlation shown on any lag for $Y_n$ while strong signal of correlations among ${Y_n}^2$. That indicates that GARCH model should be a good fit for this dataset. So we keep on going and clothe the data with the most popular used GARCH(1,1) model.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+
+fit = garchFit( ~ garch(1,1), data =NASDAQ_t,trace=F )
+
+```
+
+
+```{r,warning=FALSE,message=FALSE}
+summary(fit)
+qqnormPlot(fit@residuals,grid=TRUE)
+hist(as.vector(fit@residuals),main="Residuals from GARCH(1,1)",xlab="residuals")
+
+```
+
+The volatility implied by the GARCH(1,1) model look like this, we leave it here non-interpretated planning to compare that to the one estimated by other models later and gives the explanation.
+
+
+```{r,warning=FALSE,echo=FALSE,message=FALSE}
+quartz()
+Date=data$Date[(which(data$Date<as.Date("2016-01-01")))][-1]
+plot(Date,fit@h.t,type="l",ylab="Estimated Volatility",xlab="Date",main="2010-2015")
+
+```
+
+
+Then we plot out the the range of 95% confidence interval(two sigma away) and the 68% confidence interval (one sigma away)of the $Y_n$ value if we believe our estimated volatility. Theoretically, the $Y_n$ should fall into the [$-2\sigma,2\sigma$] with probability of 95 percent overall. Then the situation of how well $Y_n$ fall into that interval can be used as a measurement of the accurency of the estimated volatility as well as the predicted volatility. Here shows the contructed confidence interval by the evaluated volatility.
+
+
+```{r,warning=FALSE,echo=FALSE,message=FALSE}
+quartz()
+plot(seq(1,length(NASDAQ_t)),NASDAQ_t,main="Fitted Value",type="l",xlab="Date")
+lines(seq(1,length(NASDAQ_t)),fit@sigma.t, lty=2, col=4,type="l")
+lines(seq(1,length(NASDAQ_t)),-fit@sigma.t, lty=2, col=4,type="l")
+lines(seq(1,length(NASDAQ_t)),2*fit@sigma.t, lty=2, col=5,type="l")
+lines(seq(1,length(NASDAQ_t)),-2*fit@sigma.t, lty=2, col=5,type="l")
+
+```
+
+
+
+```{r,warning=FALSE,echo=FALSE,message=FALSE}
+quartz()
+prediction=predict(fit, n.ahead=61)
+sd=prediction$standardDeviation
+quartz()
+plot(seq(1,61),NASDAQ_test,main="Predicted 95% Confidence Inverval",type="l",xlab="")
+lines(seq(1,length(NASDAQ_test)),mean(NASDAQ_t)+2*sd, lty=2, col=4,type="l")
+lines(seq(1,length(NASDAQ_test)),mean(NASDAQ_t)-2*sd, lty=2, col=4,type="l")
+legend(45,0.03, c("real value", "upper edge", "lower edge"), col = c(1,4,4),
+       lty = c(1, 2, 2))
+
+
+```
+
+
+
+###Asymmetric Stochatic Volatility Model 
+
+Before we enter into the Asymmetric SV model, let us take a quick look at the standard SV model.
+
+Standard SV model
+$$Y_n = (\exp{H_n/2}) \epsilon_n$$
+$$H_n = \mu_h (1-\phi) + \phi H_{n-1} + \eta_n \sigma_n \sqrt{1- \phi^2}$$
+
+where $H_n= log(\sigma^2)$, $\sigma^2$ is the volatility of {$Y_n$}.  {$\epsilon_n$} and {$\eta_n$} Guassian unit-variance white noise. $\phi$ and $\mu$ are the parameters
+
+The empirical evidence shows us that {$\epsilon_n$} and {$\eta_n$} might not be two independent series. What people observe in the market is that, strike of the market will effect the volatility of the market in the following days. However, that effect is usually not symmetric, good strike tend to have no effect on the volatility even makes the price less flunctuated and bad news always drives the market crazy which is reflected by the high vibration of the price. To tranlate that into model language is that there exist some correlation between $\epsilon_{n-1}$ and $\eta_n$ and we expect a negative value of $\rho$ which means high $\epsilon_{n-1}$ (good news) result in small $\eta_n$ (steady market) and low $\epsilon_{n-1}$ (bad news) lead to high $\eta_n$ (fluctuate market).
+
+One of the widely used equation that satisfies the required correlation is that
+$\eta_n=\rho \epsilon_{n-1} + \omega_n \sqrt{1-\phi^2}$ with {$\omega_n$} also being unit-variance Gaussian white noise and is independent of {$\epsilon_n$}
+After plugging in the expression of $\eta_n$, we get the model looks like this:
+
+$$Y_n = (\exp{H_n/2}) \epsilon_n$$
+$$H_n= \mu_h (1-\phi) +\phi H_{n-1} + \beta \times \rho  \exp{-H_{n-1}/2} +\sigma_{\omega} \omega_n$$
+
+with $\beta =Y_{n-1} \sigma \sqrt{1-\phi^2}$ and $\sigma_{\omega} = \sigma \sqrt{1-\phi^2} \sqrt{1-\rho^2}$. where $\rho$, $\sigma$ and $\phi$ are the parameters after all.
+In the following part, we will employ that model on the three main index of the US stock market, S&P500, NASDAQ composite, Dow Jones Industrial Average to estimate the parameters especially to check if $\rho$ is significantly away from zero and compare those values across the models.
+
+
+
+
+
+
+#### Build POMP model on the Dow Jones Industrial Average Index data
+
+Then we try Dow Jones Industrial Average Index data from 2010-07 to 2016-03. The POMP model and the pomp packages in R helps us to infer the value of parameters (use the IF2 algorithm of Ionides et al. 2015) and the log-likelihood by particle filter[1]. The below gives us the diagnostic plot of how well the model fit the data and if those parameters actually converge in the end.
+
+```{r,warning=FALSE,message=FALSE}
+require(pomp)
+NQ_statenames <- c("H","Y_state")
+NQ_rp_names <- c("mu_h","phi","sigma_eta","rho")
+NQ_ivp_names <- c("H_0")
+NQ_paramnames <- c(NQ_rp_names,NQ_ivp_names)
+NQ_covarnames <- "covaryt"
+rproc1 <- "
+  double beta,omega;
+  omega = rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-rho*rho)) ;
+  beta = Y_state * sigma_eta * sqrt( 1- phi*phi );
+  H = mu_h*(1 - phi) + phi*H + beta * rho * exp(-H/2) + omega;
+"
+rproc2.sim <- "
+  Y_state = rnorm( 0,exp(H/2) );
+ "
+rproc2.filt <- "
+  Y_state = covaryt;
+ "
+NQ_rproc.sim <- paste(rproc1,rproc2.sim)
+NQ_rproc.filt <- paste(rproc1,rproc2.filt)
+NQ_initializer <- "
+  H = H_0;
+  Y_state = rnorm( 0,exp(H/2) );
+"
+NQ_rmeasure <- "
+   y=Y_state;
+"
+NQ_dmeasure <- "
+   lik=dnorm(y,0,exp(H/2),give_log);
+"
+NQ_toEstimationScale <- "
+  Tsigma_eta = log(sigma_eta);
+  Tphi = logit(phi);
+  Trho=tan(rho*(3.1416/2));
+"
+NQ_fromEstimationScale <- "
+  Tsigma_eta = exp(sigma_eta);
+  Tphi = expit(phi);
+   Trho=atan(rho)*(2/3.1416);
+  "
+NQ.filt <- pomp(data=data.frame(y=NASDAQ,
+                     time=1:length(NASDAQ)),
+              statenames=NQ_statenames,
+              paramnames=NQ_paramnames,
+              covarnames=NQ_covarnames,
+              times="time",
+              t0=0,
+              covar=data.frame(covaryt=c(0,NASDAQ),
+                     time=0:length(NASDAQ)),
+              tcovar="time",
+              rmeasure=Csnippet(NQ_rmeasure),
+              dmeasure=Csnippet(NQ_dmeasure),
+              rprocess=discrete.time.sim(step.fun=Csnippet(NQ_rproc.filt),delta.t=1),
+              initializer=Csnippet(NQ_initializer),
+              toEstimationScale=Csnippet(NQ_toEstimationScale), 
+              fromEstimationScale=Csnippet(NQ_fromEstimationScale)
+)
+expit<-function(real){1/(1+exp(-real))}
+logit<-function(p.arg){log(p.arg/(1-p.arg))}
+
+#########Fitting constant leverage model to NASDAQ data######
+run_level <- 1
+NQ_Np <-          c(100,1e3,2e3)
+NQ_Nmif <-        c(50, 100,200)
+NQ_Nreps_eval <-  c(4,  10,  20)
+NQ_Nreps_local <- c(10, 20, 20)
+NQ_Nreps_global <-c(10, 20, 100)
+params_test <- c(
+     rho=-0.6 ,
+     mu_h = -0.25,       
+     phi = expit(4),     
+     sigma_eta = exp(-0.07),
+     H_0=0)
+NQ_rw.sd_rp <- 0.02
+NQ_rw.sd_ivp <- 0.1
+NQ_cooling.fraction.50 <- 0.5
+##########Global Search#####
+fixed_params <- c(mu_h=-10, sigma_eta=1,H_0=0)
+
+NQ_box <- rbind(
+  rho =c(-0.95,0.95),
+ phi = c(0.5,0.99))
+library(quantmod)
+dataDJ=getSymbols("^DJI",env=NULL,from="2010-7-9",to="2016-3-31")
+
+DJ=diff(log(as.vector(dataDJ$DJI.Adjusted)),lag=1)
+plot(seq(1:1441),DJ,type="l")
+
+
+fixed_params <- c(mu_h=-10, sigma_eta=1,H_0=0)
+
+NQ_box <- rbind(
+  rho =c(-0.95,0.95),
+ phi = c(0.5,0.99)
+)
+
+DJ.filt <- pomp(data=data.frame(y=DJ,time=1:length(DJ)),
+              statenames=NQ_statenames,
+              paramnames=NQ_paramnames,
+              covarnames=NQ_covarnames,
+              times="time",
+              t0=0,
+              covar=data.frame(covaryt=c(0,DJ),
+                     time=0:length(DJ)),
+              tcovar="time",
+              rmeasure=Csnippet(NQ_rmeasure),
+              dmeasure=Csnippet(NQ_dmeasure),
+              rprocess=discrete.time.sim(step.fun=Csnippet(NQ_rproc.filt),delta.t=1),
+              initializer=Csnippet(NQ_initializer),
+              toEstimationScale=Csnippet(NQ_toEstimationScale), 
+              fromEstimationScale=Csnippet(NQ_fromEstimationScale)
+)
+
+
+stew(file="box_eval_dj.rda",{
+  t.box <- system.time({
+     require(doParallel)
+      cores <- 20  # The number of cores on this machine 
+      registerDoParallel(cores)
+    if.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        DJ.filt,
+        start=c(apply(NQ_box,1,function(x)runif(1,x[1],x[2])),fixed_params),
+        Np=NQ_Np[run_level],
+                         Nmif=NQ_Nmif[run_level],
+                         cooling.type="geometric",
+                         cooling.fraction.50=0.2,
+                         transform=TRUE,
+                         rw.sd = rw.sd(
+                            rho       = 0.02,
+                            phi       = 0.02)
+                             )
+    
+    
+    L.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                      .options.multicore=list(set.seed=TRUE)) %dopar% {
+                        set.seed(87932+i)
+                        logmeanexp(
+                          replicate(NQ_Nreps_eval[run_level],
+                                    logLik(pfilter(DJ.filt,params=coef(if.box[[i]]),Np=NQ_Np[run_level]))
+                          ), 
+                          se=TRUE)
+                      }
+  
+    
+    
+    
+    })
+},seed=290860873,kind="L'Ecuyer")
+
+plot(if.box)
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+if(run_level>1) write.table(r.box,file="NQ_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+#summary(r.box$logLik,digits=5)
+
+```
+
+
+Here I need to explain a little bit more, some of the people migh take the intial value which are $Y_0$ and $H_0$ to be parameters waited to be evaluated as well to maximize the log-likilihood. Here is our model, I personally choose to take them as the fixed parameters and initialize them by the zero. Then there are in total four unknown paramters $\rho$, $\phi$, $\sigma$ and $\mu_h$. The many tries of global search with all those four parameters always gives the result that $\mu_h$ will converge rather quick to the value around -10 when the other parameters does not shown any sign of covergence which gives me the thought to fix that parameter and reduce the load of the work. What's more, we also fixed $\sigma$ to be 1 because that is irrevalant to the thing we care most which is whether $\rho$ is positive or negative and how large it can be. Setting $\sigma$=1 manually might sacrifice the likelihood can be achieved even more severly effect the convergence of the parameters and the fitness of the model. However, we will do this for now and check later if that is a good choice to do that. The diagnostic plot below gives the approximate value of $\phi$ to be around 0.9 and $\rho$ to be around -0.5.
+
+We are quite confident that the $\rho$ will not be any chance close to zero which means that there truely exit financial leverage at least inferred from Dow Jones Industrial Average Index (we will later move on to check if that leverage effect exist on other Indexs). The graph below shows the liklihood surface which is also in accordance with the dianostic plot shown above. The black lines are the contours of likelihood and those small circle might be the points where the likelihood is highest. Although those circle distributed seperately on this plot, actually they are rather concentrated on the box [-0.7,0.6] $\times$ [0.88,0.92] when we looking from its whole space level.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE} 
+p= expand.grid(rho=seq(from=-0.8,to=-0.5,length=20),
+               phi=seq(from=0.8,to=0.99,length=20),
+            mu_h=-10,
+            sigma_eta=1,
+            H_0=0
+            )
+stew (file="liki_surf_dj.rda",{
+p= foreach (theta=iter(p,"row"),.combine=rbind,
+         .inorder=FALSE,.options.multicore=mcopts) %dopar% 
+ {
+  pf= pfilter(DJ.filt,params=unlist(theta),Np=100)
+   theta$loglik <- logLik(pf)
+   theta
+ } 
+})
+require(dplyr)
+require(ggplot2)
+pp <- mutate(p,loglik=ifelse(loglik>max(loglik)-100,loglik,NA))
+ggplot(data=pp,mapping=aes(x=rho,y=phi,z=loglik,fill=loglik))+
+  geom_tile(color=NA)+
+  geom_contour(color='black',binwidth=3)+
+  scale_fill_gradient()+
+  labs(x=expression(rho),y=expression(phi))
+ 
+ 
+ 
+ 
+
+```
+
+
+To calculate the confidence interval by profile-likelihood:
+$$ {\ell^\mathrm{profile}_d}(\theta_d) = \max_{\phi\in{\mathbb{R}}^D: \phi_d=\theta_d}{\ell}(\phi)$$
+Here the $\theta_d$ means the $\rho$ (or $\phi$) in our model. We need to fix the $\rho$ at first and leaves the other parameters floating. And we plot the corresponding maximal likelihood for each fixed $\rho$,then the approximate 95% confidence interval for $\rho$ is given by
+$$\{\rho^* : {\ell}({\rho^*}) - {\ell^\mathrm{profile}_d}(\rho)\} < 1.92.$$
+The confidence interval derive for $\phi$ comes from the same routine. While the initial interval for eximination is choosen to be the interval covers the value of the convergence of that parameter. To be specific in this case, the search area for $\rho$ is [-0.8,-0.5] and that for $\phi$ to be [0.8,0.99]
+We can see from the plot that there is a reasonable confidence interval for $\rho$ and $\phi$ espeicially we should notice that the confidence interval of
+$\rho$ is far away from zero indicate the significance of that parameter.
+
+
+```{r, echo=FALSE, message=FALSE}
+fixed_params <- c(mu_h=-10, sigma_eta=1,H_0=0)
+run_level <- 1
+NQ_Np <-          c(100,1e3,2e3)
+NQ_Nmif <-        c(100, 100,200)
+NQ_Nreps_eval <-  c(4,  10,  20)
+NQ_Nreps_local <- c(10, 20, 20)
+
+stew(file= "profile_likeli.rda" ,{
+  LOGLIK=c()
+  for (phi in seq(0.8,0.99,0.005)){
+    
+    j=((phi-0.8)/0.005)+1
+    fixed_params1 <- c(fixed_params,phi=phi)
+    NQ_box = rbind(rho= c(-1,1))
+     t.box <- system.time({
+     require(doParallel)
+      cores <- 20  # The number of cores on this machine 
+      registerDoParallel(cores)
+    if.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        DJ.filt,
+        start=c(apply(NQ_box,1,function(x)runif(1,x[1],x[2])),fixed_params1),
+        Np=NQ_Np[run_level],
+                         Nmif=NQ_Nmif[run_level],
+                         cooling.type="geometric",
+                         cooling.fraction.50=0.1,
+                         transform=TRUE,
+                         rw.sd = rw.sd(
+                            rho       = 0.02)
+                             )
+
+    
+    ##########likelihood global######  
+    L.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                      .options.multicore=list(set.seed=TRUE)) %dopar% {
+                        set.seed(87932)
+                        logmeanexp(
+                          replicate(NQ_Nreps_eval[run_level],
+                                    logLik(pfilter(DJ.filt,params=coef(if.box[[i]]),Np=NQ_Np[run_level]))
+                          ), se=TRUE)
+                      }
+  
+   
+    
+    
+    })
+    print(j)
+    print(phi)
+    LOGLIK[j]=mean(L.box[,1])
+    print(LOGLIK[j])
+    
+  }
+})
+stew (file= "profile_likeli-phi.rda" ,{
+  LOGLIK_phi=c()
+  LOGLIK_phi=LOGLIK
+})
+
+Index=which(LOGLIK>=(max(LOGLIK)-1.92))
+
+#seq(0.001,0.01,0.0005)[Index]
+quartz()
+plot( seq(0.8,0.99,0.005)[1:32],LOGLIK_phi[1:32],xlab=expression(phi),ylab="profile-likelihood",type="l",col="tomato")
+abline(h = max(LOGLIK_phi)-1.92,lty=2, lwd=2,v=c(0.885,0.905))
+
+
+
+
+
+
+#############calculating profile-likelihood for rho#########
+
+stew(file= "profile_likeli1.rda" ,{
+  LOGLIK=c()
+  for (rho in seq(-0.8,-0.5,0.005)){
+    j=((rho+0.8)/0.005)+1
+    fixed_params2 <- c(fixed_params,rho=rho)
+    NQ_box = rbind(phi= c(0.5,0.99))
+     t.box <- system.time({
+     require(doParallel)
+      cores <- 20  # The number of cores on this machine 
+      registerDoParallel(cores)
+    if.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        DJ.filt,
+        start=c(apply(NQ_box,1,function(x)runif(1,x[1],x[2])),fixed_params2),
+        Np=NQ_Np[run_level],
+                         Nmif=NQ_Nmif[run_level],
+                         cooling.type="geometric",
+                         cooling.fraction.50=0.1,
+                         transform=TRUE,
+                         rw.sd = rw.sd(
+                            phi       = 0.02)
+                             )
+
+    
+    ##########likelihood global######  
+    L.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                      .options.multicore=list(set.seed=TRUE)) %dopar% {
+                        set.seed(87932)
+                        logmeanexp(
+                          replicate(NQ_Nreps_eval[run_level],
+                                    logLik(pfilter(DJ.filt,params=coef(if.box[[i]]),Np=NQ_Np[run_level]))
+                          ), se=TRUE)
+                      }
+  
+   
+    
+    
+    })
+    print(j)
+    print(phi)
+    LOGLIK[j]=mean(L.box[,1])
+    print(LOGLIK[j])
+    
+  }
+})
+
+quartz()
+plot( seq(-0.8,-0.5,0.005),LOGLIK,xlab=expression(rho),ylab="profile-likelihood",col="tomato")
+abline(h = 4918.839-1.92,lty=2, lwd=2,v=c(-0.65,-0.51))
+
+
+```
+
+
+After being clear of the Maximun Likelihood Estimate of our model's parameters we can simulate the data and compare that to our original data to check how well the model function. The first set of plot is combined with our original data and three other simulated $Y_n$ series. Our main goal is not to check if they are exactly the same even not how close they are, instead, we want to see if the volatility of the original data and our simulated on coincide with each other which means when the original data vibrate violetly, the simulated data is also expected to behave the same way and they calm down in the same step. To present that more clear, we can draw the confidence interval on the original data with the simulated volatility and see if they walk side by side which is shown on the second set of the pictures.
+
+
+```{r, echo=FALSE,warning=FALSE, message=FALSE}
+statenames <- c("H","Y_state")
+paranames <- c("mu_h","phi","sigma_eta","rho")
+
+stochStep <- Csnippet("
+ 
+H = mu_h*(1 - phi) + phi*H + (Y_state * sigma_eta * sqrt( 1- phi*phi )) * rho * exp(-H/2) + (rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-rho*rho)));
+ Y_state = rnorm( 0,exp(H/2) );
+")
+
+
+
+
+params<- c(
+     rho = -0.58,
+     mu_h = -10,       
+     phi = 0.9,     
+     sigma_eta = 1,
+     H.0=0,
+     Y_state.0=0
+  )
+
+simulation=pomp(data.frame(y=DJ,time=1:length(DJ)), times="time",
+t0=0,rprocess=discrete.time.sim(step.fun=stochStep,delta.t=1),paramnames=paranames,statenames=c("H","Y_state")) 
+
+S=simulate(simulation,nsim=4,seed=54321,params=params,as.data.frame=TRUE,states=TRUE,include.data=TRUE)
+
+S$simula=c(S$y[which(S$sim=="data")],S$Y_state[which(S$sim!="data")])
+
+V1=(exp(S$H[which(S$sim==1)]))^(1/2)
+V2=(exp(S$H[which(S$sim==2)]))^(1/2)
+V3=(exp(S$H[which(S$sim==3)]))^(1/2)
+V4=(exp(S$H[which(S$sim==4)]))^(1/2)
+quartz()
+par(mfrow=c(2,2))
+
+plot(seq(100,1441),DJ[100:1441],type="l",col="tomato",ylab="original data",xlab="Date")
+plot(seq(100,1441),(S$Y_state[which(S$sim==2)])[100:1441],type="l",col="turquoise",ylab="sim1",xlab="Date")
+plot(seq(100,1441),(S$Y_state[which(S$sim==1)])[100:1441],type="l",col="turquoise",ylab="sim2",xlab="Date")
+plot(seq(100,1441),(S$Y_state[which(S$sim==3)])[100:1441],type="l",col="turquoise",ylab="sim3",xlab="Date")
+
+quartz()
+par(mfrow=c(2,2))
+plot(seq(100,1441),DJ[100:1441],type="l",col="grey",ylab="original data",xlab="Date")
+lines(seq(100,1441),2*V1[100:1441],type="l",col=5,ylab="sim1")
+lines(seq(100,1441),-2*V1[100:1441],type="l",col=5,ylab="sim1")
+
+plot(seq(100,1441),DJ[100:1441],type="l",col="grey",ylab="original data",xlab="Date")
+lines(seq(100,1441),2*V2[100:1441],type="l",col=5,ylab="sim2")
+lines(seq(100,1441),-2*V2[100:1441],type="l",col=5,ylab="sim2")
+
+plot(seq(100,1441),DJ[100:1441],type="l",col="grey",ylab="original data",xlab="Date")
+lines(seq(100,1441),2*V3[100:1441],type="l",col=5,ylab="sim3")
+lines(seq(100,1441),-2*V3[100:1441],type="l",col=5,ylab="sim3")
+
+plot(seq(100,1441),DJ[100:1441],type="l",col="grey",ylab="original data",xlab="Date")
+lines(seq(100,1441),2*V4[100:1441],type="l",col=5,ylab="sim4")
+lines(seq(100,1441),-2*V4[100:1441],type="l",col=5,ylab="sim4")
+```
+
+
+
+
+#### Build POMP model on the NASDAQ composite Index data
+
+Then we try NASDAQ composite data from 2010-07 to 2016-03 (same time period). 
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+
+stew(file="box_eval-nq.rda",{
+  t.box <- system.time({
+     require(doParallel)
+      cores <- 20  # The number of cores on this machine 
+      registerDoParallel(cores)
+    if.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        NQ.filt,
+        start=c(apply(NQ_box,1,function(x)runif(1,x[1],x[2])),fixed_params1),
+        Np=NQ_Np[run_level],
+                         Nmif=NQ_Nmif[run_level],
+                         cooling.type="geometric",
+                         cooling.fraction.50=0.2,
+                         transform=TRUE,
+                         rw.sd = rw.sd(
+                            rho       = 0.02,
+                            phi       = 0.02)
+                             )
+     L.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                      .options.multicore=list(set.seed=TRUE)) %dopar% {
+                        set.seed(87932+i)
+                        logmeanexp(
+                          replicate(NQ_Nreps_eval[run_level],
+                                    logLik(pfilter(NQ.filt,params=coef(if.box[[i]]),Np=NQ_Np[run_level]))
+                          ), 
+                          se=TRUE)
+                      }
+    })
+},seed=290860873,kind="L'Ecuyer")
+plot(NQ.filt)
+plot(if.box)
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+if(run_level>1) write.table(r.box,file="NQ_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+#summary(r.box$logLik,digits=5)
+```
+
+ 
+
+
+#### Build POMP model on the S&P500 Index data
+
+After the first two case, we continue to apply that model on the S&P500 Index Return data from 2010-07 to 2016-03 (same period as the data of NASDAQ and DJ Index)
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+SPdata=read.csv(file="S&P500.txt",header=TRUE)
+SPdata=SPdata[seq(1442,1),]
+SP500=diff(log(SPdata$Adj.Close),lag=1)
+
+plot(seq(1,1441),SP500,type="l",xlab="Date")
+
+
+fixed_params <- c(mu_h=-10, sigma_eta=1,H_0=0)
+
+NQ_box <- rbind(
+  rho =c(-0.95,0.95),
+ phi = c(0.5,0.99)
+)
+
+SP.filt <- pomp(data=data.frame(y=SP500,
+                     time=1:length(SP500)),
+              statenames=NQ_statenames,
+              paramnames=NQ_paramnames,
+              covarnames=NQ_covarnames,
+              times="time",
+              t0=0,
+              covar=data.frame(covaryt=c(0,SP500),
+                     time=0:length(SP500)),
+              tcovar="time",
+              rmeasure=Csnippet(NQ_rmeasure),
+              dmeasure=Csnippet(NQ_dmeasure),
+              rprocess=discrete.time.sim(step.fun=Csnippet(NQ_rproc.filt),delta.t=1),
+              initializer=Csnippet(NQ_initializer),
+              toEstimationScale=Csnippet(NQ_toEstimationScale), 
+              fromEstimationScale=Csnippet(NQ_fromEstimationScale)
+)
+
+
+stew(file="box_eval_sp.rda",{
+  t.box <- system.time({
+     require(doParallel)
+      cores <- 20  # The number of cores on this machine 
+      registerDoParallel(cores)
+    if.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar%  
+      mif2(
+        SP.filt,
+        start=c(apply(NQ_box,1,function(x)runif(1,x[1],x[2])),fixed_params),
+        Np=NQ_Np[run_level],
+                         Nmif=NQ_Nmif[run_level],
+                         cooling.type="geometric",
+                         cooling.fraction.50=0.2,
+                         transform=TRUE,
+                         rw.sd = rw.sd(
+                            rho       = 0.02,
+                            phi       = 0.02)
+                             )
+    
+    
+    L.box <- foreach(i=1:NQ_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                      .options.multicore=list(set.seed=TRUE)) %dopar% {
+                        set.seed(87932+i)
+                        logmeanexp(
+                          replicate(NQ_Nreps_eval[run_level],
+                                    logLik(pfilter(SP.filt,params=coef(if.box[[i]]),Np=NQ_Np[run_level]))
+                          ), 
+                          se=TRUE)
+                      }
+  
+    
+    
+    
+    })
+},seed=290860873,kind="L'Ecuyer")
+
+plot(if.box)
+
+
+
+
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+if(run_level>1) write.table(r.box,file="NQ_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+#summary(r.box$logLik,digits=5)
+
+
+```
+
+
+
+
+#### Comparison between DJ, S&P 500, NASDAQ Index and conclusion
+
+We also did profile-likelihood and simulation part to the other Index as well but I choose not to show them here so as to avoid redundency. When apply our Asymmetric SV model to all the three dataset over 2010 to 2016 year and do the diagnostic, we obtain the similar result that there exist financial leverage phenomeno on the market. The "bad news" will disturb the overall market price (measured by Index) and makes it volatile while the "good news" will has little effect on the price process even stabilize that under some cases. 
+We also compare the fitted volatility from Garch model as well as from our ASV model and plot four graphs, the black line is the fitted volatility from GARCH and blue lines are the simulated volatility by the ASV model (parameter is the MLE we estimated before) to visualize purpose. We can in a further step do that simulation thousands of times and see if that match with the Garch model (by checking the distribution of some classic statistics like mean and variance). While we didn't do that since that does not gives us much insight of the efficiency of either model (two model behave the same does not imply either is good). One way we can check the model is to predict the volatility ahead in a short period and use the predicted volatility to calculate the price of some financial derivatives like Future or Options based on that stock and compare the theoretical calculated price (use the $\sigma$ we forcast by our model) to the market price we observe, if that matches well indicate the goodness of our model. That part need alot more works beyond this course. Here is basiacally where I am going to stop to stretify the points of time series analysis and pomp model trying.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+params<- c(
+     rho = -0.42,
+     mu_h = -10,       
+     phi = 0.92,     
+     sigma_eta = 1,
+     H.0=0,
+     Y_state.0=0
+  )
+
+
+S1=simulate(simulation,nsim=4,seed=54321,params=params,as.data.frame=TRUE,states=TRUE,include.data=TRUE)
+
+S1$simula=c(S$y[which(S$sim=="data")],S$Y_state[which(S$sim!="data")])
+
+V21=(exp(S$H[which(S$sim==1)]))^(1/2)
+V22=(exp(S$H[which(S$sim==2)]))^(1/2)
+V23=(exp(S$H[which(S$sim==3)]))^(1/2)
+V24=(exp(S$H[which(S$sim==4)]))^(1/2)
+
+quartz()
+par(mfrow=c(2,2))
+Date=data$Date[(which(data$Date<as.Date("2016-01-01")))][-1]
+plot(Date,fit@h.t,type="l",ylab="Estimated Volatility",xlab="Date",main="sim1")
+lines(Date[100:1441],(V21^2)[100:1441],type="l",col=5,ylab="sim1")
+plot(Date,fit@h.t,type="l",ylab="Estimated Volatility",xlab="Date",main="sim2")
+lines(Date[100:1441],(V22^2)[100:1441],type="l",col=5,ylab="sim2")
+plot(Date,fit@h.t,type="l",ylab="Estimated Volatility",xlab="Date",main="sim3")
+lines(Date[100:1441],(V23^2)[100:1441],type="l",col=5,ylab="sim3")
+plot(Date,fit@h.t,type="l",ylab="Estimated Volatility",xlab="Date",main="sim4")
+lines(Date[100:1441],(V24^2)[100:1441],type="l",col=5,ylab="sim4")
+
+```
+
+
+
+
+
+
+
+### Reference
+[1] http://ionides.github.io/531w16/notes11/notes11.html 
+[2]Discrete-Time Stochastic Volatility Models and MCMC-Based Statistical Inference,Nikolaus Hautsch, Yangguoyi Ou, 2008
+[3]Bretó, C. 2014. On idiosyncratic stochasticity of financial leverage effects. Statistics & Probability Letters 91:20–26.
+[4] McCleery, R. H., and C. M. Perrins. 1991. Effects of predation on the numbers of great tits Parus major. Pages 129–147 in Bird population studies. relevence to conservation and management. Oxford University Press, Oxford.
+[5]http://ionides.github.io/531w16/
