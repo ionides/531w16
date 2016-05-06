@@ -1,6 +1,6 @@
 ---
 title: "Time Series Analysis of JP Morgan stock price"
-author: "Yue Song    UMID:74267931"
+author: ""
 date: "April 23, 2016"
 output: 
   html_document:
