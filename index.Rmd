@@ -163,4 +163,6 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 * [Suggestions for project topics](final_project/project_ideas.html)
 
+* [Projects](final_project/index.html)
+
 ---------
