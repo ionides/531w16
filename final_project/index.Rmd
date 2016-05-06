@@ -25,7 +25,7 @@ csl: ecology.csl
 
 2. [California Measles - Late 1980s / Early 1990s](https://ionides.github.io/531w16/final_project/Project02/stats531_final_project.html)
 
-3. [The Association Between Recent Cholera Epidemics and Rainfall in Haiti](https://ionides.github.io/531w16/final_project/Project03/final_project.html)
+3. [Analysis of an fMRI Dataset](https://ionides.github.io/531w16/final_project/Project03/531Final3.html)
 
 4. [Time Series Analysis of Star Formation History](https://ionides.github.io/531w16/final_project/Project04/final_project.html)
 
@@ -67,7 +67,6 @@ csl: ecology.csl
 
 23. [Rubella and its Vaccination in Michigan from 1969 to 1980](https://ionides.github.io/531w16/final_project/Project23/Report.html)
 
-24. [Analysis of an fMRI Dataset](https://ionides.github.io/531w16/final_project/Project24/531Final3.html)
 
 
 ----------
