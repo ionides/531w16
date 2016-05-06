@@ -88,7 +88,7 @@ POMP is the abbreviation of partially observed markov process, which include lat
 <br />
 Now, we will try to introduce the theory of our models. Firstly let talk about the Ricker model. The Ricker model with stochasticity may have the equation:
 <br />
-$${{\quad\quad}\displaystyle P}_{n+1} = r\,P_{n}\,\exp(-P_{n}+\varepsilon_{n}), \qquad \varepsilon_{n}\;\sim\;\mathrm{Normal}(0,\sigma^2)$$
+$$\quad\quad{\displaystyle P}_{n+1} = r\,P_{n}\,\exp(-P_{n}+\varepsilon_{n}), \qquad \varepsilon_{n}\;\sim\;\mathrm{Normal}(0,\sigma^2)$$
 <br />
 which is based on [here](http://ionides.github.io/531w16/notes11/notes11.html)
 We also used the Hassel model, which is 
