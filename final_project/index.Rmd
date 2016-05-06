@@ -1,0 +1,76 @@
+---
+title: "Stats 531 (Winter 2016) <br>Final projects"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+csl: ecology.csl
+---
+
+------
+
+* Following the [class discussion](http://ionides.github.io/531w16/hw/summary06.html), projects with source code are posted anonymously on the class webpage.
+
+* I will contact everyone to give you the opportunity to have your name attached to your project, if you like, after the course is over and the class grades are assigned.
+
+* Here are the projects. In most cases, source code and data are available from [https://github.com/ionides/531w16/tree/master/final_project](https://github.com/ionides/531w16/tree/master/final_project). For computationally expensive analysis, results saved as .rda files may or may not be available.
+
+
+----------
+
+----------
+
+1. [Time Series Analysis for Nasdaq-100 Index](https://ionides.github.io/531w16/final_project/Project01/531-Final-Project/531_project_2.html)
+
+
+2. [California Measles - Late 1980s / Early 1990s](https://ionides.github.io/531w16/final_project/Project02/stats531_final_project.html)
+
+3. [The Association between Recent Cholera Epidemics and Rainfall in Haiti](https://ionides.github.io/531w16/final_project/Project03/final_project.html)
+
+4. [Time series analysis of star formation history](https://ionides.github.io/531w16/final_project/Project04/final_project.html)
+
+5. [POMP Modeling for Heston Stochastic Volatility Model](https://ionides.github.io/531w16/final_project/Project05/531-final/final.html)
+
+6. [Application of the Merton Jump Diffusion Model in S&P500](https://ionides.github.io/531w16/final_project/Project06/final_report.html)
+
+7. [Exploratin of Pertussis Transmission Dynamics and Vaccination Effect Period in Michigan](https://ionides.github.io/531w16/final_project/Project07/submit/final_project_step1.html)
+
+8. [Financial Volatility Analysis with SV-in-Mean Model in Pomp](https://ionides.github.io/531w16/final_project/Project08/Final/Stats_531_Final_Project.html)
+
+9. [Financial Model Analysis and Comparison](https://ionides.github.io/531w16/final_project/Project09/Report/Final_Project.html)
+
+10. [Case Study of Mumps Transmission](https://ionides.github.io/531w16/final_project/Project10/531final_project/531_final.html)
+
+11. [Investigating the Leverage of the Stock Price of Apple](https://ionides.github.io/531w16/final_project/Project11/final.html)
+
+12. [The Association between Recent Cholera Epidemics and Rainfall in Haiti](https://ionides.github.io/531w16/final_project/Project12/final_project.html)
+
+13. [Investigating Financial Volatility of Apple Stock via Time Series Analysis](https://ionides.github.io/531w16/final_project/Project13/final_project.html)
+
+14. [Stochastic Volatility of the SPX500 Index](https://ionides.github.io/531w16/final_project/Project14/Final.html)
+
+15. [Forecasting intermittent demand of slow-moving low shelf-life SKUs](https://ionides.github.io/531w16/final_project/Project15/final.html)
+
+16. [Financial Volatility of Three Main Stock Market Indexes](https://ionides.github.io/531w16/final_project/Project16/531_final_project.html)
+
+17. [Insights into the CAPE Ratio using Linear and Non-Linear Models](https://ionides.github.io/531w16/final_project/Project17/17.html)
+
+18. [Models for Population of Nicholson’s Blowflies](https://ionides.github.io/531w16/final_project/Project18/Finalprojectv2.html)
+
+19. [Using Different Model For Fitting Beaver Population](https://ionides.github.io/531w16/final_project/Project19/final.html)
+
+20. [A Partially Observed Markov Process Model for Pulmonary Tuberculosis](https://ionides.github.io/531w16/final_project/Project20/Final_Project/stat531finalproject.html)
+
+21. [Time Series Analysis of JP Morgan stock price](https://ionides.github.io/531w16/final_project/Project21/Stats_531_Final_Project.html)
+
+22. [POMP Model on Foreign Currency Exchange Rate](https://ionides.github.io/531w16/final_project/Project22/final.html)
+
+23. [Rubella and its Vaccination in Michigan from 1969 to 1980](https://ionides.github.io/531w16/final_project/Project23/Report.html)
+
+24. [Analysis of an fMRI dataset](https://ionides.github.io/531w16/final_project/Project24/531Final3.html)
+
+
+----------
+
+-----------
+

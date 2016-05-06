@@ -1,0 +1,794 @@
+---
+title: "STATS 531. Final Project"
+author: ""
+date: "April 23, 2016"
+output: html_document
+fontsize: 11pt
+---
+\newcommand\prob{\mathbb{P}}
+\newcommand\E{\mathbb{E}}
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+---
+
+```{r knitr-opts,include=FALSE,purl=FALSE,cache=FALSE}
+prefix <- "final"
+library(knitr)
+opts_chunk$set(
+  progress=TRUE,
+  prompt=FALSE,tidy=FALSE,highlight=TRUE,
+  strip.white=TRUE,
+  warning=FALSE,
+  message=FALSE,
+  error=FALSE,
+  echo=TRUE,
+  cache=TRUE,
+  cache.extra=rand_seed,
+  results='markup',
+  fig.show='asis',
+  size='small',
+  fig.lp="fig:",
+  fig.path=paste0("figure/",prefix,"-"),
+  cache.path=paste0("cache/",prefix,"-"),
+  fig.pos="h!",
+  fig.align='center',
+  fig.height=4,fig.width=6.83,
+  dpi=300,
+  dev='png',
+  dev.args=list(bg='transparent')
+  )
+```
+
+```{r opts,include=FALSE,cache=FALSE}
+options(
+  keep.source=TRUE,
+  stringsAsFactors=FALSE,
+  encoding="UTF-8"
+  )
+```
+
+```{r prelims,echo=F,cache=F}
+set.seed(20160423)
+require(ggplot2)
+theme_set(theme_bw())
+require(plyr)
+require(reshape2)
+require(foreach)
+require(doMC)
+require(pomp)
+require(doParallel)
+library(mFilter)
+library(astsa)
+library(forecast)
+library(tseries)
+require(vrtest)
+require(magrittr)
+stopifnot(packageVersion("pomp")>="0.69-1")
+```
+
+# 1. Summary
+
+* This project aims at investigating the leverage of the stock price of Apple Inc. by implementing POMP models. The main issue is the choice between fixed leverage and time-varying leverage, because random leverage can help to choose strategy for risk management.
+\
+* Select the ARMA(0,0) model of demeaned returns based on AIC. The returns behave like non-Gaussian white noise.
+\
+* Use GARCH(1,1) model of returns and volatility as benchmark. The log likelihood is highest among all models.
+\
+* Compare two stochastic models: fixed leverage and random walk leverage. The improvement in likelihood favors the leverage randomness.
+
+# 2. Introduction
+
+* Return: Let $P_n$ be the price of a stock at time $n$. The log return $Y_n$ of this stock is defined as the difference of the logarithm of the price, where $Y_n=\ln P_n-\ln P_{n-1}$$^{[1]}$. In this report, we use "return" to denote "log return". In financial study, return is an effective subsitute of stock price, because price may differ in unit and scale. To prevent investors from finding patterns of returns and earning money, stock of large companies are probable to have uncorrelated returns$^{[2]}$.
+\
+\
+* Adjusted closing price: An adjusted closing price of a stock's is the closing price on a trading day. It is adjusted to corporate any distributions and actions (e.g., dividends and splits) prior to the next open day. Since stock market is closed on weekends and holidays, the adjusted closing price is only available on weekdays. It is widely used for examining returns$^{[3]}$.
+\
+\
+* Volatility: The volatility of a stock is the dispersion of returns, measured by the standard deviation or variance between returns. High volatility means high risk of a stock$^{[4]}$. Volatility is helpful for selecting strategies in options trading and risk management. Here are some characteristcs of volatility$^{[1]}$:
+\
+  Not directly observable.
+\
+  Exists clusters: may be high for certain time periods and low for other periods.
+\
+  Continuous over time.
+\
+  Varies within some fixed range.
+\
+\
+* Leverage: Leverage is a phenomenon that negative shocks to a stock price are related to a subsequent increase in volatility. The formal definition is the correlation between return on time $n$ and the increase in the log volatility from time $n-1$ to $n$$^{[2]}$.
+\
+\
+* Apple Inc.: Apple Inc. is the world's largest information technology company by revenue. It is famous for designing, developing and selling electronics like MacBook, iPhone and iPad, as well as software including OS X, iOS and iTunes. It succeeded in mobile devices from 2007 to 2011. In 2012, its booming stock price rose the company's value to beat the world-record of Microsoft$^{[5]}$. It is interesting to study the stock fluctuation of such a business leader.
+\
+
+# 3. Explore the data
+
+The dataset is downloaded from yahoo.com$^{[6]}$. It contains 574 observations of weekly adjusted closing price for Apple Inc. from 2005 to 2015. They are the adjusted closing price of the last trading day of each week. Below is the plot of the data. The red lines show the mean of each plot.
+
+```{r plot-data,echo=F,eval=T}
+close <-read.csv("https://raw.githubusercontent.com/yitongchen/timeseries/master/apple-weekly-adjclose.csv")
+N <- dim(close)[1]
+
+par(mfrow=c(1,2))
+plot(as.Date(close$date),close$adj_close,type="l",xlab="Date",ylab="Price($)",main="Weekly adjusted closing price")
+abline(h=mean(close$adj_close),col="red")
+plot(as.Date(close$date),log(close$adj_close),type="l",xlab="Date",ylab="Log price($)",main="Log price")
+abline(h=mean(log(close$adj_close)),col="red")
+
+par(mfrow=c(1,2))
+plot(as.Date(close$date)[2:N-1],diff(log(close$adj_close)),type="l",xlab="Date",ylab="",main="Returns of price")
+abline(h=mean(diff(log(close$adj_close))),col="red")
+ret <- diff(log(close$adj_close))
+ret.de <- ret-mean(ret)
+plot(as.Date(close$date)[2:N-1],ret.de,type="l",xlab="Date",ylab="",
+     main="Demeaned returns")
+abline(h=mean(ret.de),col="red")
+```
+
+Both the original price and log price show an increasing trend from 2005 to 2015. The returns appear to be stationary with a small positive mean `r round(mean(ret),digits=5)`. As time increases, the price can eventually go to infinity with the cumulation of positive returns. 
+\
+Since our goal is to analyze the volatility (variability of returns), we will focus on the demeaned returns in the following parts. Looking at the plot of demeaned returns, we can see high volatility at 2008, probably caused by the huge success of selling iPhone and financial crisis.
+\
+\
+# 4. ARMA model: returns
+\
+\
+Before we dig into the volatility, we apply a linear stationary model as a simple way to capture the dynamic of returns over time. First we plot the sample autocorrelation function of the demeaned returns.
+
+```{r, acf, echo=F, eval=T}
+acf(ret.de,lag.max=50,main="Sample ACF of demeaned returns")
+```
+
+The aurocorrelation reaches 1 at lag 0. For other positive lags, the ACF mainly fall within the two standard error limit dashed lines, suggesting the correlations are not significant at $5\%$ level. This is similar to a white noise process.
+\
+\
+Let $Y_n$ denotes the demeaned return at time $n$ and the ARMA(p,q) model is as follows:
+
+$$
+\begin{aligned}
+\E[Y_n] &= 0 \\
+Y_n &= \sum_{i=1}^p\phi_i Y_{n-i} + \epsilon_n +\sum_{j=1}^q\psi_j\epsilon_{n-j} \\
+{\epsilon_n} &\overset{iid}\sim N[0,\sigma^2]
+\end{aligned}
+$$
+
+We construct the AIC table and select an ARMA(p,q) model with lowest AIC score.
+
+```{r, arma, echo=F, eval=T}
+aic_table <- function(data,P,Q){
+  table <- matrix(NA,(P+1),(Q+1))
+  for(p in 0:P){
+    for(q in 0:Q){
+      table[p+1,q+1] <- arima(data,order=c(p,0,q),optim.control=list(maxit = 1000))$aic
+    }
+  }
+  dimnames(table) <- list(paste("<b> AR",0:P, "</b>",sep=""),paste("MA",0:Q,sep=""))
+  table
+}
+returns_aic_table <- aic_table(ret.de,4,5)
+kable(returns_aic_table,digits=2)
+```
+
+The AIC table favors ARMA(0,0), since it is the simplest model with smallest AIC value. This suggests that the demeaned returns may behave like Gaussian white noise. We will check the normality of demeaned returns.
+
+```{r,arma-norm,echo=F,eval=T}
+qqnorm(ret.de)
+qqline(ret.de)
+shapiro.test(ret.de)
+```
+
+There are heavy tails in the Q-Q plot of demeaned returns. The p-value of shapiro-wilk test is very small, rejecting the null hypothesis that demeaned returns follow Gaussian distribution.
+\
+\
+Now we do some diagnostics on residuals.
+
+```{r,arma-diag,echo=F,eval=T}
+arma00 <- arima(ret.de,order=c(0,0,0))
+plot(as.Date(close$date)[2:N],arma00$resid,type="l",xlab="Date",ylab="Residuals",main="Residuals of ARMA(0,0)")
+acf(resid(arma00),lag.max=50,main="ACF of ARMA(0,0) residuals")
+```
+
+The residuals are basically not autocorrelated at $5\%$ level. The  loglikelihood of ARMA(0,0) is `r round(arma00$loglik,digits=3)`. The demeaned returns may behave like non-Gaussian white noise.
+
+# 5. GARCH model: returns and volatility
+
+Apart from returns in ARMA model, we also consider the volatility in GARCH model. We use GARCH model as a benchmark of POMP model. GARCH is a simpler and popular model of volatility clustering. Let $Y_n$ denotes the demeaned return at time $n$ and $V_n$ denotes its conditional variance. The GARCH(p,q) model is as follows:
+
+$$
+\begin{aligned}
+Y_n &= \epsilon_n\sqrt{V_n} \\
+V_n &= \alpha_0+\sum_{j=1}^p\alpha_j Y_{n-j}^2+\sum_{k=1}^q\beta_k V_{n-k} \\
+\end{aligned}
+$$
+where $\epsilon_n$ is a white noise process.
+ 
+Aftering attempting several low-order GARCH models, we choose GARCH(1,1) based on coefficents significance and likelihood. Now we rewrite the model:
+
+$$
+\begin{aligned}
+Y_n &= \epsilon_n\sqrt{V_n} \\
+V_n &= \alpha_0+\alpha_1 Y_{n-1}^2+\beta_1 V_{n-1} \\
+\end{aligned}
+$$
+
+A large $Y_{n-1}^2$ or $V_{n-1}$ results in a large value of $V_n$. Thus a large $Y_{n-1}$ tends to be followed by a large $Y_n$ at the next time point. This corresponds to the volatility clustering$^{[1]}$.
+
+```{r garch,echo=F,eval=T}
+ret.garch11 <- garch(ret.de,order=c(1,1),grad="analytic",trace=FALSE)
+summary(ret.garch11)
+```
+
+The loglikelihood of GARCH(1,1) model is `r round(logLik(ret.garch11),digits=3)`, which is larger than that of ARMA(0,0).
+
+# 6. POMP model: returns, volatility and leverage
+
+In previous section of GARCH model, we use a specific function to describe the volatility. GARCH model is useful for predicting volatility but its parameters are not explanatory. To study the correlation between return and volatility, we implement POMP model using stochastic equation to represent leverage.
+\
+\
+We compare the maximum likelihood of two stochastic leverage models: fixed leverage and random-walk leverage. In the fixed leverage model, the leverge is constant over time. As an alternative, the latter model has time-varying leverage parameter following a random walk. Random walk is a simple idiosyncratic dynamic models with only one parameter of noise variance.
+\
+\
+The random variation of leverage is idiosyncratic, i.e., independent of shocks to returns and of volatility. Ignoring random leverage could trigger both an excessive confidence in conclusions and biases. Random leverage could help to prevent poor hedging and control risk$^{[7]}$.
+\
+\
+First we build the POMP model folllowing the notations in Bretó (2014)$^{[7]}$. Then we perform iterated filtering to estimate parameters maximizing log likelihood function. At each iteration, the particle filter is performed on a perturbed version of the model$^{[9]}$. At last we use random starting values to approach MLE.
+
+## 6.1 Fixed-leverage model
+
+### 6.1.1 Build a model
+
+State space variables: observable $\{Y_n\}$, latent $\{H_n\}$.
+\
+Parameters: $\mu_h,\phi,\sigma_{\eta},\rho$.
+\
+$\rho$: fixed leverage.
+\
+$\{Y_n\}$: demeaned return on time $n$, observable.
+\
+$\{H_n\}$: log volatility, unobservable.
+\
+$\{\epsilon_n\}$: return shock.
+
+$$
+\begin{align} 
+Y_n &= \exp\{H_n/2\} \epsilon_n, \\
+H_n &= \mu_h(1-\phi) + \phi H_{n-1} +
+\beta_{n-1}R_n\exp\{-H_{n-1}/2\} + \omega_n,\\
+\end{align}
+$$
+where 
+$$
+\begin{align}
+\beta_n &= Y_n\sigma_\eta\sqrt{1-\phi^2} \\
+\sigma_\omega &= \sigma_\eta\sqrt{1-\phi^2}\sqrt{1-\rho^2} \\
+\epsilon_n &\overset{iid}\sim N[0,1] \\
+\omega_n &\overset{iid}\sim N[0,\sigma_\omega^2] \\
+\end{align}
+$$
+
+### 6.1.2 Fit a model
+
+The starting values of parameters and initial values of dynamic system combine repetitive experiments and the empirical results in Bretó (2014)$^{[7]}$.
+
+```{r names_fix,echo=F,eval=T}
+apple_statenames_fix <- c("H","Y_state")
+apple_rp_names_fix <- c("mu_h","phi","sigma_eta","rho")
+apple_ivp_names_fix <- c("H_0")
+apple_paramnames_fix <- c(apple_rp_names_fix,apple_ivp_names_fix)
+apple_covarnames_fix <- "covaryt"
+```
+
+```{r rproc_fix,echo=F,eval=T}
+rproc1_fix <- "
+  double beta,omega;
+  omega = rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-rho*rho));
+  beta = Y_state * sigma_eta * sqrt( 1- phi*phi );
+  H =   mu_h*(1 - phi) +phi*H + beta * rho * exp(-H/2) + omega;
+"
+rproc2.sim_fix <- "
+  Y_state = rnorm( 0,exp(H/2) );
+ "
+
+rproc2.filt_fix <- "
+  Y_state = covaryt;
+ "
+apple_rproc.sim_fix <- paste(rproc1_fix,rproc2.sim_fix)
+apple_rproc.filt_fix <- paste(rproc1_fix,rproc2.filt_fix)
+```
+
+```{r initializer_fix,echo=F,eval=T}
+apple_initializer_fix <- "
+  H = H_0;
+  Y_state = rnorm( 0,exp(H/2) );
+"
+```
+
+```{r measure_fix,echo=F,eval=T}
+apple_rmeasure_fix <- "
+   y=Y_state;
+"
+apple_dmeasure_fix <- "
+   lik=dnorm(y,0,exp(H/2),give_log);
+"
+```
+
+```{r transforms_fix,echo=F,eval=T}
+apple_toEstimationScale_fix <- "
+  Tsigma_eta = log(sigma_eta);
+  Tphi = logit(phi);
+"
+
+apple_fromEstimationScale_fix <- "
+  Tsigma_eta = exp(sigma_eta);
+  Tphi = expit(phi);
+"
+```
+
+```{r sp_pomp_fix,echo=F,eval=T}
+apple.filt_fix <- pomp(data=data.frame(y=ret.de,
+                     time=1:length(ret.de)),
+              statenames=apple_statenames_fix,
+              paramnames=apple_paramnames_fix,
+              covarnames=apple_covarnames_fix,
+              times="time",
+              t0=0,
+              covar=data.frame(covaryt=c(0,ret.de),
+                     time=0:length(ret.de)),
+              tcovar="time",
+              rmeasure=Csnippet(apple_rmeasure_fix),
+              dmeasure=Csnippet(apple_dmeasure_fix),
+              rprocess=discrete.time.sim(step.fun=Csnippet(apple_rproc.filt_fix),delta.t=1),
+              initializer=Csnippet(apple_initializer_fix),
+              toEstimationScale=Csnippet(apple_toEstimationScale_fix), 
+              fromEstimationScale=Csnippet(apple_fromEstimationScale_fix)
+)
+
+expit<-function(real){1/(1+exp(-real))}
+logit<-function(p.arg){log(p.arg/(1-p.arg))}
+```
+
+```{r para-test-fix,echo=T,eval=T}
+params_test_fix <- c(
+     mu_h = -0.25,       
+     phi = 0.98,     
+     sigma_eta = 0.9,
+    rho=-0.65,
+      H_0=0
+  )
+
+```
+
+```{r run_level_fix,echo=F,eval=T}
+run_level_fix <- 3
+apple_Np_fix <-          c(100,1e3,5e3)
+apple_Nmif_fix <-        c(10, 100,200)
+apple_Nreps_eval_fix <-  c(4,  10,  20)
+apple_Nreps_local_fix <- c(10, 20, 20)
+apple_Nreps_global_fix <-c(10, 20, 100)
+```
+
+Here is the summary of log likelihood using 5000 sequential Monte Carlo samples and 200 times of iterations. The values of log likelihood are smaller than those of ARMA and GARCH.
+
+```{r mif_fix,echo=F,eval=T}
+apple_rw.sd_rp_fix <- 0.02
+apple_rw.sd_ivp_fix <- 0.01
+apple_cooling.fraction.50_fix <- 0.5
+
+stew("mif1_fix.rda",{
+   t.if1_fix <- system.time({
+   if1_fix <- foreach(i=1:apple_Nreps_local_fix[run_level_fix],
+                  .packages='pomp', .combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar% try(
+                    mif2(apple.filt_fix,
+                         start=params_test_fix,
+                         Np=apple_Np_fix[run_level_fix],
+                         Nmif=apple_Nmif_fix[run_level_fix],
+                         cooling.type="geometric",
+                         cooling.fraction.50=apple_cooling.fraction.50_fix,
+                         transform=TRUE,
+                         rw.sd = rw.sd(
+                            mu_h      = apple_rw.sd_rp_fix,
+                            phi       = apple_rw.sd_rp_fix,
+                            sigma_eta = apple_rw.sd_rp_fix,
+                            rho       = -apple_rw.sd_rp_fix,
+                            H_0       = ivp(apple_rw.sd_ivp_fix)
+                         )
+                    )
+                  )
+    
+    L.if1_fix <- foreach(i=1:apple_Nreps_local_fix[run_level_fix],.packages='pomp',
+                      .combine=rbind,.options.multicore=list(set.seed=TRUE)) %dopar% 
+                      {
+                        logmeanexp(
+                          replicate(apple_Nreps_eval_fix[run_level_fix],
+                                    logLik(pfilter(apple.filt_fix,params=coef(if1_fix[[i]]),Np=apple_Np_fix[run_level_fix]))
+                          ),
+                          se=TRUE)
+                      }
+  })
+},seed=20160427,kind="L'Ecuyer")
+
+r.if1_fix <- data.frame(logLik=L.if1_fix[,1],logLik_se=L.if1_fix[,2],t(sapply(if1_fix,coef)))
+if (run_level_fix>1) 
+  write.table(r.if1_fix,file="apple_params_fix.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+  summary(r.if1_fix$logLik,digits=5)
+```
+
+Below is the diagnostics plot of last iteration and the convergence diagnostics.
+
+```{r iter_diag_fix,echo=F,eval=T}
+plot(if1_fix)
+```
+
+We can observe the latent variable volatility. After the initial decrease, it varies within a fixed range. However, the log likelihood does not converge.
+
+```{r pairs_fix,echo=F,eval=T}
+pairs(~logLik+rho+mu_h+phi+sigma_eta,data=subset(r.if1_fix,logLik>max(logLik)-50))
+```
+
+The points are rather sparse in a neighbourhood of the likelihood surface. The results of likelihood inference are not satisfactoy in the fixed leverage model. This suggests that we should implement the random-walk leverage model with time-varying parameters.
+
+## 6.2 Random-walk leverage model
+
+### 6.2.1 Build a model
+
+Simlar to 6.1.1, we build the random-walk leverage model. We use $\{R_n\}$ instead of constant $\rho$ to denote the leverage.
+\
+State space variables: observable $\{Y_n\}$, latent $\{G_n\},\{H_n\}$.
+\
+Parameters: $\mu_h,\phi,\sigma_{\eta},\sigma_{\nu}$.
+\
+$\{R_n\}$: leverage on time $n$ as correlation between return on time $n-1$ and the increase in the log volatility from time $n-1$ to $n$.It is a random walk on a transformed scale $[-1,1]$.
+\
+$\{G_n\}$: usual Gaussian random walk leverage, unobservable.
+\
+$\{Y_n\}$: demeaned return on time $n$, observable.
+\
+$\{H_n\}$: log volatility, unobservable.
+\
+$\{\epsilon_n\}$: return shock.
+
+$$
+\begin{align} 
+R_n &= \frac{\exp\{2G_n\} -1}{\exp\{2G_n\}+1} \\
+Y_n &= \exp\{H_n/2\} \epsilon_n, \\
+H_n &= \mu_h(1-\phi) + \phi H_{n-1} +
+\beta_{n-1}R_n\exp\{-H_{n-1}/2\} + \omega_n,\\
+G_n &= G_{n-1}+\nu_n,
+\end{align}
+$$
+where 
+$$
+\begin{align}
+\beta_n &= Y_n\sigma_\eta\sqrt{1-\phi^2} \\
+\sigma_\omega &= \sigma_\eta\sqrt{1-\phi^2}\sqrt{1-R_n^2} \\
+\epsilon_n &\overset{iid}\sim N[0,1] \\
+\nu_n &\overset{iid}\sim N[0,\sigma_{\nu}^2] \\
+\omega_n &\overset{iid}\sim N[0,\sigma_\omega^2] \\
+\end{align}
+$$
+
+```{r names,echo=F,eval=T}
+apple_statenames <- c("H","G","Y_state")
+apple_rp_names <- c("sigma_nu","mu_h","phi","sigma_eta")
+apple_ivp_names <- c("G_0","H_0")
+apple_paramnames <- c(apple_rp_names,apple_ivp_names)
+apple_covarnames <- "covaryt"
+```
+
+```{r rproc,echo=F,eval=T}
+rproc1 <- "
+  double beta,omega,nu;
+  omega = rnorm(0,sigma_eta * sqrt( 1- phi*phi ) * sqrt(1-tanh(G)*tanh(G)));
+  nu = rnorm(0, sigma_nu);
+  G += nu;
+  beta = Y_state * sigma_eta * sqrt( 1- phi*phi );
+  H =   mu_h*(1 - phi) +phi*H + beta * tanh(G) * exp(-H/2) + omega;
+"
+rproc2.sim <- "
+  Y_state = rnorm( 0,exp(H/2) );
+ "
+
+rproc2.filt <- "
+  Y_state = covaryt;
+ "
+apple_rproc.sim <- paste(rproc1,rproc2.sim)
+apple_rproc.filt <- paste(rproc1,rproc2.filt)
+```
+
+```{r initializer,echo=F,eval=T}
+apple_initializer <- "
+  G = G_0;
+  H = H_0;
+  Y_state = rnorm( 0,exp(H/2) );
+"
+```
+
+```{r measure,echo=F,eval=T}
+apple_rmeasure <- "
+   y=Y_state;
+"
+apple_dmeasure <- "
+   lik=dnorm(y,0,exp(H/2),give_log);
+"
+```
+
+```{r transforms,echo=F,eval=T}
+apple_toEstimationScale <- "
+  Tsigma_eta = log(sigma_eta);
+  Tsigma_nu = log(sigma_nu);
+  Tphi = logit(phi);
+"
+
+apple_fromEstimationScale <- "
+  Tsigma_eta = exp(sigma_eta);
+  Tsigma_nu = exp(sigma_nu);
+  Tphi = expit(phi);
+"
+expit<-function(real){1/(1+exp(-real))}
+logit<-function(p.arg){log(p.arg/(1-p.arg))}
+```
+
+
+```{r sp_pomp,echo=F,eval=T}
+apple.filt <- pomp(data=data.frame(y=ret.de,
+                     time=1:length(ret.de)),
+              statenames=apple_statenames,
+              paramnames=apple_paramnames,
+              covarnames=apple_covarnames,
+              times="time",
+              t0=0,
+              covar=data.frame(covaryt=c(0,ret.de),
+                     time=0:length(ret.de)),
+              tcovar="time",
+              rmeasure=Csnippet(apple_rmeasure),
+              dmeasure=Csnippet(apple_dmeasure),
+              rprocess=discrete.time.sim(step.fun=Csnippet(apple_rproc.filt),delta.t=1),
+              initializer=Csnippet(apple_initializer),
+              toEstimationScale=Csnippet(apple_toEstimationScale), 
+              fromEstimationScale=Csnippet(apple_fromEstimationScale)
+)
+```
+
+```{r run_level,echo=F,eval=T}
+run_level <- 3
+apple_Np <-          c(100,1e3,5e3)
+apple_Nmif <-        c(10, 100,200)
+apple_Nreps_eval <-  c(4,  10,  20)
+apple_Nreps_local <- c(10, 20, 20)
+apple_Nreps_global <-c(10, 20, 100)
+```
+
+### 6.2.2 Fit a model
+
+Here are the starting values of parameters and initial values of dynamic system.
+
+```{r para-test,echo=T,eval=T}
+params_test <- c(
+     sigma_nu = 0.0086,  
+     mu_h = -0.261,       
+     phi = 0.98,     
+     sigma_eta = 0.92,
+     G_0 = 0,
+     H_0=0
+  )
+```
+
+The improvement lies in the values of log likelihood: they are larger than those in the fixed leverage model and close to the benchmark of GARCH. The time variation leverage outperforms fixed leverage. 
+
+```{r mif,echo=F,eval=T}
+apple_rw.sd_rp <- 0.02
+apple_rw.sd_ivp <- 0.1
+apple_cooling.fraction.50 <- 0.5
+
+stew("mif1.rda",{
+   t.if1 <- system.time({
+   if1 <- foreach(i=1:apple_Nreps_local[run_level],
+                  .packages='pomp', .combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar% try(
+                    mif2(apple.filt,
+                         start=params_test,
+                         Np=apple_Np[run_level],
+                         Nmif=apple_Nmif[run_level],
+                         cooling.type="geometric",
+                         cooling.fraction.50=apple_cooling.fraction.50,
+                         transform=TRUE,
+                         rw.sd = rw.sd(
+                            sigma_nu  = apple_rw.sd_rp,
+                            mu_h      = apple_rw.sd_rp,
+                            phi       = apple_rw.sd_rp,
+                            sigma_eta = apple_rw.sd_rp,
+                            G_0       = ivp(apple_rw.sd_ivp),
+                            H_0       = ivp(apple_rw.sd_ivp)
+                         )
+                    )
+                  )
+    
+    L.if1 <- foreach(i=1:apple_Nreps_local[run_level],.packages='pomp',
+                      .combine=rbind,.options.multicore=list(set.seed=TRUE)) %dopar% 
+                      {
+                        logmeanexp(
+                          replicate(apple_Nreps_eval[run_level],
+                                    logLik(pfilter(apple.filt,params=coef(if1[[i]]),Np=apple_Np[run_level]))
+                          ),
+                          se=TRUE)
+                      }
+  })
+},seed=20160427,kind="L'Ecuyer")
+
+r.if1 <- data.frame(logLik=L.if1[,1],logLik_se=L.if1[,2],t(sapply(if1,coef)))
+if (run_level>1) 
+  write.table(r.if1,file="apple_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.if1$logLik,digits=5)
+```
+
+As we can see, the likelihood function converges to a maximum value as iterations increase. The parameter $\phi$ also converges to 1. The results in convergence also favors the random walk leverage model.
+
+```{r iter_diag,echo=F,eval=T}
+plot(if1)
+```
+
+The maximum likelihood surface has denser points than the fixed leverage model. Smaller values of $\sigma_{\nu}$ are more probable to maximize likelihood.
+
+```{r pairs,echo=F,eval=T}
+pairs(~logLik+sigma_nu+mu_h+phi+sigma_eta,data=subset(r.if1,logLik>max(logLik)-50))
+```
+
+### 6.2.3 Likelihood Maximization using randomized starting values
+
+Instead of the specific starting values in 6.2.2, we randomly select the starting values by uniform distribution within parameter vectors. If the conclusion of estimation are stable, this can support the finding of MLE via global search$^{[2]}$. Here are the parameter values based on the parameter estimates and standard errors in Bretó (2014)$^{[7]}$.
+
+```{r box,echo=T,eval=T}
+apple_box <- rbind(
+sigma_nu=c(0.005,0.01),
+ mu_h    =c(-0.4,0),
+ phi = c(0.95,0.99),
+ sigma_eta = c(0.8,1),
+ G_0 = c(-1,1),
+ H_0 = c(-0.5,0.5)
+)
+```
+
+The best likelihood is slightly larger than that the best likelihood in 6.2.2, but the overall likelihood is smaller.
+
+```{r box_eval,echo=F,eval=T}
+stew(file="box_eval.rda",{
+  t.box <- system.time({
+    if.box <- foreach(i=1:apple_Nreps_global[run_level],.packages='pomp',.combine=c,
+                  .options.multicore=list(set.seed=TRUE)) %dopar%  
+    mif2(
+        if1[[1]],
+        start=apply(apple_box,1,function(x)runif(1,x))
+      )
+    L.box <- foreach(i=1:apple_Nreps_global[run_level],.packages='pomp',.combine=rbind,
+                      .options.multicore=list(set.seed=TRUE)) %dopar% {
+                        set.seed(87932+i)
+                        logmeanexp(
+                          replicate(apple_Nreps_eval[run_level],
+                                    logLik(pfilter(apple.filt,params=coef(if.box[[i]]),Np=apple_Np[run_level]))
+                          ), 
+                          se=TRUE)
+                      }
+  })
+},seed=20160423,kind="L'Ecuyer")
+
+
+r.box <- data.frame(logLik=L.box[,1],logLik_se=L.box[,2],t(sapply(if.box,coef)))
+if(run_level>1) write.table(r.box,file="apple_params.csv",append=TRUE,col.names=FALSE,row.names=FALSE)
+summary(r.box$logLik,digits=5)
+```
+
+The likelihood converges faster in this case.
+
+```{r iter_diag_global, echo=F, eval=T}
+plot(if.box)
+```
+
+The points in the likelihood surface are more sparse than those of 6.2.2.
+
+```{r pairs_global,echo=F,eval=T}
+pairs(~logLik+sigma_nu+mu_h+phi+sigma_eta,data=subset(r.box,logLik>max(logLik)-50))
+```
+
+The diverse remote starting values can stably approach the maximum likelihood. This result has strengthened the MLE of random walk leverage model with specific starting values.
+
+### 6.2.4 Profile likelihood
+
+From the diagnostics plots given above, we can see that the parameter $\phi$ can also converge to 1. This inspires us to investigate this parameter by constructing profile likelihood and rigorous confidence interval. 
+\
+\
+For each starting point, we find the maximum likelihood and its estimator. We fix $\phi$ and let other parameters vary. We use the estimator of the largest likelihood value to construct the profile likelihood. Here is the expression of $1-\alpha$ confidence interval of $\phi$:
+$$
+\{\phi:\max\{\ell^{\text{profile}}(\phi)\}-\ell^{\text{profile}}(\phi)< z_{\alpha/2} \}
+$$
+
+```{r prof-box,echo=F,eval=T}
+It=20
+nprof=20
+profile.box <- profileDesign(  
+  phi=exp(seq(log(0.95),log(0.99),length.out=It)),
+  lower=c(sigma_nu=0.005,mu_h=-0.4,sigma_eta=0.8,G_0=-1,H_0=-0.5),
+  upper=c(sigma_nu=0.01,mu_h=0,sigma_eta=1,G_0=1,H_0=0.5),
+  nprof=nprof
+)
+```
+
+```{r prof-mif,echo=F,eval=T}
+stew(file=sprintf("profile phi-%d.rda",It),{
+  t_global2 <- system.time({
+      prof.llh<- foreach(i=1:(It*nprof),.packages='pomp', .combine=rbind, .options.multicore=list(set.seed=TRUE)) %dopar%{
+        mif2(
+          if1[[1]],
+          start=c(unlist(profile.box[i,]),params_test),
+          Np=50,Nmif=10,
+          rw.sd=rw.sd(
+                           sigma_nu  = apple_rw.sd_rp,
+                            mu_h      = apple_rw.sd_rp,
+                            sigma_eta = apple_rw.sd_rp,
+                            G_0       = ivp(apple_rw.sd_ivp),
+                            H_0       = ivp(apple_rw.sd_ivp)
+          )
+        )->mifs_global2
+        evals = replicate(10, logLik(pfilter(mifs_global2,Np=50)))
+        ll=logmeanexp(evals, se=TRUE)        
+        data.frame(as.list(coef(mifs_global2)),
+                   loglik = ll[1],
+                   loglik.se = ll[2])
+      }
+  })
+},seed=931129,kind="L'Ecuyer")
+```
+
+```{r prof-plot,echo=F,eval=T}
+prof.llh %<>%
+  mutate(phi=exp(signif(log(phi),5))) %>%
+  ddply(~phi,subset,rank(-loglik)<=1)
+
+a=max(prof.llh$loglik)
+b=a-1.92
+CI=which(prof.llh$loglik>=b)
+c=prof.llh$phi[min(CI)]
+d=prof.llh$phi[max(CI)]
+
+prof.llh %>%
+  ggplot(aes(x=phi,y=loglik))+
+  geom_point()+
+  geom_smooth(method="loess")+
+  geom_hline(aes(yintercept=a),linetype="dashed")+
+  geom_hline(aes(yintercept=b),linetype="dashed")+
+  geom_vline(aes(xintercept=c),linetype="dashed")+
+  geom_vline(aes(xintercept=d),linetype="dashed")
+
+c(lower=c,upper=d)
+
+```
+
+A $95\%$ confidence interval of $\phi$ is $[0.95,0.96]$. From the likelihood plot, there is no strong evidence showing that $\phi$ is significant. Therefore, converging parameter does not necessarily contribute to converging likelihood.
+
+# 7. Conclusion
+
+* The random walk leverage model performs better than the fixed leverge model in terms of log likelihood, suggesting the importance of time-varying parameters. (The number of parameters are the same in these two models, so we use likelihood instead of AIC) 
+
+* Although POMP model does not outperform the benchmark of GARCH, the values of log likelihood are rather close to each other. Besides, POMP provides explanatory parameters of leverage lacking in GARCH.
+
+* For further improvement, we can consider implementing more complex models with multiple volatility factors$^{[8]}$ to beat the benchmark.
+
+# 8. Reference
+
+[1] Ruey S. Tsay. (2002). Analysis of financial time series. Chicago, IL: John Wiley & Sons, Inc.
+\
+[2] http://ionides.github.io/531w16/notes15/notes15.html
+\
+[3] http://www.investopedia.com/terms/a/adjusted_closing_price.asp
+\
+[4] http://www.investopedia.com/terms/v/volatility.asp
+\
+[5] https://en.wikipedia.org/wiki/Apple_Inc.
+\
+[6] http://finance.yahoo.com/q/hp?s=AAPL&a=00&b=1&c=2005&d=11&e=31&f=2015&g=w
+\
+[7] Carles Bretó, 2014. On idiosyncratic stochasticity of financial leverage effects. Statistics and Probability Letters 91 (2014), 20–26.
+\
+[8] http://fic.wharton.upenn.edu/fic/papers/09/0905.pdf
+\
+[9] https://r-how.com/packages/pomp/mif

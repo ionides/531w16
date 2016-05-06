@@ -1,0 +1,273 @@
+---
+title: "Final Project Report"
+author: ""
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+bibliography: final_project.bib
+---
+\newcommand\var{\mathrm{Var}}
+\newcommand\cov{\mathrm{Cov}}
+-----------
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                    warning=FALSE, message=FALSE)
+```
+### Tentative project from my research
+Currently, one of the most important topics in astrophysics is the origin of our Milk Way galaxy, which is comprised of stars, cold and hot gas, dark matter, etc. Stars are formed from cold dense molecular clouds through gravitational collapse. Therefore, star formation activities highly correlate with the cold gas component of the galaxies. Right after star formation, young massive stars with very strong stellar wind and radiation start to influence the ambient gas cloud and boil the cold gas into hot corona and prevent further star formation. This is known as stellar feedback (e.g. @agertz13). It is this complex interplay between star formation and stellar feedback that makes the galaxy formation problem so hard to be solved. Theoretically, it is extremely hard to determine the evolutionary path of a given galaxy. Observationally, it is still a challenging job to detect the gas component of the galaxy, and sometimes the only available information is the current star formation rate (SFR). Therefore, studying the time series of SFR is a great laboratory for investigating the hidden galaxy properties, such as the multi-phase gas condition of the galaxy.
+
+In this project, I would like to analyze the time series of star formation history and try to obtain some insights on the galaxy evolution problem. Star formation history in this project is extracted from **my PHD research project**, which is a large-scale cosmological simulations of a Milky Way-sized galaxy using the state-of-the-art adaptive refinement tree (ART) code developed by @kravtsov99. The star formation history is defined as the instantaneous star formation rate as a function of cosmic time from the beginning of the Universe to the present, and smooth over 50 million years (Myr) per each bin. This hydrodynamic simulation includes the gravitational evolution of dark matter and star particles, as well as the gas dynamics. The fiducial run is performed in the super cluster FULLA in the Fermi National Laboratory using **500 CPU cores for 10 months**.
+
+**One difficulty of this project is that no one have ever tried to do such time series analysis on star formation history before**. @cen14 analyzed the star formation history and found the number of star formation peaks per unit time is proportional to the width of the smoothing window $\nu_{\rm peak}\propto\Delta t^{1-\phi}$, where $phi=1.618$, suggests that SF activities exhibit a fractal behavior with a Hausdorff dimension $\phi-1$. This temporal self-organization star formation in galaxy formation is then confirmed by @hopkins14, who find the variability of star formation depends strongly on the smoothing length.
+However, no one have ever tried to fit directly the star formation time series with specific galaxy formation models.
+So the first step for me is to build up my own model that can appropriately describes the complex interplay between star formation and stellar feedback.
+
+Galaxy formation involves in numerous processes. In order to build up a realistic model, at least four processes are needed (e.g. @benson10): **gas accretion from intra-galactic medium; gas cooling from hot phase to cold phase; star formation; stellar feedback**. The processes involved in this topic is numerous and it is very hard to determine the essence. Here I sketch a basic flowchat of my current **heuristic model from first principle**:
+```{r, echo=FALSE}
+require(DiagrammeR)
+DiagrammeR("
+graph LR
+Hot-->Cold; Cold-->SFR
+",height=200,width=500)
+```
+
+Assuming the gas in our galaxy is a bath tub. The faucet is the universe outside the galaxy that can bring fresh gas to the galaxy with gas accretion rate $\Phi$. The sink links to the place where all stars are form.
+
+- Gas accretion from the intra-galactic medium with a accretion rate $\Phi$.
+- A fraction $f$ of the accreted hot gas will cool down to feed into cold gas with cooling timescale $\tau_{\rm cool}$.
+- Star formation: assume the current star formation rate is linear to the cold gas mass, $SFR=\epsilon M_{gas}/\tau_{\rm dep}$, where $\epsilon$ is the star formation efficiency and $\tau_{\rm dep}$ is the gas depletion timescale.
+- Stellar feedback: assuming young stars can remove some amount of cold gas and turn it into hot phase. The amount should correlation with the current SFR, since the higher the SFR, the more intense the feedback will be. So, gas heat-up rate is $\lambda SFR$, where $\lambda$ is the mass-loading factor.
+- The total star mass will also increase accordingly with a rate the same as SFR.
+
+Put everything together:
+
+$\frac{dM_{hot}}{dt}=\Phi-\frac{fM_{hot}}{\tau_{cooling}}+\lambda SFR$
+
+$\frac{dM_{cold}}{dt}=\frac{fM_{hot}}{\tau_{cooling}}-\frac{\epsilon M_{cold}}{\tau_{dep}}-\lambda SFR$
+
+$SFR=\epsilon \frac{M_{cold}}{\tau_{dep}}$
+
+$\Phi$ is a time dependent accretion rate that is set to have a gradual rise after 500 Myr: $\Phi=\Phi_0(t/600 \rm Myr)^2$, inspired by @fakhouri10.
+
+## Data exmination
+The data has only two column: cosmic time and the corresponding star formation rate.
+```{r}
+sfh_data = read.table('sfh.txt')
+colnames(sfh_data) = c("time", "obs")
+plot(sfh_data, type='l', xlab='Cosmic Time (Myr)', ylab='star formationr rate (Msun per yr)')
+```
+
+## Following the lecture
+Basic data manipulations: determine state variable and model parameters.
+```{r}
+sfh_statenames <- c("MH","MC","SFR")
+sfh_paramnames <- c("lambda","sigmah","eps","sigmac","f","phi","tauc","taud","sigmas")
+(sfh_obsnames <- colnames(sfh_data)[2])
+```
+
+Construct SIR model:
+Since most of the observational error depends on the value of the observable itself, it is common to use lognormal distribution to construct the observation model in astronomy. I also construct a log-scale noise for both the cooling and stellar feedback terms that will feed into cold and hot gas, respectively. This log-scale noise has a robust behavior when solving the stochastic differential equations using Euler approximation. However, one problem is that, when the variance is large, it is possible to create negative value of cooling or feedback, which is definitely unphysical. Therefore, I use a conditional command to constrain the noise, so that both cooling and feedback terms are larger than zero. See the following code for details. I will discuss the possibility of lognormal noise later and find the difference between the two.
+
+```{r}
+sfh_dmeasure <- "
+  lik = dlnorm(obs,log(SFR), sigmas, give_log);
+"
+
+sfh_rmeasure <- "
+obs = rlnorm(log(SFR),sigmas);
+"
+
+sfh_rprocess <- "
+double t1 = dt*lambda*SFR*rnorm(1,sigmah);
+double t2 = dt*f*MH/tauc*rnorm(1,sigmac);
+double t3 = eps*MC/taud;
+t1 = (t1>0)?t1:0;
+t2 = (t2>0)?t2:0;
+if (MC+t2-t1-t3<0) {t1 = MC+t3-t2;}
+MH += phi*(1+t/600)*(1+t/600)*dt+t1-t2;
+MC += t2-t1-t3;
+SFR = t3;
+"
+
+sfh_fromEstimationScale <- "
+Tlambda = exp(lambda);
+Teps = exp(eps);
+"
+
+sfh_toEstimationScale <- "
+Tlambda = log(lambda);
+Teps = log(eps);
+"
+
+sfh_initializer <- "
+MH=0;
+MC=0;
+SFR=0;
+"
+```
+
+Build and initialize the pomp model
+```{r}
+require(pomp)
+stopifnot(packageVersion("pomp")>="0.75-1")
+sfh2 <- pomp(
+  data=sfh_data,
+  times="time",
+  t0=300,
+  rprocess=euler.sim(
+    step.fun=Csnippet(sfh_rprocess),
+    delta.t=1/12
+  ),
+  rmeasure=Csnippet(sfh_rmeasure),
+  dmeasure=Csnippet(sfh_dmeasure),
+  fromEstimationScale=Csnippet(sfh_fromEstimationScale),
+  toEstimationScale=Csnippet(sfh_toEstimationScale),
+  obsnames = sfh_obsnames,
+  statenames=sfh_statenames,
+  paramnames=sfh_paramnames,
+  initializer=Csnippet(sfh_initializer)
+)
+plot(sfh2)
+```
+
+First let us see one simulation result of the model time series. The model can roughly reproduce the gradual rise of the SFR and outburst behavior.
+```{r}
+theta = coef(sfh2)
+theta[c("lambda","sigmah","eps","sigmac","f","phi","tauc","taud","sigmas")] = c(1.0,0.2,0.001,0.2,0.17,10,100,100,1.0)
+logLik(pfilter(sfh2,params=theta,Np=100))
+x = simulate(sfh2,params=theta)
+plot(x)
+```
+
+```{r}
+run_level <- 2
+switch(run_level,
+       {sfh_Np=100; sfh_Nmif=10; sfh_Neval=10; sfh_Nglobal=10; sfh_Nlocal=10}, 
+       {sfh_Np=20000; sfh_Nmif=100; sfh_Neval=10; sfh_Nglobal=10; sfh_Nlocal=10}, 
+       {sfh_Np=60000; sfh_Nmif=300; sfh_Neval=10; sfh_Nglobal=100; sfh_Nlocal=20}
+)
+
+sfh_fixed_params = c(f=0.17, phi=200, tauc=100, taud=100, sigmas=1.0, sigmah=0.2, sigmac=0.2)
+
+require(doParallel)
+cores <- 4  # The number of cores on this machine 
+registerDoParallel(cores)
+mcopts <- list(set.seed=TRUE)
+set.seed(396658101,kind="L'Ecuyer")
+```
+
+Since there is no reference for the range of values for our model parameters, I would like to examine the possible range of the fiducial values visually using likelihood distribution on $\lamba-\epsilon$ plane. Here I assume all lognormal variance is 1.0 for simplicity. I use particle filter to calculate the loglikelihood given the two parameters in a very large range. Since the distribution of the two parameters spans in a very large range, it is more reasonable to examine them in log scale.
+
+```{r}
+require(plot3D)
+theta[c("lambda","sigmah","eps","sigmac","f","phi","tauc","taud","sigmas")] = c(1.0,1.0,0.001,1.0,0.17,40,100,100,1.0)
+N_l = 10
+N_e = 20
+loglik = matrix(, nrow=N_l, ncol=N_e)
+l_i = 10**seq(-5,1.5,length=N_l)
+e_i = 10**seq(-4,-0.5,length=N_e)
+
+for (i in 1:N_l)
+{
+    theta["lambda"] = l_i[i]
+    for (j in 1:N_e)
+    {
+    theta["eps"] = e_i[j]
+    loglik[i, j] = logLik(pfilter(sfh2,params=theta,Np=10))
+    }
+}
+
+image2D(loglik, log10(l_i), log10(e_i), border=NA )
+```
+
+We can see from the above plot that the parameter $\epsilon$ is well constrained to have a value that is around $10^{-2.5}$, but $\lambda$ is not well constrained, since across a large range of value from 1e-5 to 100, the loglikelihood does not change much with $\lambda$. But it seems that $\lambda\sim10$ has a slightly larger likelihood than others. To test the above statement in details, we then run a local search for both these two parameters as well as the log-scale variations.
+
+```{r}
+sfh_mle = c(lambda=1e-3, sigmah=1.0, eps=0.003, sigmac=1.0, f=0.17, phi=40, tauc=100, taud=100, sigmas=1.0)
+sfh_rw.sd <- 0.01
+sfh_cooling.fraction.50 <- 0.5
+
+stew(file=sprintf("local_search-%d.rda",run_level),{
+  
+  t_local <- system.time({
+    mifs_local <- foreach(i=1:sfh_Nlocal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar%  {
+      mif2(
+        sfh2,
+        start=sfh_mle,
+        Np=sfh_Np,
+        Nmif=sfh_Nmif,
+        cooling.type="geometric",
+        cooling.fraction.50=sfh_cooling.fraction.50,
+        transform=TRUE,
+        rw.sd=rw.sd(
+          lambda=sfh_rw.sd,
+          sigmah=sfh_rw.sd,
+          eps=sfh_rw.sd,
+          sigmac=sfh_rw.sd
+        )
+      )
+      
+    }
+  })
+  
+},seed=900242057,kind="L'Ecuyer")
+```
+
+```{r}
+stew(file=sprintf("lik_local-%d.rda",run_level),{
+    t_local_eval <- system.time({
+    liks_local <- foreach(i=1:sfh_Nlocal,.packages='pomp',.combine=rbind) %dopar% {
+      evals <- replicate(sfh_Neval, logLik(pfilter(sfh2,params=coef(mifs_local[[i]]),Np=sfh_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=900242057,kind="L'Ecuyer")
+
+results_local <- data.frame(logLik=liks_local[,1],logLik_se=liks_local[,2],t(sapply(mifs_local,coef)))
+summary(results_local$logLik,digits=5)
+```
+
+```{r}
+pairs(~logLik+lambda+eps+sigmah+sigmac,data=subset(results_local,logLik>max(logLik)-50))
+```
+
+Below is a code for global search. It seems that the global search is not able to keep the parameter $\lambda$ converge to a global maximum value and lead to a random walk on the parameters space that beyond the reasonable physical regime. This is possibly because that out simplified model lacks some key terms that reflect the regulation of the galaxy formation problem. This need to be tested in the future. However, due to the time limit of this final project, it is not possible to it here.
+
+```{r}
+stew(file=sprintf("box_eval-%d.rda",run_level),{
+  
+  t_global <- system.time({
+    mifs_global <- foreach(i=1:sfh_Nglobal,.packages='pomp', .combine=c, .options.multicore=mcopts) %dopar% mif2(
+      mifs_local[[1]],
+      start=c(lambda=0.0, eps=10**runif(1,-3,-2),sfh_fixed_params)
+    )
+  })
+},seed=1270401374,kind="L'Ecuyer")
+
+print("Start global search: Evaluation!")
+stew(file=sprintf("lik_global_eval-%d.rda",run_level),{
+  t_global_eval <- system.time({
+    liks_global <- foreach(i=1:sfh_Nglobal,.packages='pomp',.combine=rbind, .options.multicore=mcopts) %dopar% {
+      evals <- replicate(sfh_Neval, logLik(pfilter(sfh2,params=coef(mifs_global[[i]]),Np=sfh_Np)))
+      logmeanexp(evals, se=TRUE)
+    }
+  })
+},seed=442141592,kind="L'Ecuyer")
+
+results_global <- data.frame(logLik=liks_global[,1],logLik_se=liks_global[,2],t(sapply(mifs_global,coef)))
+summary(results_global$logLik,digits=5)
+
+plot(mifs_global)
+```
+
+## Conclusion
+1. For the first time, a state process model is built to fit the star formation history of the Galaxy in astronomy. The model, although fairly simple compared to complex semi-analytical model, grasps the basic astrophysics, such as gas cooling, star formation, and stellar feedback.
+
+2. The pomp object is created and simple simulation result shows that the model can reproduce the gradual rise of the SFR across cosmic time, as well as the bursty feature.
+
+3. Both the particle filter and local search method can constrain the star formation efficiency to be around 1.5e-3. This value is consistent with observations on the local Universe (@kennicutt97), suggesting an inefficient star formation rate due to either the long gas cooling timescale or the stellar feedback process.
+
+4. Another key parameter $\lambda$, the mass-loading factor for stellar feedback is very hard to be constrained. This inability also leads to a unstable maximization process in global search process. From the convergence diagnostic plot, we find that this parameter is not able to converge. This is possibly due to the fact that my heuristic galaxy formation model lacks some key physics on stellar feedback, and a simple mass-loading factor is not able to describe the whole picture. Further effort is needed to revisit this issue.
+
+## References
