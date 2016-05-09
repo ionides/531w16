@@ -33,7 +33,7 @@ csl: ecology.csl
 
 6. [Application of the Merton Jump Diffusion Model in S&P500](https://ionides.github.io/531w16/final_project/Project06/final_report.html)
 
-7. [Exploratin of Pertussis Transmission Dynamics and Vaccination Effect Period in Michigan](https://ionides.github.io/531w16/final_project/Project07/submit/final_project_step1.html)
+7. [Exploration of Pertussis Transmission Dynamics and Vaccination Effect Period in Michigan](https://ionides.github.io/531w16/final_project/Project07/submit/final_project_step1.html)
 
 8. [Financial Volatility Analysis with SV-in-Mean Model in Pomp](https://ionides.github.io/531w16/final_project/Project08/Final/Stats_531_Final_Project.html)
 
