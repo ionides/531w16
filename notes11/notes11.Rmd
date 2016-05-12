@@ -134,7 +134,7 @@ options(
 
 * The same issues arise for any modeling and inference via nonlinear mechanistic models. This arises throughout engineering, the sciences (social, biological and physical) and business.
 
-* For example, in finance, we considered a stochastic volatility example in [Chapter 1](http://ionides.github.io/531w16/intro/intro.html#models-dynamic-systems-state-space-models)
+* For example, in finance, we considered a stochastic volatility example in [Chapter 1](http://ionides.github.io/531w16/notes01/intro.html#models-dynamic-systems-state-space-models)
 
 * Many applications arise in epidemiology, studying the transmission of infectious diseases.
 
@@ -771,7 +771,7 @@ $$\varepsilon_t \sim \mathrm{Lognormal}(-\tfrac{1}{2}\sigma^2,\sigma^2).$$
 
 <big><big><big>Acknowledgment</big></big></big>
 
-These notes were developed from a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
+These notes draw on material developed for a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
 
 ----
 

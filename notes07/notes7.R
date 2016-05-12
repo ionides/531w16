@@ -23,9 +23,9 @@ round(V_eigen$values[1:9],2)
 system("head ann_arbor_weather.csv",intern=TRUE)
 
 ## ----weather_data--------------------------------------------------------
-x <- read.table(file="ann_arbor_weather.csv",header=TRUE)
-head(x)
-low <- x$Low
+y <- read.table(file="ann_arbor_weather.csv",header=TRUE)
+head(y)
+low <- y$Low
 
 ## ----replace_na----------------------------------------------------------
 low[is.na(low)] <- mean(low, na.rm=TRUE)
@@ -45,22 +45,22 @@ abline(v=c(10,90),lty="dotted",col="red")
 spectrum(low,method="ar", main="Spectrum estimated via AR model picked by AIC")
 
 ## ----poly_fit------------------------------------------------------------
-lm0 <- lm(Low~1,data=x)
-lm1 <- lm(Low~Year,data=x)
-lm2 <- lm(Low~Year+I(Year^2),data=x)
-lm3 <- lm(Low~Year+I(Year^2)+I(Year^3),data=x)
+lm0 <- lm(Low~1,data=y)
+lm1 <- lm(Low~Year,data=y)
+lm2 <- lm(Low~Year+I(Year^2),data=y)
+lm3 <- lm(Low~Year+I(Year^2)+I(Year^3),data=y)
 poly_aic <- matrix( c(AIC(lm0),AIC(lm1),AIC(lm2),AIC(lm3)), nrow=1,
    dimnames=list("<b>AIC</b>", paste("order",0:3)))
 require(knitr)
 kable(poly_aic,digits=1)
 
 ## ----plot_jan_temp,fig.width=5-------------------------------------------
-plot(Low~Year,data=x,type="l")
+plot(Low~Year,data=y,type="l")
 
 ## ----read_glob_temp------------------------------------------------------
-y <- read.table("Global_Temperature.txt",header=TRUE)
-global_temp <- y$Annual[y$Year %in% x$Year]
-lm_global <- lm(Low~global_temp,data=x)
+Z <- read.table("Global_Temperature.txt",header=TRUE)
+global_temp <- Z$Annual[Z$Year %in% y$Year]
+lm_global <- lm(Low~global_temp,data=y)
 AIC(lm_global)
 
 ## ----glob_temp_fit-------------------------------------------------------

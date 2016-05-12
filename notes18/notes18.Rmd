@@ -840,6 +840,11 @@ if(run_level>1) save(list = ls(all = TRUE), file = "Rout.rda")
 
 --------
 
+<big><big><big>Acknowledgment</big></big></big>
+
+These notes draw on material developed for a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
+
+----
 
 
 ## References

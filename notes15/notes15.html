@@ -119,7 +119,7 @@ img {
 <div id="notation-and-data" class="section level2">
 <h2><span class="header-section-number">15.3</span> Notation and data</h2>
 <ul>
-<li>Recall the daily S&amp;P 500 data that we saw earlier, in <a href="http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model">Section 3.5</a>, downloaded from <a href="http://real-chart.finance.yahoo.com/table.csv?s=%5EGSPC&amp;d=0&amp;e=15&amp;f=2016&amp;g=d&amp;a=0&amp;b=3&amp;c=1950&amp;ignore=.csv">yahoo.com</a>.</li>
+<li>Recall the daily S&amp;P 500 data that we saw earlier, in <a href="http://ionides.github.io/531w16/notes03/notes3.html#a-random-walk-model">Section 3.5</a>, downloaded from <a href="http://real-chart.finance.yahoo.com/table.csv?s=%5EGSPC&amp;d=0&amp;e=15&amp;f=2016&amp;g=d&amp;a=0&amp;b=3&amp;c=1950&amp;ignore=.csv">yahoo.com</a>.</li>
 </ul>
 <pre class="r"><code>dat &lt;- read.table(&quot;sp500.csv&quot;,sep=&quot;,&quot;,header=TRUE)
 N &lt;- nrow(dat)
@@ -131,7 +131,7 @@ plot(log(sp500),type=&quot;l&quot;)</code></pre>
 <ul>
 <li><p>We write <span class="math">\(\{z^*_n,n=1,\dots,N\}\)</span> for the data.</p></li>
 <li><p>We write the return on the S&amp;P 500 index, i.e., the difference of the log of the index, as <span class="math">\[ {y_n^*}=\log({z_n^*})-\log({z_{n-1}^*}).\]</span></p></li>
-<li><p>We saw, in <a href="http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model">Section 3.5</a>, that <span class="math">\({y_{2:N}^*}\)</span> has negligible sample autocorrelation.</p></li>
+<li><p>We saw, in <a href="http://ionides.github.io/531w16/notes03/notes3.html#a-random-walk-model">Section 3.5</a>, that <span class="math">\({y_{2:N}^*}\)</span> has negligible sample autocorrelation.</p></li>
 <li><p>However, the absolute deviations from average, <span class="math">\[ {a_n^*} = \left| {y_n^*} - \frac{1}{N-1}\sum_{k=2}^N {y_k^*} \right|\]</span> have considerable sample autocorrelation.</p></li>
 </ul>
 <p><br></p>
@@ -140,7 +140,7 @@ plot(log(sp500),type=&quot;l&quot;)</code></pre>
 <div id="question.-fitting-a-stationarity-model-to-stock-market-returns" class="section level3">
 <h3><span class="header-section-number">15.3.1</span> Question. Fitting a stationarity model to stock market returns</h3>
 <ul>
-<li><p>Look at the plots in <a href="http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model">Section 3.5</a>.</p></li>
+<li><p>Look at the plots in <a href="http://ionides.github.io/531w16/notes03/notes3.html#a-random-walk-model">Section 3.5</a>.</p></li>
 <li><p>Is it appropriate to fit a stationary model to <span class="math">\({y_{2:N}^*}\)</span>, or do we have evidence for violation of stationarity? Explain.</p></li>
 </ul>
 <p><br></p>
@@ -568,7 +568,7 @@ w_{n}(x_n|x_{n-1}) = f_{Y_n|U_n,X_{n-1}}(y_n^*|u_n,x_{n-1}).
 <hr />
 <hr />
 <p><big><big><big>Acknowledgment</big></big></big></p>
-<p>These notes were developed from a tutorial on <a href="http://dept.stat.lsa.umich.edu/~ionides/tutorials/sp500/sp500.html">financial leverage analysis in pomp</a>.</p>
+<p>These notes draw on material in a tutorial on <a href="http://dept.stat.lsa.umich.edu/~ionides/tutorials/sp500/sp500.html">financial leverage analysis in pomp</a>.</p>
 <hr />
 <div class="references">
 <h2>References</h2>

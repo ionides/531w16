@@ -1230,7 +1230,7 @@ We cannot directly evaluate $e$, since there is also Monte Carlo error in our ev
 
 <big><big><big>Acknowledgment</big></big></big>
 
-These notes were developed from a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
+These notes draw on material developed for a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
 
 
 ------

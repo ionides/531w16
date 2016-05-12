@@ -150,7 +150,7 @@ u &lt;- apply(u_data[u_data$Year %in% t, 2:13],1,mean)</code></pre>
 <ul>
 <li><p>We are interested in changes over business cycle timescales, once trends have been removed.</p></li>
 <li><p>To extract the cyclical component, we use an econometric method called the Hodrick-Prescott (HP) filter .</p></li>
-<li><p>The HP filter is exactly a smoothing spline (see <a href="http://ionides.github.io/531w16/notes9/notes9.html#spline-smoothing-and-its-lg-pomp-representation">Section 9.6</a>) with a particular choice of smoothing parameter.</p></li>
+<li><p>The HP filter is exactly a smoothing spline (see <a href="http://ionides.github.io/531w16/notes09/notes9.html#spline-smoothing-and-its-lg-pomp-representation">Section 9.6</a>) with a particular choice of smoothing parameter.</p></li>
 <li><p>Specifically, for a time series <span class="math">\({y_{1:N}^*}\)</span>, the HP filter is the time series <span class="math">\({s_{1:N}^*}\)</span> constructed as</p></li>
 </ul>
 <p><span class="math">\[{s_{1:N}^*} =  \arg\min_{s_{1:N}} 

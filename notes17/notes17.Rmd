@@ -148,7 +148,7 @@ f_{X_{n+k}|X_{n+k-1}}(x_{n+k}\given x_{n+k-1}\params\hat\theta) \, dx_{n}\dots d
 
 * For time series models, the "fitted values" are usually defined to be the 1-step prediction mean. This corresponds to exactly the regression fitted value for an AR model. However, because these fitted values depend on nearby data points (unlike in most regression models) their interpretation needs additional care.
 
-* For example, consider the daily S&P 500 index that we saw earlier in [Section 3.5](http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model) and [Chapter 15](http://ionides.github.io/531w16/notes15/notes15.html).
+* For example, consider the daily S&P 500 index that we saw earlier in [Section 3.5](http://ionides.github.io/531w16/notes03/notes3.html#a-random-walk-model) and [Chapter 15](http://ionides.github.io/531w16/notes15/notes15.html).
 
 * In practice, we would usually start by transforming the data to the daily investment return, by taking differences of logs. To make the current point, let's instead fit an ARMA(1,1) model to the logarithm of the index, for the most recent 1000 days.
 
@@ -223,20 +223,21 @@ sd(resid(sp500_arma))
 
 ## Case study: An emerging infectious disease outbreak
 
-* This case study is based on @King2015 and uses material sourced from a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/), taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
 
+* Let's situate ourselves at the beginning of October 2014.
 
-<big><b>The scenario</b></big>.
-Let's situate ourselves at the beginning of October 2014.
-Ebola has quite suddenly turned into a threat to global health and global trade.
-The WHO situation report contained data on the number of Ebola cases in each of Guinea, Sierra Leone, and Liberia.
-Key questions included:
+* Ebola has quite suddenly turned into a threat to global health and global trade.
 
-1. How fast will the outbreak unfold?
-1. How large will it ultimately prove?
-1. What interventions will be most effective?
+* The WHO situation report contained data on the number of Ebola cases in each of Guinea, Sierra Leone, and Liberia. Key questions included:
 
-Download the data from the WHO Situation Report of 1 October 2014:
+    1. How fast will the outbreak unfold?
+
+    1. How large will it ultimately prove?
+
+    1. What interventions will be most effective?
+
+* We carry out an investigation based on @King2015, using data downloaded from the WHO Situation Report of 1 October 2014:
+
 ```{r get-data}
 base_url <- "http://kingaa.github.io/sbied/"
 read.csv(paste0(base_url,"data/ebola_data.csv"),stringsAsFactors=FALSE,
@@ -245,7 +246,7 @@ sapply(dat,class)
 head(dat)
 ```
 
-Supplementing these data are population estimates for the three countries.
+* Supplementing these data are population estimates for the three countries.
 
 ```{r popsizes}
 ## Population sizes in Guinea, Liberia, and Sierra Leone (census 2014)
@@ -267,15 +268,17 @@ dat %>%
 
 ### An SEIR model with gamma-distributed latent and infectious periods
 
-Many of the early modeling efforts used variants on the simple SEIR model.
-Here, we'll focus on a variant that attempts a more accurate description of the duration of the latent period.
-Specifically, this model assumes that the amount of time an infection remains latent is
+* Many of the early modeling efforts used variants on the simple SEIR model.
+
+* Here, we'll focus on a variant that attempts a more accurate description of the duration of the latent period.
+
+* Specifically, this model assumes that the amount of time an infection remains latent is
 $$\mathrm{LP} \sim \mathrm{Gamma}\left(m,\frac{1}{m\,\alpha}\right),$$
 where $m$ is an integer.
-This means that the latent period has expectation $1/\alpha$ and variance $1/(m\,\alpha)$.
-In this document, we'll fix $m=3$.
 
-We implement Gamma distributions using the so-called *linear chain trick*.
+* This means that the latent period has expectation $1/\alpha$ and variance $1/(m\,\alpha)$. In this document, we'll fix $m=3$.
+
+* We implement Gamma distributions using the so-called *linear chain trick*.
 
 ```{r seir-diagram,echo=FALSE,cache=FALSE,purl=FALSE}
 require(DiagrammeR)
@@ -342,7 +345,7 @@ rSim <- Csnippet('
 
 ### Deterministic skeleton
 
-The deterministic skeleton is an ODE.
+* The deterministic skeleton is an ODE.
 
 ```{r skel}
 skel <- Csnippet('
@@ -373,7 +376,7 @@ skel <- Csnippet('
 
 ###  Measurement model: overdispersed count data
 
-$C_t | H_t$ is negative binomial with $\E[C_t|H_t] = \rho\,H_t$ and $\var[C_t|H_t] = \rho\,H_t\,(1+k\,\rho\,H_t)$.
+* $C_t | H_t$ is negative binomial with $\E[C_t|H_t] = \rho\,H_t$ and $\var[C_t|H_t] = \rho\,H_t\,(1+k\,\rho\,H_t)$.
 
 ```{r measmodel}
 dObs <- Csnippet('
@@ -421,7 +424,7 @@ fromEst <- Csnippet('
 ')
 ```
 
-The following function constructs a `pomp` object to hold the data for any one of the countries.
+* The following function constructs a `pomp` object to hold the data for any one of the countries.
 
 ```{r pomp-construction}
 ebolaModel <- function (country=c("Guinea", "SierraLeone", "Liberia"),
@@ -476,19 +479,23 @@ ebolaModel("Liberia") -> lbr
 
 ## Parameter estimates for Ebola
 
-@King2015 estimated parameters for this model for each country.
-A large [Latin hypercube design](https://en.wikipedia.org/wiki/Latin_hypercube_sampling) was used to initiate a large number of iterated filtering runs.
-Profile likelihoods were computed for each country against the parameters $k$ (the measurement model overdispersion) and $R_0$ (the basic reproductive ratio).
-Full details are given [on the datadryad.org site](http://dx.doi.org/10.5061/dryad.r5f30).
-The following loads the results of these calculations.
+* @King2015 estimated parameters for this model for each country.
+
+* A large [Latin hypercube design](https://en.wikipedia.org/wiki/Latin_hypercube_sampling) was used to initiate a large number of iterated filtering runs.
+
+* Profile likelihoods were computed for each country against the parameters $k$ (the measurement model overdispersion) and $R_0$ (the basic reproductive ratio).
+
+* Full details are given [on the datadryad.org site](http://dx.doi.org/10.5061/dryad.r5f30). The following loads the results of these calculations.
 
 ```{r load-profile}
 options(stringsAsFactors=FALSE)
 profs <- read.csv(paste0(base_url,"/ebola/ebola-profiles.csv"))
 ```
 
-The following plots the profile likelihoods.
-The horizontal line represents the critical value of the likelihood ratio test for $p=0.01$.
+* The following plots the profile likelihoods.
+
+* The horizontal line represents the critical value of the likelihood ratio test for $p=0.01$.
+
 ```{r profiles-plots,results='hide'}
 require(reshape2)
 require(plyr)
@@ -516,21 +523,28 @@ profs %>%
 
 ## Diagnostics for the Ebola analysis
 
-Parameter estimation is the process of finding the parameters that are "best", in some sense, for a given model, from among the set of those that make sense for that model.
-Model selection, likewise, aims at identifying the "best" model, in some sense, from among a set of candidates.
-One can do both of these things more or less well, but no matter how carefully they are done, the best of a bad set of models is still bad.
+* Parameter estimation is the process of finding the parameters that are "best", in some sense, for a given model, from among the set of those that make sense for that model.
 
-Let's investigate the model here, at its maximum-likelihood parameters, to see if we can identify problems.
-The guiding principle in this is that, if the model is "good", then the data are a plausible realization of that model.
-Therefore, we can compare the data directly against model simulations.
-Moreover, we can quantify the agreement between simulations and data in any way we like.
-Any statistic, or set of statistics, that can be applied to the data can also be applied to simulations.
-Shortcomings of the model should manifest themselves as discrepancies between the model-predicted distribution of such statistics and their value on the data.
+* Model selection, likewise, aims at identifying the "best" model, in some sense, from among a set of candidates.
 
-**pomp** provides tools to facilitate this process.
+* One can do both of these things more or less well, but no matter how carefully they are done, the best of a bad set of models is still bad.
+
+* Let's investigate the model here, at its maximum-likelihood parameters, to see if we can identify problems.
+
+* The guiding principle in this is that, if the model is "good", then the data are a plausible realization of that model.
+
+    + Therefore, we can compare the data directly against model simulations.
+
+    + Moreover, we can quantify the agreement between simulations and data in any way we like.
+
+    + Any statistic, or set of statistics, that can be applied to the data can also be applied to simulations.
+
+    + Shortcomings of the model should manifest themselves as discrepancies between the model-predicted distribution of such statistics and their value on the data.
+
+* **pomp** provides tools to facilitate this process.
 Specifically, the `probe` function applies a set of user-specified *probes* or summary statistics, to the model and the data, and quantifies the degree of disagreement in several ways.
 
-Let's see how this is done using the model for the Guinean outbreak.
+* Let's see how this is done using the model for the Guinean outbreak.
 
 ```{r diagnostics1}
 library(pomp)
@@ -556,10 +570,11 @@ simulate(gin,nsim=20,as.data.frame=TRUE,include.data=TRUE) %>%
   scale_alpha_manual(values=c(no=0.5,yes=1))
 ```
 
-The simulations appear to be growing a bit more quickly than the data.
-Let's try to quantify this.
-First, we'll write a function that estimates the exponential growth rate by linear regression.
-Then, we'll apply it to the data and to 500 simulations.
+* The simulations appear to be growing a bit more quickly than the data.
+
+* Let's try to quantify this.
+
+* First, we'll write a function that estimates the exponential growth rate by linear regression. Then, we'll apply it to the data and to 500 simulations.
 
 ```{r diagnostics-growth-rate}
 growth.rate <- function (y) {
@@ -570,9 +585,9 @@ growth.rate <- function (y) {
 probe(gin,probes=list(r=growth.rate),nsim=500) %>% plot()
 ```
 
-Do these results bear out our suspicion that the model and data differ in terms of growth rate?
+* Do these results bear out our suspicion that the model and data differ in terms of growth rate?
 
-The simulations also appear to be more highly variable around the trend than do the data.
+* The simulations appear to be more highly variable around the trend than do the data.
 
 ```{r diagnostics-growth-rate-and-sd}
 growth.rate.plus <- function (y) {
@@ -584,9 +599,11 @@ probe(gin,probes=list(growth.rate.plus),
       nsim=500) %>% plot()
 ```
 
-Let's also look more carefully at the distribution of values about the trend using the 1st and 3rd quantiles.
-Also, it looks like the data are less jagged than the simulations.
-We can quantify this using the autocorrelation function (ACF).
+* Let's also look more carefully at the distribution of values about the trend using the 1st and 3rd quantiles.
+
+* Also, it looks like the data are less jagged than the simulations.
+
+* We can quantify this using the autocorrelation function (ACF).
 
 ```{r diagnostics2,fig.height=6}
 log1p.detrend <- function (y) {
@@ -611,10 +628,11 @@ probe(gin,probes=list(
 
 ### Exercise: the SEIR model for the Sierra Leone outbreak
 
-Apply probes to investigate the extent to which the model is an adequate description of the data from the Sierra Leone outbreak.
-Have a look at the probes provided with **pomp**: `?basic.probes`.
-Try also to come up with some informative probes of your own.
-Discuss the implications of your findings.
+* Apply probes to investigate the extent to which the model is an adequate description of the data from the Sierra Leone outbreak.
+
+* Have a look at the probes provided with **pomp**: `?basic.probes`.
+
+* Try also to come up with some informative probes of your own. Discuss the implications of your findings.
 
 <br>
 
@@ -763,5 +781,17 @@ simq %>% ggplot(aes(x=date))+
              mapping=aes(x=date,y=cases),color='black')+
   labs(y="cases")
 ```
+
+<br>
+
+-------
+
+------
+
+<big><big><big>Acknowledgment</big></big></big>
+
+These notes draw on material developed for a short course on [Simulation-based Inference for Epidemiological Dynamics](http://kingaa.github.io/sbied/) by Aaron King and Edward Ionides, taught at the University of Washington Summer Institute in Statistics and Modeling in Infectious Diseases, 2015.
+
+----
 
 ## References

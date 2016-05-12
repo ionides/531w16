@@ -61,24 +61,24 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 ## Class notes
 
-1. [Introduction](intro/intro.html). [(R script)](intro/intro.R)
+1. [Introduction](notes01/intro.html). [(R script)](notes01/intro.R)
 
-2. [Definitions and trend estimation by least squares](trend/trend.html). [(R script)](trend/trend.R)
+2. [Definitions and trend estimation by least squares](notes02/trend.html). [(R script)](notes02/trend.R)
 
-3. [Stationarity, white noise, and some basic time series models](notes3/notes3.html). [(R script)](notes3/notes3.R)
+3. [Stationarity, white noise, and some basic time series models](notes03/notes3.html). [(R script)](notes03/notes3.R)
 
-4. [Linear time series models and the algebra of ARMA models](notes4/notes4.html). [(R script)](notes4/notes4.R)
+4. [Linear time series models and the algebra of ARMA models](notes04/notes4.html). [(R script)](notes04/notes4.R)
 
-5. [Parameter estimation and model identification for ARMA models](notes5/notes5.html). [(R script)](notes5/notes5.R)
+5. [Parameter estimation and model identification for ARMA models](notes05/notes5.html). [(R script)](notes05/notes5.R)
 
-6. [Extending the ARMA model: Seasonality and trend](notes6/notes6.html). [(R script)](notes6/notes6.R)
+6. [Extending the ARMA model: Seasonality and trend](notes06/notes6.html). [(R script)](notes06/notes6.R)
 
-7. [Introduction to the frequency domain](notes7/notes7.html). [(R script)](notes7/notes7.R)
+7. [Introduction to the frequency domain](notes07/notes7.html). [(R script)](notes07/notes7.R)
 
 
-8. [Smoothing in the time and frequency domains](notes8/notes8.html). [(R script)](notes8/notes8.R)
+8. [Smoothing in the time and frequency domains](notes08/notes8.html). [(R script)](notes08/notes8.R)
 
-9. [Introduction to partially observed Markov process models](notes9/notes9.html). [(R script)](notes9/notes9.R)
+9. [Introduction to partially observed Markov process models](notes09/notes9.html). [(R script)](notes09/notes9.R)
 
 10. [Case study: An association between unemployment and mortality?](notes10/notes10.html) [(R script)](notes10/notes10.R)
 
@@ -92,7 +92,7 @@ Any material taken from any source, such as the internet, must be properly ackno
 
 15. [Case study: POMP modeling to investigate financial volatility](notes15/notes15.html). [(R script)](notes15/notes15.R)
 
-16. [Using a Linux sever for POMP analysis](linux/linux.html). [Using the UM Flux Linux cluster](flux/flux.html).
+16. [Using a Linux sever for POMP analysis](notes16/linux/linux.html). [Using the UM Flux Linux cluster](notes16/flux/flux.html).
 
 17. [Forecasting and fitted values, with a case study of Ebola](notes17/notes17.html). [(R script)](notes17/notes17.R)
 

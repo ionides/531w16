@@ -92,11 +92,11 @@ options(
 
     + Formally, this means that for any collection of times $(t_1, t_2,\dots,t_K)$, the joint distribution of observations at these times should be the same as the joint distribution at $(t_1+\tau, t_2+\tau,\dots,t_K+\tau)$ for any $\tau$.
 
-    + For equally spaced observations, this becomes: for any collection of timepoints $n_1,\dots,n_K$, and for any lag $h$, the joint density function of $(X_{n_1},X_{n_2},\dots, X_{n_K})$ is the same as the joint density function of $(X_{n_1+h},X_{n_2+h},\dots, X_{n_K+h})$.
+    + For equally spaced observations, this becomes: for any collection of timepoints $n_1,\dots,n_K$, and for any lag $h$, the joint density function of $(Y_{n_1},Y_{n_2},\dots, Y_{n_K})$ is the same as the joint density function of $(Y_{n_1+h},Y_{n_2+h},\dots, Y_{n_K+h})$.
 
     + In our general notation for densities, this strict stationarity requirement can be written as
-$$\begin{eqnarray}&&f_{X_{n_1},X_{n_2},\dots, X_{n_K}}(x_1,x_2,\dots,x_K)\\
-&&\quad\quad = f_{X_{n_1+h},X_{n_2+h},\dots, X_{n_K+h}}(x_1,x_2,\dots,x_K).
+$$\begin{eqnarray}&&f_{Y_{n_1},Y_{n_2},\dots, Y_{n_K}}(y_1,y_2,\dots,y_K)\\
+&&\quad\quad = f_{Y_{n_1+h},Y_{n_2+h},\dots, Y_{n_K+h}}(y_1,y_2,\dots,y_K).
 \end{eqnarray}$$
 
    + Strict stationarity implies weak stationarity (check this). Note that we only defined weak stationarity for equally spaced observations.
@@ -278,7 +278,7 @@ abline(v=c(1/4,1/2,3/4),lty="dotted")
 
 * The order $p$ autoregressive model,  abbreviated to AR(p), is
 <br><br>
-[M1] $\quad\quad \quad X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n$,
+[M1] $\quad\quad \quad Y_n = \phi_1 Y_{n-1}+\phi_2Y_{n-2}+\dots+\phi_pY_{n-p} + \epsilon_n$,
 <br><br>
 where $\{\epsilon_n\}$ is a white noise process. 
 
@@ -287,21 +287,21 @@ where $\{\epsilon_n\}$ is a white noise process.
 
 * M1 is a **stochastic difference equation**. It is a [difference equation (also known as a recurrence relation)](https://en.wikipedia.org/wiki/Recurrence_relation) since each time point is specified recursively in terms of previous time points. Stochastic just means random.
 
-* To complete the model, we need to **initialize** the solution to the stochastic difference equation. Supposing we want to specify a distribution for $X_{1:N}$, we have some choices in how to set up the **initial values**.
+* To complete the model, we need to **initialize** the solution to the stochastic difference equation. Supposing we want to specify a distribution for $Y_{1:N}$, we have some choices in how to set up the **initial values**.
 
-    1. We can specify $X_{1:p}$ explicitly, to get the recursion started.
+    1. We can specify $Y_{1:p}$ explicitly, to get the recursion started.
 
-    2. We can specify $X_{1-p:0}$ explicitly.
+    2. We can specify $Y_{1-p:0}$ explicitly.
 
     3. For either of these choices, we can define these initial values either to be additional parameters in the model (i.e., not random) or to be specified random variables.
 
-    4. If we want our model is strictly stationary, we must initialize so that $X_{1:p}$ have the proper joint distribution for this stationary model.
+    4. If we want our model is strictly stationary, we must initialize so that $Y_{1:p}$ have the proper joint distribution for this stationary model.
 
 * Let's investigate a particular Gaussian AR(1) process, as an exercise.
 <br><br>
-[M2] $\quad\quad \quad X_n = 0.6 X_{n-1}+ \epsilon_n$,
+[M2] $\quad\quad \quad Y_n = 0.6 Y_{n-1}+ \epsilon_n$,
 <br><br>
-where $\epsilon_n\sim \mathrm{IID} N[0,1]$. We will initialize with $X_1\sim N[0,1.56^2]$.
+where $\epsilon_n\sim \mathrm{IID} N[0,1]$. We will initialize with $Y_1\sim N[0,1.56^2]$.
 
 <br>
 
@@ -374,17 +374,17 @@ plot(X,type="l")
 
 * The order $q$ moving average model, abbreviated to MA(q), is
 <br><br>
-[M3] $\quad\quad \quad X_n =  \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}$,
+[M3] $\quad\quad \quad Y_n =  \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}$,
 <br><br>
 where $\{\epsilon_n\}$ is a white noise process. 
 
-* To fully specify $X_{1:N}$ we must specify the joint distribution of $\epsilon_{1-q:N}$.
+* To fully specify $Y_{1:N}$ we must specify the joint distribution of $\epsilon_{1-q:N}$.
 
 * Often, we consider the **Gaussian MA(q)** model, where  $\{\epsilon_n\}$ is a Gaussian white noise process. 
 
 * Let's investigate a particular Gaussian MA(2) process, as an exercise.
 <br><br>
-[M4] $\quad\quad \quad X_n = \epsilon_n + 1.5\epsilon_{n-1}+\epsilon_{n-2}$,
+[M4] $\quad\quad \quad Y_n = \epsilon_n + 1.5\epsilon_{n-1}+\epsilon_{n-2}$,
 <br><br>
 where $\epsilon_n\sim \mathrm{IID} N[0,1]$.
 
@@ -434,36 +434,36 @@ plot(epsilon,type="l")
 
 * The **random walk** model is
 <br><br>
-[M5] $\quad\quad\quad X_n = X_{n-1} + \epsilon_n$,
+[M5] $\quad\quad\quad Y_n = Y_{n-1} + \epsilon_n$,
 <br><br>
-where $\{\epsilon_n\}$ is white noise. Unless otherwise specified, we usually initialize with $X_0=0$.
+where $\{\epsilon_n\}$ is white noise. Unless otherwise specified, we usually initialize with $Y_0=0$.
 
 * If $\{\epsilon_n\}$ is Gaussian white noise, then we have a Gaussian random walk.
 
 * The random walk model is a special case of AR(1) with $\phi_1=1$. 
 
 * The stochastic difference equation in M5 has an exact solution,
-$$ X_n = \sum_{k=1}^n\epsilon_k.$$
+$$ Y_n = \sum_{k=1}^n\epsilon_k.$$
 
-* We can also call $X_{0:N}$ an **integrated white noise process**. We think of summation as a discrete version of integration.
+* We can also call $Y_{0:N}$ an **integrated white noise process**. We think of summation as a discrete version of integration.
 
-* If data $\data{x_{1:N}}$ are modeled as a random walk, the value of $X_0$ is usually an unknown. Rather than introducing an unknown parameter to our model, we may initialize our model at time $t_1$ with $X_1=\data{x_1}$.
+* If data $\data{y_{1:N}}$ are modeled as a random walk, the value of $Y_0$ is usually an unknown. Rather than introducing an unknown parameter to our model, we may initialize our model at time $t_1$ with $Y_1=\data{y_1}$.
 
 * The **first difference** time series $\data{z_{2:N}}$ is defined by
-$$ \data{z_n}= \Delta \data{x_n} = \data{x_{n}}-\data{x_{n-1}}$$ 
+$$ \data{z_n}= \Delta \data{y_n} = \data{y_{n}}-\data{y_{n-1}}$$ 
 
 * From a time series of length $N$, we only get $N-1$ first differences. 
 
-* A random walk model for $\data{x_{1:N}}$ is essentially equivalent to a white noise model for $\data{z_{2:N}}= \Delta \data{x_{2:N}}$, apart from the issue of initialization.
+* A random walk model for $\data{y_{1:N}}$ is essentially equivalent to a white noise model for $\data{z_{2:N}}= \Delta \data{y_{2:N}}$, apart from the issue of initialization.
 
 * The **random walk with drift** model is given by the difference equation
 <br><br>
-[M6] $\quad\quad\quad X_n = X_{n-1} + \mu + \epsilon_n$,
+[M6] $\quad\quad\quad Y_n = Y_{n-1} + \mu + \epsilon_n$,
 <br><br>
 driven by a white noise process $\{\epsilon_n\}$. This has solution
-$$ X_n = X_0 + n\mu + \sum_{k=1}^n\epsilon_k.$$
+$$ Y_n = Y_0 + n\mu + \sum_{k=1}^n\epsilon_k.$$
 
-* As for the random walk without drift, we must define $X_0$ to initialize the model and complete the model specification. Unless otherwise specified, we usually initialize with $X_0=0$.
+* As for the random walk without drift, we must define $Y_0$ to initialize the model and complete the model specification. Unless otherwise specified, we usually initialize with $Y_0=0$.
 
 <br>
 
@@ -511,7 +511,7 @@ plot(X2,type="l")
 
 * It is bad style to refer to quantities using computer code notation. We should set up mathematical notation in the text. Let's try again...
 
-* Let $\data{x_{1:N}}$ be the time series of S&P 500 daily closing values downloaded from yahoo.com.  Let $\data{z_n}= \Delta \log \data{x_n} = \log \data{x_{n}}-\log \data{x_{n-1}}$. 
+* Let $\data{y_{1:N}}$ be the time series of S&P 500 daily closing values downloaded from yahoo.com.  Let $\data{z_n}= \Delta \log \data{y_n} = \log \data{y_{n}}-\log \data{y_{n-1}}$. 
 
 * The temporal difference of the log of the value of an investment is called the **return** on the investment. Let's plot the sample autocorrelation function of the time series of S&P 500 returns, $\data{z_{2:N}}$.
 ```{r sp500_acf}

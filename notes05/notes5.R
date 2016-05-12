@@ -66,12 +66,12 @@ intercept <- params["intercept"]
 sigma <- sqrt(huron_arma21$sigma2)
 theta <- matrix(NA,nrow=J,ncol=length(params),dimnames=list(NULL,names(params)))
 for(j in 1:J){
-   X_j <- arima.sim(
+   Y_j <- arima.sim(
       list(ar=ar,ma=ma),
       n=length(huron_depth),
       sd=sigma
    )+intercept
-   theta[j,] <- coef(arima(X_j,order=c(2,0,1)))
+   theta[j,] <- coef(arima(Y_j,order=c(2,0,1)))
 }
 hist(theta[,"ma1"],freq=FALSE) 
 
@@ -94,8 +94,8 @@ intercept <- params["intercept"]
 sigma <- sqrt(huron_ar1$sigma2)
 t1 <- system.time(
   huron_sim <- foreach(j=1:J) %dopar% {
-     X_j <- arima.sim(list(ar=ar),n=length(huron_depth),sd=sigma)+intercept
-     try(coef(arima(X_j,order=c(2,0,1))))
+     Y_j <- arima.sim(list(ar=ar),n=length(huron_depth),sd=sigma)+intercept
+     try(coef(arima(Y_j,order=c(2,0,1))))
   }
 ) 
 

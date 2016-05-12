@@ -97,12 +97,12 @@ options(
 * A general SARMA$(p,q)\times(P,Q)_{12}$ model for monthly data is
 <br>
 <br>
-[S1] $\eqspace \ar(B)\AR(B^{12}) (X_n-\mu) = \ma(B)\MA(B^{12}) \epsilon_n$,
+[S1] $\eqspace \ar(B)\AR(B^{12}) (Y_n-\mu) = \ma(B)\MA(B^{12}) \epsilon_n$,
 <br>
 <br>
 where $\{\epsilon_n\}$ is a white noise process and
 $$\begin{eqnarray}
-\mu &=& \E[X_n]
+\mu &=& \E[Y_n]
 \\
 \ar(x)&=&1-\ar_1 x-\dots -\ar_px^p,
 \\ 
@@ -122,10 +122,10 @@ $$\begin{eqnarray}
 * Consider the following two models:
 <br>
 <br>
-[S2] $\eqspace X_n = 0.5 X_{n-1} + 0.25 X_{n-12} + \epsilon_n$,
+[S2] $\eqspace Y_n = 0.5 Y_{n-1} + 0.25 Y_{n-12} + \epsilon_n$,
 <br>
 <br>
-[S3] $\eqspace X_n = 0.5 X_{n-1} + 0.25 X_{n-12} - 0.125 X_{n-13} + \epsilon_n$,
+[S3] $\eqspace Y_n = 0.5 Y_{n-1} + 0.25 Y_{n-12} - 0.125 Y_{n-13} + \epsilon_n$,
 <br>
 <br>
 
@@ -153,7 +153,7 @@ $$\begin{eqnarray}
 
 ### Fitting a SARMA model
 
-* Let's do this for the full, monthly, version of the Lake Huron data described in [Section 5.5](http://ionides.github.io/531w16/notes5/notes5.html#implementing-likelihood-based-inference-for-arma-models-in-r).
+* Let's do this for the full, monthly, version of the Lake Huron data described in [Section 5.5](http://ionides.github.io/531w16/notes05/notes5.html#implementing-likelihood-based-inference-for-arma-models-in-r).
 
 * First, we'll revisit reading in the data.
 
@@ -173,7 +173,7 @@ plot(huron_depth~time,type="l")
 ```
 
 * Now, we get to fit a model. Based on our previous analysis, we'll go with AR(1) for the annual polynomial. Let's try ARMA(1,1) for the monthly part. In other words, we seek to fit the model
-$$ (1-\AR_1 B^{12})(1-\ar_1 B) X_n = (1+\ma_1 B)\epsilon_n.$$
+$$ (1-\AR_1 B^{12})(1-\ar_1 B) Y_n = (1+\ma_1 B)\epsilon_n.$$
 ```{r sarima}
 huron_sarma11x10 <- arima(huron_depth,
    order=c(1,0,1),
@@ -209,15 +209,15 @@ acf(resid(huron_sarma11x10))
 
 * This can be viewed as a **transformation to stationarity**
 
-* We can transform the data $\data{x_{1:N}}$ to $\data{y_{2:N}}$ 
-$$ \data{y_n} = \Delta \data{x_n} = \data{x_n}-\data{x_{n-1}}.$$
+* We can transform the data $\data{y_{1:N}}$ to $\data{z_{2:N}}$ 
+$$ \data{z_n} = \Delta \data{y_n} = \data{y_n}-\data{y_{n-1}}.$$
 
-* Then, an ARMA(p,q) model $Y_{2:N}$ for the differenced data $\data{y_{2:N}}$ is called an **integrated autoregressive moving average** model for $\data{x_{1:N}}$ and is written as ARIMA(p,1,q).
+* Then, an ARMA(p,q) model $Z_{2:N}$ for the differenced data $\data{z_{2:N}}$ is called an **integrated autoregressive moving average** model for $\data{y_{1:N}}$ and is written as ARIMA(p,1,q).
 
-* Formally, the ARIMA(p,d,q) model with intercept $\mu$ for $X_{1:N}$ is
+* Formally, the ARIMA(p,d,q) model with intercept $\mu$ for $Y_{1:N}$ is
 <br>
 <br>
-[S4] $\eqspace \ar(B)\big( (1-B)^d X_n-\mu) = \ma(B) \epsilon_n$,
+[S4] $\eqspace \ar(B)\big( (1-B)^d Y_n-\mu) = \ma(B) \epsilon_n$,
 <br>
 <br>
 where $\{\epsilon_n\}$ is a white noise process; $\ar(x)$ and $\ma(x)$ are the ARMA polynomials defined previously.
@@ -244,7 +244,7 @@ where $\{\epsilon_n\}$ is a white noise process; $\ar(x)$ and $\ma(x)$ are the A
 
 * There are two reasons to fit an ARIMA(p,1,q) model
 
-1. You may really think that modeling the differences is a natural approach for your data. The S&P 500 stock market index analysis in [Section 3.5](http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model) is an example of this, as long as you remember to first apply a logarithmic transform to the data.
+1. You may really think that modeling the differences is a natural approach for your data. The S&P 500 stock market index analysis in [Section 3.5](http://ionides.github.io/531w16/notes03/notes3.html#a-random-walk-model) is an example of this, as long as you remember to first apply a logarithmic transform to the data.
 
 2. Differencing often makes data look "more stationary" and perhaps it will then look stationary enough to justify applying the ARMA machinery.
 
@@ -268,8 +268,8 @@ where $\{\epsilon_n\}$ is a white noise process; $\ar(x)$ and $\ma(x)$ are the A
 
 ### Question: What is the trend of the ARIMA(p,1,q) model? 
 
-* Hint: recall that the ARIMA(p,1,q) model specification for $X_{1:N}$ implies that 
-$Y_n = (1-B)X_n$ is a stationary, causal, invertible ARMA(p,q) process with mean $\mu$.
+* Hint: recall that the ARIMA(p,1,q) model specification for $Y_{1:N}$ implies that 
+$Z_n = (1-B)Y_n$ is a stationary, causal, invertible ARMA(p,q) process with mean $\mu$.
 Now take expectations of both sides of the difference equation.
 
 <br>
@@ -291,11 +291,11 @@ Now take expectations of both sides of the difference equation.
 * Combining integration of ARMA models with seasonality, we can write a general SARIMA$(p,d,q)\times(P,D,Q)_{12}$ model for nonstationary monthly data, given by 
 <br>
 <br>
-[S5] $\eqspace \ar(B)\AR(B^{12}) \big((1-B)^d(1-B^{12})^D X_n-\mu)$<br>
+[S5] $\eqspace \ar(B)\AR(B^{12}) \big((1-B)^d(1-B^{12})^D Y_n-\mu)$<br>
 $\eqspace \hspace{2in} = \ma(B)\MA(B^{12}) \epsilon_n$,
 <br>
 <br>
-where $\{\epsilon_n\}$ is a white noise process, the intercept $\mu$ is the mean of the differenced process $\{(1-B)^d(1-B^{12})^D X_n\}$, and we have ARMA polynomials $\ar(x)$, $\AR(x)$, $\ma(x)$, $\MA(x)$ as in model [S1].
+where $\{\epsilon_n\}$ is a white noise process, the intercept $\mu$ is the mean of the differenced process $\{(1-B)^d(1-B^{12})^D Y_n\}$, and we have ARMA polynomials $\ar(x)$, $\AR(x)$, $\ma(x)$, $\MA(x)$ as in model [S1].
 
 * The SARIMA$(0,1,1)\times(0,1,1)_{12}$ model has often been used for forecasting monthly time series in economics and business. It is sometimes called the **airline model** after a data analysis by Box and Jenkins (1970).
 
@@ -311,12 +311,12 @@ where $\{\epsilon_n\}$ is a white noise process, the intercept $\mu$ is the mean
 * A general **signal plus noise** model is
 <br>
 <br>
-[S6] $\eqspace   X_n = \mu_n + \eta_n$,
+[S6] $\eqspace   Y_n = \mu_n + \eta_n$,
 <br>
 <br>
 where $\{\eta_n\}$ is a stationary, mean zero stochastic process, and $\mu_n$ is the mean function. 
 
-* If, in addition, $\{\eta_n\}$ is uncorrelated, then we have a **signal plus white noise** model. The usual linear trend regression model fitted by least squares in [Section 2.4](http://ionides.github.io/531w16/trend/trend.html#estimating-a-trend-by-least-squares) corresponds to a signal plus white noise model.
+* If, in addition, $\{\eta_n\}$ is uncorrelated, then we have a **signal plus white noise** model. The usual linear trend regression model fitted by least squares in [Section 2.4](http://ionides.github.io/531w16/notes02/trend.html#estimating-a-trend-by-least-squares) corresponds to a signal plus white noise model.
 
 * We can say **signal plus colored noise** if we wish to emphasize that we're not assuming white noise.
 
@@ -343,8 +343,8 @@ $$\theta = (\ar_{1:p},\ma_{1:q},\sigma^2,\beta).$$
 $$\mu_n = \sum_{k=1}^K Z_{n,k}\beta_k,$$
 the **signal plus ARMA noise** model is known as **linear regression with ARMA errors**.
 
-* Writing $X$ for a column vector of $X_{1:N}$, $\mu$ for a column vector of $\mu_{1:N}$, $\eta$ for a column vector of $\eta_{1:N}$, and $Z$ for the $N\times K$ matrix with $(n,k)$ entry $Z_{n,k}$, we have a general linear regression model with correlated ARMA errors,
-$$ X = Z\beta + \eta.$$
+* Writing $Y$ for a column vector of $Y_{1:N}$, $\mu$ for a column vector of $\mu_{1:N}$, $\eta$ for a column vector of $\eta_{1:N}$, and $Z$ for the $N\times K$ matrix with $(n,k)$ entry $Z_{n,k}$, we have a general linear regression model with correlated ARMA errors,
+$$ Y = Z\beta + \eta.$$
 
 * Maximum likelihood estimation of $\theta = (\ar_{1:p},\ma_{1:q},\sigma^2,\beta)$ is a nonlinear optimization problem. Fortunately, `arima` in R can do it for us, though as usual we should look out for signs of numerical problems. 
 
@@ -388,8 +388,8 @@ fit1 <- arima(huron,order=c(1,0,0),xreg=year)
 fit1
 ```
 
-* To talk formally about these results, we'd better write down a model and some hypotheses. Writing the data as $\data{x_{1:N}}$, collected at years $t_{1:N}$, the model we have fitted is
-$$ (1-\ar_1 B)(X_n - \mu - \beta t_n) = \epsilon_n,$$
+* To talk formally about these results, we'd better write down a model and some hypotheses. Writing the data as $\data{y_{1:N}}$, collected at years $t_{1:N}$, the model we have fitted is
+$$ (1-\ar_1 B)(Y_n - \mu - \beta t_n) = \epsilon_n,$$
 where $\{\epsilon_n\}$ is Gaussian white noise with variance $\sigma^2$. Our null model is
 $$ H^{\langle 0\rangle}: \beta=0,$$
 and our alternative hypothesis is

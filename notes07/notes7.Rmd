@@ -97,7 +97,7 @@ options(
 
 * We're going to start by reviewing eigenvectors and eigenvalues of covariance matrices. This eigen decomposition also arises elsewhere in Statistics, such as the principle component analysis technique in multivariate analysis.
 
-* A univariate time series model is a vector-valued random variable $X_{1:N}$ which we suppose has a covariance matrix $V$ which is an $N\times N$ matrix with entries $V_{mn}=\cov(X_m,X_n)$.
+* A univariate time series model is a vector-valued random variable $Y_{1:N}$ which we suppose has a covariance matrix $V$ which is an $N\times N$ matrix with entries $V_{mn}=\cov(Y_m,Y_n)$.
 
 * $V$ is a non-negative definite symmetric matrix, and [therefore](https://en.wikipedia.org/wiki/Eigendecomposition_of_a_matrix#Real_symmetric_matrices) has $N$ non-negative eigenvalues $\lambda_1,\dots,\lambda_N$ with corresponding eigenvectors $\ev_1,\dots,\ev_N$ such that
 $$ V \ev_n = \lambda_n \ev_n.$$
@@ -107,9 +107,9 @@ $$ \ev_m^\transpose \ev_n = 0 \mbox{ if $m\neq n$}.$$
 
 * We may work with **normalized** eigenvectors that are scaled such that $\ev_n^\transpose \ev_n = 1$.
 
-* We can also check that the components of $X$ in the directions of different eigenvectors are uncorrelated. Since $\cov(AX,BX)=A\cov(X,X)B^\transpose$, we have
+* We can also check that the components of $Y$ in the directions of different eigenvectors are uncorrelated. Since $\cov(AY,BY)=A\cov(Y,Y)B^\transpose$, we have
 $$\begin{eqnarray}
-\cov(\ev_m^\transpose X, \ev_n^\transpose X) &=& \ev_m^\transpose \cov(X,X) \ev_n
+\cov(\ev_m^\transpose Y, \ev_n^\transpose Y) &=& \ev_m^\transpose \cov(Y,Y) \ev_n
 \\
 &=& \ev_m^\transpose V \ev_n
 \\
@@ -146,7 +146,7 @@ par(oldpars)
 round(V_eigen$values[1:9],2)
 ```
 
-* We see that the eigenvalues are decreasing. For this model, the components of $X_{1:N}$ with highest variance correspond to long-period oscillations.
+* We see that the eigenvalues are decreasing. For this model, the components of $Y_{1:N}$ with highest variance correspond to long-period oscillations.
 
 * Are the sinusoidal eigenvectors a special feature of this particular time series model, or something more general?
 
@@ -158,7 +158,7 @@ round(V_eigen$values[1:9],2)
 
 ### The eigenvectors for a long stationary time series model
 
-* Suppose $\{X_n,-\infty<n<\infty\}$ has a stationary autocovariance function $\gamma_h$.
+* Suppose $\{Y_n,-\infty<n<\infty\}$ has a stationary autocovariance function $\gamma_h$.
 
 * We write $\Gamma$ for the infinite matrix with entries
 $$ \Gamma_{m,n} = \gamma_{m-n} \quad \mbox{for all integers $m$ and $n$}.$$
@@ -203,23 +203,23 @@ $$\omega_{(N/2)} = \pi.$$
 
 ## Frequency components of the data and their representation via the Fourier transform
 
-* The **frequency components** of $X_{1:N}$ are the components in the directions of these eigenvectors. Equivalently, we could say they are the representation of $X_{1:N}$ in the Fourier basis. Specifically, we write
+* The **frequency components** of $Y_{1:N}$ are the components in the directions of these eigenvectors. Equivalently, we could say they are the representation of $Y_{1:N}$ in the Fourier basis. Specifically, we write
 $$\begin{eqnarray}
-C_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
+C_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N Y_k\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
 \\
-S_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N X_k\sin(\omega_n k) \mbox{ for $1\le n\le N/2$}.
+S_n &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N Y_k\sin(\omega_n k) \mbox{ for $1\le n\le N/2$}.
 \end{eqnarray}$$
 
-* Similarly, the **frequency components** of data $\data{x_{1:N}}$ are 
+* Similarly, the **frequency components** of data $\data{y_{1:N}}$ are 
 $$\begin{eqnarray}
-\data{c_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{x_k}\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
+\data{c_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{y_k}\cos(\omega_n k) \mbox{ for $0\le n\le N/2$},
 \\
-\data{s_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{x_k}\sin(\omega_n k) \mbox{ for $1\le n\le N/2$}.
+\data{s_n} &=& \frac{1}{\sqrt{N}}\sum_{k=1}^N \data{y_k}\sin(\omega_n k) \mbox{ for $1\le n\le N/2$}.
 \end{eqnarray}$$
 
 * The frequency components of the data are often written as real and imaginary parts of the **discrete Fourier transform**,
 $$\begin{eqnarray}
-\data{d_n} &=& \frac{1}{\sqrt{N}} \sum_{k=1}^N \data{x_k} e^{2\pi i n/N}
+\data{d_n} &=& \frac{1}{\sqrt{N}} \sum_{k=1}^N \data{y_k} e^{2\pi i n/N}
 \\
 &=&\data{c_n} + i\data{s_n}
 \end{eqnarray}$$
@@ -229,7 +229,7 @@ $$\begin{eqnarray}
 * `fft` is an implementation of the fast Fourier transform algorithm, which enables computation of all the frequency components with order $N\log(N)$ computation. At first consideration, computing the frequency components appears to require a matrix multiplication involving order $N^2$ additions and multiplications. When $N=10^5$ or $N=10^6$ this difference becomes important!
 
 
-* The first frequency component, $C_0$, is something of a special case, since it has mean $\mu=\E[X_n]$ whereas the other components have mean zero.
+* The first frequency component, $C_0$, is something of a special case, since it has mean $\mu=\E[Y_n]$ whereas the other components have mean zero.
 
 * In practice, we subtract a mean before computing the periodogram, which is equivalent to removing the frequency component for frequency zero.
 
@@ -293,7 +293,7 @@ as an estimator of the spectral density.
 -------
 
 ### Question: compute the spectrum of the MA(q) moving mean,
-$$ X_n = \frac{1}{q+1} \sum_{k=0}^q \epsilon_{n-k}.$$
+$$ Y_n = \frac{1}{q+1} \sum_{k=0}^q \epsilon_{n-k}.$$
 
 <br>
 
@@ -321,9 +321,9 @@ system("head ann_arbor_weather.csv",intern=TRUE)
 ```
 
 ```{r weather_data}
-x <- read.table(file="ann_arbor_weather.csv",header=TRUE)
-head(x)
-low <- x$Low
+y <- read.table(file="ann_arbor_weather.csv",header=TRUE)
+head(y)
+low <- y$Low
 ```
 
 * We have to deal with the NA measurement for 1955. A simple approach is to replace the NA by the mean.
@@ -431,10 +431,10 @@ spectrum(low,method="ar", main="Spectrum estimated via AR model picked by AIC")
 * Let's try some low-order polynomial trend specifications.
 
 ```{r poly_fit}
-lm0 <- lm(Low~1,data=x)
-lm1 <- lm(Low~Year,data=x)
-lm2 <- lm(Low~Year+I(Year^2),data=x)
-lm3 <- lm(Low~Year+I(Year^2)+I(Year^3),data=x)
+lm0 <- lm(Low~1,data=y)
+lm1 <- lm(Low~Year,data=y)
+lm2 <- lm(Low~Year+I(Year^2),data=y)
+lm3 <- lm(Low~Year+I(Year^2)+I(Year^3),data=y)
 poly_aic <- matrix( c(AIC(lm0),AIC(lm1),AIC(lm2),AIC(lm3)), nrow=1,
    dimnames=list("<b>AIC</b>", paste("order",0:3)))
 require(knitr)
@@ -446,7 +446,7 @@ kable(poly_aic,digits=1)
 * Now, let's remind ourselves what the data look like.
 
 ```{r plot_jan_temp,fig.width=5}
-plot(Low~Year,data=x,type="l")
+plot(Low~Year,data=y,type="l")
 ```
 
 * Our eye may see a trend, and recall that it looks a bit like the global temperature trend.
@@ -454,9 +454,9 @@ plot(Low~Year,data=x,type="l")
 * Let's try fitting global temperature as an explanatory variable.
 
 ```{r read_glob_temp}
-y <- read.table("Global_Temperature.txt",header=TRUE)
-global_temp <- y$Annual[y$Year %in% x$Year]
-lm_global <- lm(Low~global_temp,data=x)
+Z <- read.table("Global_Temperature.txt",header=TRUE)
+global_temp <- Z$Annual[Z$Year %in% y$Year]
+lm_global <- lm(Low~global_temp,data=y)
 AIC(lm_global)
 ```
 

@@ -31,7 +31,7 @@ csl: ecology.csl
 \newcommand\ar{\phi}
 \newcommand\ma{\psi}
 
-Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/.
+Licensed under the Creative Commons attribution-noncommercial license, http://creativecommons.org/licenses/by-nc/3.0/. 
 Please share and remix noncommercially, mentioning its origin.  
 ![CC-BY_NC](cc-by-nc.png)
 
@@ -94,8 +94,8 @@ options(
 
 ## Background on likelihood-based inference
 
-* For any data $\data{x_{1:N}}$ and any probabilistic model $f_{X_{1:N}}(x_{1:N}\params\theta)$ we define the likelihood function to be
-$$ \lik(\theta) = f_{X_{1:N}}(\data{x_{1:N}}\params\theta).$$
+* For any data $\data{y_{1:N}}$ and any probabilistic model $f_{Y_{1:N}}(y_{1:N}\params\theta)$ we define the likelihood function to be
+$$ \lik(\theta) = f_{Y_{1:N}}(\data{y_{1:N}}\params\theta).$$
 
 * It is often convenient to work with the logarithm to base $e$ of the likelihood, which we write as
 $$\loglik(\theta) = \log \lik(\theta).$$
@@ -122,14 +122,14 @@ $$\loglik(\theta) = \log \lik(\theta).$$
 ## The maximum likelihood estimator (MLE)
 
 * A maximum likelihood estimator (MLE) is
-$$ \hat\theta(x_{1:N}) = \arg\max_\theta f_{X_{1:N}}(x_{1:N}\params\theta),$$
+$$ \hat\theta(y_{1:N}) = \arg\max_\theta f_{Y_{1:N}}(y_{1:N}\params\theta),$$
 where $\arg\max_\theta g(\theta)$ means a value of argument $\theta$ at which the maximum of the function $g$ is attained, so $g\big(\arg\max_\theta g(\theta)\big) = \max_\theta g(\theta)$.
 
 * If there are many values of $\theta$ giving the same maximum value of the likelihood, then an MLE still exists but is not unique.
  
 
 * The maximum likelihood estimate (also known as the MLE) is
-$$\begin{eqnarray} \data{\theta} &=& \hat\theta(\data{x_{1:N}})
+$$\begin{eqnarray} \data{\theta} &=& \hat\theta(\data{y_{1:N}})
 \\
 &=& \arg\max_\theta \lik(\theta)
 \\
@@ -173,7 +173,7 @@ $$
 
 * There are three main approaches to estimating the statistical uncertainty in an MLE.
 
-1. The Fisher information. This is computationally quick, but works well only when $\hat\theta(X_{1:N})$ is well approximated by a normal distribution.
+1. The Fisher information. This is computationally quick, but works well only when $\hat\theta(Y_{1:N})$ is well approximated by a normal distribution.
 
 2. Profile likelihood estimation. This is a bit more computational effort, but generally is preferable to the Fisher information.
 
@@ -204,7 +204,7 @@ $$ \big[\nabla^2\loglik(\theta)\big]_{ij} =  \frac{\partial^2}{\partial\theta_i\
 $$ \data{I} = - \nabla^2\loglik(\data{\theta}).$$
 
 * A standard asymptotic approximation to the distribution of the MLE for large $N$ is
-$$ \hat\theta(X_{1:N}) \approx N[\theta, {\data{I}}^{-1}],$$
+$$ \hat\theta(Y_{1:N}) \approx N[\theta, {\data{I}}^{-1}],$$
 where $\theta$ is the true parameter value.
 This asserts that the MLE is asymptotically unbiased, with variance asymptotically attaining the Cramer-Rao lower bound. Thus, we say the MLE is **asymptotically efficient**.
 
@@ -244,10 +244,10 @@ $$ \{\theta_d : \loglik(\data{\theta}) - \profileloglik{d}(\theta_d)\} < 1.92.$$
 
 ### Bootstrap methods for constructing standard errors and confidence intervals
 
-* Suppose we want to know the statistical behavior of the estimator $\hat\theta({x_{1:N}})$
-for models in a neighborhood of the MLE, $\data{\theta}=\hat\theta(\data{x_{1:N}})$.
+* Suppose we want to know the statistical behavior of the estimator $\hat\theta({y_{1:N}})$
+for models in a neighborhood of the MLE, $\data{\theta}=\hat\theta(\data{y_{1:N}})$.
 
-* In particular, let's consider the problem of estimating uncertainty about $\theta_1$. We want to assess the behavior of the maximum likelihood estimator, $\hat\theta({x_{1:N}})$, and possibly the coverage of an associated confidence interval estimator, $\big[\hat\theta_{1,\mathrm lo}({x_{1:N}}),\hat\theta_{1,\mathrm hi}({x_{1:N}})\big]$. The confidence interval estimator could be constructed using either the Fisher information method or the profile likelihood approach.
+* In particular, let's consider the problem of estimating uncertainty about $\theta_1$. We want to assess the behavior of the maximum likelihood estimator, $\hat\theta({y_{1:N}})$, and possibly the coverage of an associated confidence interval estimator, $\big[\hat\theta_{1,\mathrm lo}({y_{1:N}}),\hat\theta_{1,\mathrm hi}({y_{1:N}})\big]$. The confidence interval estimator could be constructed using either the Fisher information method or the profile likelihood approach.
 
 
 * The following simulation study lets us address the following goals: 
@@ -259,10 +259,10 @@ for models in a neighborhood of the MLE, $\data{\theta}=\hat\theta(\data{x_{1:N}
 (C) Construct a confidence interval for $\theta_1$ with exact local coverage.
 
 1. Generate $J$ independent Monte Carlo simulations, 
-$$X_{1:N}^{[j]} \sim f_{X_{1:N}}(x_{1:N}\params\data{\theta})\mbox{ for } j\in 1:J.$$
+$$Y_{1:N}^{[j]} \sim f_{Y_{1:N}}(y_{1:N}\params\data{\theta})\mbox{ for } j\in 1:J.$$
 
 2. For each simulation, evaluate the maximum likelihood estimator,
-$$ \theta^{[j]} = \hat\theta\big(X_{1:N}^{[j]}\big)\mbox{ for } j\in 1:J,$$
+$$ \theta^{[j]} = \hat\theta\big(Y_{1:N}^{[j]}\big)\mbox{ for } j\in 1:J,$$
 and, if desired, the confidence interval estimator,
 $$ \big[\theta^{[j]}_{1,\mathrm lo},\theta^{[j]}_{1,\mathrm hi}\big] = \big[\hat\theta_{1,\mathrm lo}({X^{[j]}_{1:N}}),\hat\theta_{1,\mathrm hi}({X^{[j]}_{1:N}})\big].$$
 
@@ -467,10 +467,10 @@ plot(huron_depth~year,type="l")
 * Later, we will consider hypotheses of trend. For now, let's start by fitting a stationary ARMA$(p,q)$ model under the null hypothesis that there is no trend. This hypothesis, which asserts that nothing has substantially changed in this system over the last 150 years, is not entirely unreasonable from looking at the data.
 
 * We seek to fit a stationary Gaussian ARMA(p,q) model with parameter vector $\theta=(\ar_{1:p},\ma_{1:q},\mu,\sigma^2)$ given by
-$$ \ar(B)(X_n-\mu) = \ma(B) \epsilon_n,$$
+$$ \ar(B)(Y_n-\mu) = \ma(B) \epsilon_n,$$
 where 
 $$\begin{eqnarray}
-\mu &=& \E[X_n]
+\mu &=& \E[Y_n]
 \\
 \ar(x)&=&1-\ar_1 x-\dots -\ar_px^p,
 \\ 
@@ -577,12 +577,12 @@ intercept <- params["intercept"]
 sigma <- sqrt(huron_arma21$sigma2)
 theta <- matrix(NA,nrow=J,ncol=length(params),dimnames=list(NULL,names(params)))
 for(j in 1:J){
-   X_j <- arima.sim(
+   Y_j <- arima.sim(
       list(ar=ar,ma=ma),
       n=length(huron_depth),
       sd=sigma
    )+intercept
-   theta[j,] <- coef(arima(X_j,order=c(2,0,1)))
+   theta[j,] <- coef(arima(Y_j,order=c(2,0,1)))
 }
 hist(theta[,"ma1"],freq=FALSE) 
 ```
@@ -630,8 +630,8 @@ intercept <- params["intercept"]
 sigma <- sqrt(huron_ar1$sigma2)
 t1 <- system.time(
   huron_sim <- foreach(j=1:J) %dopar% {
-     X_j <- arima.sim(list(ar=ar),n=length(huron_depth),sd=sigma)+intercept
-     try(coef(arima(X_j,order=c(2,0,1))))
+     Y_j <- arima.sim(list(ar=ar),n=length(huron_depth),sd=sigma)+intercept
+     try(coef(arima(Y_j,order=c(2,0,1))))
   }
 ) 
 ```

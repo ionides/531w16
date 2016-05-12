@@ -123,7 +123,7 @@ Produced with R version `r getRversion()` and **pomp** version `r packageVersion
 
 ## Notation and data
 
-* Recall the daily S&P 500 data that we saw earlier, in [Section 3.5](http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model), downloaded from [yahoo.com](http://real-chart.finance.yahoo.com/table.csv?s=%5EGSPC&d=0&e=15&f=2016&g=d&a=0&b=3&c=1950&ignore=.csv).
+* Recall the daily S&P 500 data that we saw earlier, in [Section 3.5](http://ionides.github.io/531w16/notes03/notes3.html#a-random-walk-model), downloaded from [yahoo.com](http://real-chart.finance.yahoo.com/table.csv?s=%5EGSPC&d=0&e=15&f=2016&g=d&a=0&b=3&c=1950&ignore=.csv).
 
 ```{r sp500}
 dat <- read.table("sp500.csv",sep=",",header=TRUE)
@@ -139,7 +139,7 @@ plot(log(sp500),type="l")
 * We write the return on the S&P 500 index, i.e., the difference of the log of the index, as
 $$ \data{y_n}=\log(\data{z_n})-\log(\data{z_{n-1}}).$$
 
-* We saw, in [Section 3.5](http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model), that $\data{y_{2:N}}$ has negligible sample autocorrelation.
+* We saw, in [Section 3.5](http://ionides.github.io/531w16/notes03/notes3.html#a-random-walk-model), that $\data{y_{2:N}}$ has negligible sample autocorrelation.
 
 * However, the absolute deviations from average, 
 $$ \data{a_n} = \left| \data{y_n} - \frac{1}{N-1}\sum_{k=2}^N \data{y_k} \right|$$
@@ -153,7 +153,7 @@ have considerable sample autocorrelation.
 
 ### Question. Fitting a stationarity model to stock market returns
 
-* Look at the plots in  [Section 3.5](http://ionides.github.io/531w16/notes3/notes3.html#a-random-walk-model). 
+* Look at the plots in  [Section 3.5](http://ionides.github.io/531w16/notes03/notes3.html#a-random-walk-model). 
 
 * Is it appropriate to fit a stationary model to $\data{y_{2:N}}$, or do we have evidence for violation of stationarity? Explain.
 
@@ -734,7 +734,7 @@ $$
 
 <big><big><big>Acknowledgment</big></big></big>
 
-These notes were developed from a tutorial on [financial leverage analysis in pomp](http://dept.stat.lsa.umich.edu/~ionides/tutorials/sp500/sp500.html).
+These notes draw on material in a tutorial on [financial leverage analysis in pomp](http://dept.stat.lsa.umich.edu/~ionides/tutorials/sp500/sp500.html).
 
 ------
 ## References

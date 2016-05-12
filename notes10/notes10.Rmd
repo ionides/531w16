@@ -170,7 +170,7 @@ plot(ts(cbind(e,u),start=1948),main="Percent unemployment (u) and life expectanc
 
 * To extract the cyclical component, we use an econometric method called the Hodrick-Prescott (HP) filter \citep{hodrick97}.
 
-* The HP filter is exactly a smoothing spline (see [Section 9.6](http://ionides.github.io/531w16/notes9/notes9.html#spline-smoothing-and-its-lg-pomp-representation)) with a particular choice of smoothing parameter. 
+* The HP filter is exactly a smoothing spline (see [Section 9.6](http://ionides.github.io/531w16/notes09/notes9.html#spline-smoothing-and-its-lg-pomp-representation)) with a particular choice of smoothing parameter. 
 
 * Specifically, for a time series $\data{y_{1:N}}$, the HP filter is the time series $\data{s_{1:N}}$ constructed as
 

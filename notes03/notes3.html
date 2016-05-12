@@ -97,9 +97,9 @@ img {
 <li><p>A time series model for which all joint distributions are invariant to shifts in time is called <strong>strictly stationary</strong>.</p>
 <ul>
 <li><p>Formally, this means that for any collection of times <span class="math">\((t_1, t_2,\dots,t_K)\)</span>, the joint distribution of observations at these times should be the same as the joint distribution at <span class="math">\((t_1+\tau, t_2+\tau,\dots,t_K+\tau)\)</span> for any <span class="math">\(\tau\)</span>.</p></li>
-<li><p>For equally spaced observations, this becomes: for any collection of timepoints <span class="math">\(n_1,\dots,n_K\)</span>, and for any lag <span class="math">\(h\)</span>, the joint density function of <span class="math">\((X_{n_1},X_{n_2},\dots, X_{n_K})\)</span> is the same as the joint density function of <span class="math">\((X_{n_1+h},X_{n_2+h},\dots, X_{n_K+h})\)</span>.</p></li>
-<li><p>In our general notation for densities, this strict stationarity requirement can be written as <span class="math">\[\begin{eqnarray}&amp;&amp;f_{X_{n_1},X_{n_2},\dots, X_{n_K}}(x_1,x_2,\dots,x_K)\\
-&amp;&amp;\quad\quad = f_{X_{n_1+h},X_{n_2+h},\dots, X_{n_K+h}}(x_1,x_2,\dots,x_K).
+<li><p>For equally spaced observations, this becomes: for any collection of timepoints <span class="math">\(n_1,\dots,n_K\)</span>, and for any lag <span class="math">\(h\)</span>, the joint density function of <span class="math">\((Y_{n_1},Y_{n_2},\dots, Y_{n_K})\)</span> is the same as the joint density function of <span class="math">\((Y_{n_1+h},Y_{n_2+h},\dots, Y_{n_K+h})\)</span>.</p></li>
+<li><p>In our general notation for densities, this strict stationarity requirement can be written as <span class="math">\[\begin{eqnarray}&amp;&amp;f_{Y_{n_1},Y_{n_2},\dots, Y_{n_K}}(y_1,y_2,\dots,y_K)\\
+&amp;&amp;\quad\quad = f_{Y_{n_1+h},Y_{n_2+h},\dots, Y_{n_K+h}}(y_1,y_2,\dots,y_K).
 \end{eqnarray}\]</span></p></li>
 </ul></li>
 <li><p>Strict stationarity implies weak stationarity (check this). Note that we only defined weak stationarity for equally spaced observations.</p></li>
@@ -213,17 +213,17 @@ img {
 <div id="the-arp-autoregressive-model" class="section level3">
 <h3><span class="header-section-number">3.3.1</span> The AR(p) autoregressive model</h3>
 <ul>
-<li><p>The order <span class="math">\(p\)</span> autoregressive model, abbreviated to AR(p), is <br><br> [M1] <span class="math">\(\quad\quad \quad X_n = \phi_1 X_{n-1}+\phi_2X_{n-2}+\dots+\phi_pX_{n-p} + \epsilon_n\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
+<li><p>The order <span class="math">\(p\)</span> autoregressive model, abbreviated to AR(p), is <br><br> [M1] <span class="math">\(\quad\quad \quad Y_n = \phi_1 Y_{n-1}+\phi_2Y_{n-2}+\dots+\phi_pY_{n-p} + \epsilon_n\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
 <li><p>Often, we consider the <strong>Gaussian AR(p)</strong> model, where <span class="math">\(\{\epsilon_n\}\)</span> is a Gaussian white noise process.</p></li>
 <li><p>M1 is a <strong>stochastic difference equation</strong>. It is a <a href="https://en.wikipedia.org/wiki/Recurrence_relation">difference equation (also known as a recurrence relation)</a> since each time point is specified recursively in terms of previous time points. Stochastic just means random.</p></li>
-<li><p>To complete the model, we need to <strong>initialize</strong> the solution to the stochastic difference equation. Supposing we want to specify a distribution for <span class="math">\(X_{1:N}\)</span>, we have some choices in how to set up the <strong>initial values</strong>.</p>
+<li><p>To complete the model, we need to <strong>initialize</strong> the solution to the stochastic difference equation. Supposing we want to specify a distribution for <span class="math">\(Y_{1:N}\)</span>, we have some choices in how to set up the <strong>initial values</strong>.</p>
 <ol style="list-style-type: decimal">
-<li><p>We can specify <span class="math">\(X_{1:p}\)</span> explicitly, to get the recursion started.</p></li>
-<li><p>We can specify <span class="math">\(X_{1-p:0}\)</span> explicitly.</p></li>
+<li><p>We can specify <span class="math">\(Y_{1:p}\)</span> explicitly, to get the recursion started.</p></li>
+<li><p>We can specify <span class="math">\(Y_{1-p:0}\)</span> explicitly.</p></li>
 <li><p>For either of these choices, we can define these initial values either to be additional parameters in the model (i.e., not random) or to be specified random variables.</p></li>
-<li><p>If we want our model is strictly stationary, we must initialize so that <span class="math">\(X_{1:p}\)</span> have the proper joint distribution for this stationary model.</p></li>
+<li><p>If we want our model is strictly stationary, we must initialize so that <span class="math">\(Y_{1:p}\)</span> have the proper joint distribution for this stationary model.</p></li>
 </ol></li>
-<li><p>Let’s investigate a particular Gaussian AR(1) process, as an exercise. <br><br> [M2] <span class="math">\(\quad\quad \quad X_n = 0.6 X_{n-1}+ \epsilon_n\)</span>, <br><br> where <span class="math">\(\epsilon_n\sim \mathrm{IID} N[0,1]\)</span>. We will initialize with <span class="math">\(X_1\sim N[0,1.56^2]\)</span>.</p></li>
+<li><p>Let’s investigate a particular Gaussian AR(1) process, as an exercise. <br><br> [M2] <span class="math">\(\quad\quad \quad Y_n = 0.6 Y_{n-1}+ \epsilon_n\)</span>, <br><br> where <span class="math">\(\epsilon_n\sim \mathrm{IID} N[0,1]\)</span>. We will initialize with <span class="math">\(Y_1\sim N[0,1.56^2]\)</span>.</p></li>
 </ul>
 <p><br></p>
 <hr />
@@ -280,10 +280,10 @@ plot(X,type=&quot;l&quot;)</code></pre>
 <div id="the-maq-moving-average-model" class="section level3">
 <h3><span class="header-section-number">3.4.1</span> The MA(q) moving average model</h3>
 <ul>
-<li><p>The order <span class="math">\(q\)</span> moving average model, abbreviated to MA(q), is <br><br> [M3] <span class="math">\(\quad\quad \quad X_n = \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
-<li><p>To fully specify <span class="math">\(X_{1:N}\)</span> we must specify the joint distribution of <span class="math">\(\epsilon_{1-q:N}\)</span>.</p></li>
+<li><p>The order <span class="math">\(q\)</span> moving average model, abbreviated to MA(q), is <br><br> [M3] <span class="math">\(\quad\quad \quad Y_n = \epsilon_n +\theta_1 \epsilon_{n-1} +\dots+\theta_q\epsilon_{n-q}\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is a white noise process.</p></li>
+<li><p>To fully specify <span class="math">\(Y_{1:N}\)</span> we must specify the joint distribution of <span class="math">\(\epsilon_{1-q:N}\)</span>.</p></li>
 <li><p>Often, we consider the <strong>Gaussian MA(q)</strong> model, where <span class="math">\(\{\epsilon_n\}\)</span> is a Gaussian white noise process.</p></li>
-<li><p>Let’s investigate a particular Gaussian MA(2) process, as an exercise. <br><br> [M4] <span class="math">\(\quad\quad \quad X_n = \epsilon_n + 1.5\epsilon_{n-1}+\epsilon_{n-2}\)</span>, <br><br> where <span class="math">\(\epsilon_n\sim \mathrm{IID} N[0,1]\)</span>.</p></li>
+<li><p>Let’s investigate a particular Gaussian MA(2) process, as an exercise. <br><br> [M4] <span class="math">\(\quad\quad \quad Y_n = \epsilon_n + 1.5\epsilon_{n-1}+\epsilon_{n-2}\)</span>, <br><br> where <span class="math">\(\epsilon_n\sim \mathrm{IID} N[0,1]\)</span>.</p></li>
 </ul>
 </div>
 <div id="simulating-a-moving-average-model" class="section level3">
@@ -328,17 +328,17 @@ plot(epsilon,type=&quot;l&quot;)</code></pre>
 <div id="a-random-walk-model" class="section level2">
 <h2><span class="header-section-number">3.5</span> A random walk model</h2>
 <ul>
-<li><p>The <strong>random walk</strong> model is <br><br> [M5] <span class="math">\(\quad\quad\quad X_n = X_{n-1} + \epsilon_n\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is white noise. Unless otherwise specified, we usually initialize with <span class="math">\(X_0=0\)</span>.</p></li>
+<li><p>The <strong>random walk</strong> model is <br><br> [M5] <span class="math">\(\quad\quad\quad Y_n = Y_{n-1} + \epsilon_n\)</span>, <br><br> where <span class="math">\(\{\epsilon_n\}\)</span> is white noise. Unless otherwise specified, we usually initialize with <span class="math">\(Y_0=0\)</span>.</p></li>
 <li><p>If <span class="math">\(\{\epsilon_n\}\)</span> is Gaussian white noise, then we have a Gaussian random walk.</p></li>
 <li><p>The random walk model is a special case of AR(1) with <span class="math">\(\phi_1=1\)</span>.</p></li>
-<li><p>The stochastic difference equation in M5 has an exact solution, <span class="math">\[ X_n = \sum_{k=1}^n\epsilon_k.\]</span></p></li>
-<li><p>We can also call <span class="math">\(X_{0:N}\)</span> an <strong>integrated white noise process</strong>. We think of summation as a discrete version of integration.</p></li>
-<li><p>If data <span class="math">\({x_{1:N}^*}\)</span> are modeled as a random walk, the value of <span class="math">\(X_0\)</span> is usually an unknown. Rather than introducing an unknown parameter to our model, we may initialize our model at time <span class="math">\(t_1\)</span> with <span class="math">\(X_1={x_1^*}\)</span>.</p></li>
-<li><p>The <strong>first difference</strong> time series <span class="math">\({z_{2:N}^*}\)</span> is defined by <span class="math">\[ {z_n^*}= \Delta {x_n^*} = {x_{n}^*}-{x_{n-1}^*}\]</span></p></li>
+<li><p>The stochastic difference equation in M5 has an exact solution, <span class="math">\[ Y_n = \sum_{k=1}^n\epsilon_k.\]</span></p></li>
+<li><p>We can also call <span class="math">\(Y_{0:N}\)</span> an <strong>integrated white noise process</strong>. We think of summation as a discrete version of integration.</p></li>
+<li><p>If data <span class="math">\({y_{1:N}^*}\)</span> are modeled as a random walk, the value of <span class="math">\(Y_0\)</span> is usually an unknown. Rather than introducing an unknown parameter to our model, we may initialize our model at time <span class="math">\(t_1\)</span> with <span class="math">\(Y_1={y_1^*}\)</span>.</p></li>
+<li><p>The <strong>first difference</strong> time series <span class="math">\({z_{2:N}^*}\)</span> is defined by <span class="math">\[ {z_n^*}= \Delta {y_n^*} = {y_{n}^*}-{y_{n-1}^*}\]</span></p></li>
 <li><p>From a time series of length <span class="math">\(N\)</span>, we only get <span class="math">\(N-1\)</span> first differences.</p></li>
-<li><p>A random walk model for <span class="math">\({x_{1:N}^*}\)</span> is essentially equivalent to a white noise model for <span class="math">\({z_{2:N}^*}= \Delta {x_{2:N}^*}\)</span>, apart from the issue of initialization.</p></li>
-<li><p>The <strong>random walk with drift</strong> model is given by the difference equation <br><br> [M6] <span class="math">\(\quad\quad\quad X_n = X_{n-1} + \mu + \epsilon_n\)</span>, <br><br> driven by a white noise process <span class="math">\(\{\epsilon_n\}\)</span>. This has solution <span class="math">\[ X_n = X_0 + n\mu + \sum_{k=1}^n\epsilon_k.\]</span></p></li>
-<li><p>As for the random walk without drift, we must define <span class="math">\(X_0\)</span> to initialize the model and complete the model specification. Unless otherwise specified, we usually initialize with <span class="math">\(X_0=0\)</span>.</p></li>
+<li><p>A random walk model for <span class="math">\({y_{1:N}^*}\)</span> is essentially equivalent to a white noise model for <span class="math">\({z_{2:N}^*}= \Delta {y_{2:N}^*}\)</span>, apart from the issue of initialization.</p></li>
+<li><p>The <strong>random walk with drift</strong> model is given by the difference equation <br><br> [M6] <span class="math">\(\quad\quad\quad Y_n = Y_{n-1} + \mu + \epsilon_n\)</span>, <br><br> driven by a white noise process <span class="math">\(\{\epsilon_n\}\)</span>. This has solution <span class="math">\[ Y_n = Y_0 + n\mu + \sum_{k=1}^n\epsilon_k.\]</span></p></li>
+<li><p>As for the random walk without drift, we must define <span class="math">\(Y_0\)</span> to initialize the model and complete the model specification. Unless otherwise specified, we usually initialize with <span class="math">\(Y_0=0\)</span>.</p></li>
 </ul>
 <p><br></p>
 <hr />
@@ -378,7 +378,7 @@ plot(X2,type=&quot;l&quot;)</code></pre>
 <ul>
 <li><p>Seems reasonable enough so far. Let’s plot the sample autocorrelation function (sample ACF) of <code>diff(log(sp500))</code>.</p></li>
 <li><p>It is bad style to refer to quantities using computer code notation. We should set up mathematical notation in the text. Let’s try again…</p></li>
-<li><p>Let <span class="math">\({x_{1:N}^*}\)</span> be the time series of S&amp;P 500 daily closing values downloaded from yahoo.com. Let <span class="math">\({z_n^*}= \Delta \log {x_n^*} = \log {x_{n}^*}-\log {x_{n-1}^*}\)</span>.</p></li>
+<li><p>Let <span class="math">\({y_{1:N}^*}\)</span> be the time series of S&amp;P 500 daily closing values downloaded from yahoo.com. Let <span class="math">\({z_n^*}= \Delta \log {y_n^*} = \log {y_{n}^*}-\log {y_{n-1}^*}\)</span>.</p></li>
 <li><p>The temporal difference of the log of the value of an investment is called the <strong>return</strong> on the investment. Let’s plot the sample autocorrelation function of the time series of S&amp;P 500 returns, <span class="math">\({z_{2:N}^*}\)</span>.</p></li>
 </ul>
 <pre class="r"><code>z &lt;- diff(log(sp500))

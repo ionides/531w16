@@ -90,11 +90,11 @@ options(
 
 * A **stationary causal linear process** is a time series models that can be written as
 <br><br>
-[M7] $\eqspace X_n = \mu + g_0\epsilon_n + g_1\epsilon_{n-1}+g_2\epsilon_{n-2}+g_3\epsilon_{n-3} + g_4\epsilon_{n-4}+\dots$
+[M7] $\eqspace Y_n = \mu + g_0\epsilon_n + g_1\epsilon_{n-1}+g_2\epsilon_{n-2}+g_3\epsilon_{n-3} + g_4\epsilon_{n-4}+\dots$
 <br><br>
 where $\{\epsilon_n, n=\dots,-2,-1,0,1,2,\dots\}$ is a white noise process, defined for all integer timepoints, with variance $\var(\epsilon_n)=\sigma^2$.
 
-* We do not need to define any initial values. The doubly infinite noise process $\{\epsilon_n, n=\dots,-2,-1,0,1,2,\dots\}$ is enough to define $X_n$ for every $n$ as long as the sequence in [M7] converges.
+* We do not need to define any initial values. The doubly infinite noise process $\{\epsilon_n, n=\dots,-2,-1,0,1,2,\dots\}$ is enough to define $Y_n$ for every $n$ as long as the sequence in [M7] converges.
 
 * **stationary** since the construction is the same for each $n$. 
 
@@ -112,13 +112,13 @@ where $\{\epsilon_n, n=\dots,-2,-1,0,1,2,\dots\}$ is a white noise process, defi
 
 -------
 
-* **causal** refers to $\{\epsilon_n\}$ being a causal driver of $\{X_n\}$. The value of $X_n$ depends only on noise process values already determined by time $n$. This matching a [requirement for causation](https://en.wikipedia.org/wiki/Bradford_Hill_criteria) that causes must precede effects. 
+* **causal** refers to $\{\epsilon_n\}$ being a causal driver of $\{Y_n\}$. The value of $Y_n$ depends only on noise process values already determined by time $n$. This matching a [requirement for causation](https://en.wikipedia.org/wiki/Bradford_Hill_criteria) that causes must precede effects. 
 
-* **linear** refers to linearity of $X_n$ as a function of $\{\epsilon_n\}$. A linear modification of the noise process, replacing $\{\epsilon_n\}$ by $\{\alpha + \beta\epsilon_n\}$, results in a new linear process. 
+* **linear** refers to linearity of $Y_n$ as a function of $\{\epsilon_n\}$. A linear modification of the noise process, replacing $\{\epsilon_n\}$ by $\{\alpha + \beta\epsilon_n\}$, results in a new linear process. 
 
 * The autocovariance function is,
 $$\begin{eqnarray}
-\gamma_h &=& \cov\big(X_n,X_{n+h}\big)\\
+\gamma_h &=& \cov\big(Y_n,Y_{n+h}\big)\\
 &=& \cov\left(\sum_{j=0}^\infty g_j\epsilon_{n-j},\sum_{k=0}^\infty g_k\epsilon_{n+h-k}\right)\\
 &=& \sum_{j=0}^\infty \sum_{k=0}^\infty  g_j g_k\cov\big(\epsilon_{n-j},\epsilon_{n+h-k}\big)\\
 &=& \sum_{j=0}^\infty g_jg_{j+h} \sigma^2, \mbox{for $h\ge 0$}.
@@ -143,17 +143,17 @@ $$\sum_{j=0}^\infty |g_j| < \infty.$$
 
 * Recall the stochastic difference equation defining the AR(1) model,
 <br><br>
-[M8] $\eqspace X_n = \ar X_{n-1}+\epsilon_n$.
+[M8] $\eqspace Y_n = \ar Y_{n-1}+\epsilon_n$.
 <br><br>
 
 * This has a causal solution,
 <br><br>
-[M8.1] $\eqspace X_n = \sum_{j=0}^\infty \ar^j\epsilon_{n-j}$.
+[M8.1] $\eqspace Y_n = \sum_{j=0}^\infty \ar^j\epsilon_{n-j}$.
 <br><br>
 
 * It also has a non-causal solution,
 <br><br>
-[M8.1] $\eqspace X_n = \sum_{j=0}^\infty \ar^{-j}\epsilon_{n+j}$.
+[M8.1] $\eqspace Y_n = \sum_{j=0}^\infty \ar^{-j}\epsilon_{n+j}$.
 <br><br>
 
 <br>
@@ -193,22 +193,22 @@ $$\sum_{j=0}^\infty |g_j| < \infty.$$
 ## The backshift operator and the difference operator
 
 * The **backshift** operator $B$, also known as the **lag** operator, is given by
-$$ B X_n = X_{n-1}.$$
+$$ B Y_n = Y_{n-1}.$$
 
 * The **difference** operator $\Delta=1-B$ is
-$$ \Delta X_n = (1-B)X_n = X_n - X_{n-1}.$$
+$$ \Delta Y_n = (1-B)Y_n = Y_n - Y_{n-1}.$$
 
 * Powers of the backshift operator correspond to different time shifts, e.g.,
-$$ B^2 X_n = B (BX_n) = B(X_{n-1}) = X_{n-2}.$$
+$$ B^2 Y_n = B (BY_n) = B(Y_{n-1}) = Y_{n-2}.$$
 
 * We can also take a second difference,
 $$\begin{eqnarray}
-\Delta^2 X_n &=& (1-B)(1-B) X_n\\
-&=& (1-2B+B^2) X_n = X_n - 2X_{n-1} + X_{n-2}.
+\Delta^2 Y_n &=& (1-B)(1-B) Y_n\\
+&=& (1-2B+B^2) Y_n = Y_n - 2Y_{n-1} + Y_{n-2}.
 \end{eqnarray}$$
  
 * The backshift operator is linear, i.e., 
-$$(\alpha +\beta B)X_n = \alpha X_n + \beta BX_n = \alpha X_n + \beta X_{n-1}.$$
+$$(\alpha +\beta B)Y_n = \alpha Y_n + \beta BY_n = \alpha Y_n + \beta Y_{n-1}.$$
 
 * The AR, MA and linear process model equations can all be written in terms of polynomials in the backshift operator.
 
@@ -216,25 +216,25 @@ $$(\alpha +\beta B)X_n = \alpha X_n + \beta BX_n = \alpha X_n + \beta X_{n-1}.$$
 $$\ar(x) = 1-\ar_1 x -\ar_2 x^2 -\dots -\ar_p x^p.$$
 The equation M1 for the AR(p) model can be rearranged to give
 $$
- X_n - \ar_1 X_{n-1}- \ar_2X_{n-2}-\dots-\ar_pX_{n-p} = \epsilon_n,
+ Y_n - \ar_1 Y_{n-1}- \ar_2Y_{n-2}-\dots-\ar_pY_{n-p} = \epsilon_n,
 $$
 which is equivalent to
 <br><br>
-[M1$^\prime$] $\eqspace \ar(B) X_n = \epsilon_n$.
+[M1$^\prime$] $\eqspace \ar(B) Y_n = \epsilon_n$.
 <br><br>
 
 * Similarly, writing $\ma(x)$ for a polynomial of order $q$,
 $$\ma(x) = 1+\ma_1 x +\ma_2 x^2 + \dots +\ma_q x^q,$$
 the MA(q) equation M3 is equivalent to 
 <br><br>
-[M3$^\prime$] $\eqspace X_n = \ma(B) \epsilon_n$.
+[M3$^\prime$] $\eqspace Y_n = \ma(B) \epsilon_n$.
 <br><br>
 
 * Additionally, if $g(x)$ is a function defined by the [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansion
 $$g(x)= g_0 + g_1 x + g_2 x^2 + g_3 x^3 + g_4 x^4 + \dots,$$
 we can write the stationary causal linear process equation [M7] as
 <br><br>
-[M7$^\prime$] $\eqspace X_n = \mu + g(B)\epsilon_n$.
+[M7$^\prime$] $\eqspace Y_n = \mu + g(B)\epsilon_n$.
 <br><br>
 
 * Whatever skills you have acquired, or acquire during this course, about working with [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansions will help you understand AR and MA models, and ARMA models that combine both autoregressive and moving average features.
@@ -249,11 +249,11 @@ we can write the stationary causal linear process equation [M7] as
 
 * Putting together M1 and M3 suggests an **autoregressive moving average** ARMA(p,q) model given by
 <br><br>
-[M9] $\eqspace X_n = \ar_1 X_{n-1}+\ar_2X_{n-2}+\dots+\ar_pX_{n-p} + \epsilon_n +\ma_1 \epsilon_{n-1} +\dots+\ma_q\epsilon_{n-q}$,
+[M9] $\eqspace Y_n = \ar_1 Y_{n-1}+\ar_2Y_{n-2}+\dots+\ar_pY_{n-p} + \epsilon_n +\ma_1 \epsilon_{n-1} +\dots+\ma_q\epsilon_{n-q}$,
 <br><br>
 where $\{\epsilon_n\}$ is a white noise process. Using the backshift operator, we can write this more succinctly as
 <br><br>
-[M9$^\prime$] $\eqspace \ar(B) X_n = \ma(B) \epsilon_n$.
+[M9$^\prime$] $\eqspace \ar(B) Y_n = \ma(B) \epsilon_n$.
 <br><br>
 
 * Experience with data analysis suggests that models with both AR and MA components often fit data better than a pure AR or MA process.
@@ -265,14 +265,14 @@ where $\{\epsilon_n\}$ is a white noise process. Using the backshift operator, w
 ------
 
 ### Exercise: Carry out the following steps to obtain the MA($\infty$) representation and the autocovariance function of the ARMA(1,1) model,
-$$ X_n = \ar X_{n-1} + \epsilon_n + \ma \epsilon_{n-1}.$$
+$$ Y_n = \ar Y_{n-1} + \epsilon_n + \ma \epsilon_{n-1}.$$
 
 1. Formally, we can write 
-$$   (1-\ar B)X_n = (1+\ma B)\epsilon_n,$$
+$$   (1-\ar B)Y_n = (1+\ma B)\epsilon_n,$$
 which algebraically is equivalent to 
-$$X_n = \left(\frac{1+\ma B}{1-\ar B}\right)\epsilon_n.$$
+$$Y_n = \left(\frac{1+\ma B}{1-\ar B}\right)\epsilon_n.$$
 We write this as
-$$X_n = g(B) \epsilon_n,$$
+$$Y_n = g(B) \epsilon_n,$$
 where
 $$ g(x) = \left(\frac{1+\ma x}{1-\ar x}\right).$$
 To make sense of $g(B)$ we need to work out the [Taylor series](https://en.wikipedia.org/wiki/Taylor_series) expansion,
@@ -291,15 +291,15 @@ Do this either by hand or using your favorite math software.
 
 * We say that the ARMA model [M9] is **causal** if its MA($\infty$) representation is a convergent series. 
 
-* Recall that **causality** is about writing $X_n$ in terms of the driving noise process $\{\epsilon_n,\epsilon_{n-1},\epsilon_{n-2},\dots\}$.
+* Recall that **causality** is about writing $Y_n$ in terms of the driving noise process $\{\epsilon_n,\epsilon_{n-1},\epsilon_{n-2},\dots\}$.
 
-* **Invertibility** is about writing $\epsilon_n$ in terms of $\{X_n, X_{n-1}, X_{n-2},\dots\}$. 
+* **Invertibility** is about writing $\epsilon_n$ in terms of $\{Y_n, Y_{n-1}, Y_{n-2},\dots\}$. 
 
 * To assess causality, we consider the convergence of the Taylor series expansion of $\ma(x)/\ar(x)$ in the ARMA representation
-$$ X_n = \frac{\ma(B)}{\ar(B)} \epsilon_n.$$
+$$ Y_n = \frac{\ma(B)}{\ar(B)} \epsilon_n.$$
 
 * To assess invertibility, we consider the convergence of the Taylor series expansion of $\ar(x)/\ma(x)$ in the inversion of the ARMA model given by
-$$ \epsilon_n = \frac{\ar(B)}{\ma(B)} X_n.$$
+$$ \epsilon_n = \frac{\ar(B)}{\ma(B)} Y_n.$$
 
 * Fortunately, there is a simple way to check causality and invertibility. We will state the result without proof.
 
@@ -312,7 +312,7 @@ $$ \ma(x) = 1+\ma_1 x + \ma_2 x^2 + \dots + \ma_q x^q$$
 has all its roots (i.e., solutions to $\ma(x)=0$) outside the unit circle in the complex plane. 
 
 * We can check the roots using the `polyroot` function in R. For example, consider the MA(2) model,
-$$ X_n = \epsilon_n + 2\epsilon_{n-1} + 2\epsilon_{n-2}.$$
+$$ Y_n = \epsilon_n + 2\epsilon_{n-1} + 2\epsilon_{n-2}.$$
 The roots to $\ma(x)= 1+2x+2x^2$ are
 ```{r root}
 roots <- polyroot(c(1,2,2))
@@ -344,7 +344,7 @@ One answer to this question involves diagnosing model misspecification.
 ## Reducible and irreducible ARMA models
 
 * The ARMA model can be viewed as a ratio of two polynomials,
-$$ X_n = \frac{\ar(B)}{\ma(B)} \epsilon_n.$$
+$$ Y_n = \frac{\ar(B)}{\ma(B)} \epsilon_n.$$
 
 * If the two polynomials $\ar(x)$ and $\ma(x)$ share a common factor, it can be canceled out without changing the model. 
 
@@ -357,9 +357,9 @@ where $\lambda_{1:p}$ are the $p$ roots of the polynomial, which may be real or 
 * The polynomials $\ar(x)$ and $\ma(x)$ share a common factor if, and only if, they share a common root. 
 
 * It is not clear, just from looking at the model equations, that
-$$ X_n = \frac{5}{6} X_{n-1} -  \frac{1}{6} X_{n-2} + \epsilon_n- \epsilon_{n-1}+\frac{1}{4} \epsilon_{n-2}$$
+$$ Y_n = \frac{5}{6} Y_{n-1} -  \frac{1}{6} Y_{n-2} + \epsilon_n- \epsilon_{n-1}+\frac{1}{4} \epsilon_{n-2}$$
 is **exactly the same model** as
-$$ X_n = \frac{1}{3} X_{n-1} + \epsilon_n- \frac{1}{2}\epsilon_{n-1}.$$
+$$ Y_n = \frac{1}{3} Y_{n-1} + \epsilon_n- \frac{1}{2}\epsilon_{n-1}.$$
 
 * To see this, you have to do the math! We see that the second of these equations is derived from the first by canceling out the common factor $(1-0.5B)$ in the ARMA model specification.
 ```{r reducibility}
@@ -406,7 +406,7 @@ Canceling the term $e^{\lambda t}$, we see that this has two solutions, with
 $$ \lambda^2 = \pm \omega i,$$
 where $i=\sqrt{-1}$.
 
-2. The linearity of the differential equation means that if $x_1(t)$ and $x_2(t)$ are two solutions, then $Ax_1(t)+Bx_2(t)$ is also a solution for any $A$ and $B$. So, we have a general solution to [M10] given by
+2. The linearity of the differential equation means that if $y_1(t)$ and $y_2(t)$ are two solutions, then $Ay_1(t)+By_2(t)$ is also a solution for any $A$ and $B$. So, we have a general solution to [M10] given by
 $$ x(t) = A e^{i\omega t} + B e^{-i\omega t}.$$
 
 3. Using the two identities,
@@ -421,12 +421,12 @@ $$ x(t) = A\sin(\omega t + \beta).$$
 For the solution in this form, $\omega$ is called the **frequency**, $A$ is called the **amplitude** of the oscillation and $\beta$ is called the **phase**. The frequency of the oscillation is determined by [M10], but the amplitude and phase are unspecfied constants. Initial conditions can be used to specify $A$ and $\beta$.
 
 * A discrete time version of [M10] is a deterministic linear difference equation, replacing $\frac{d^2}{dt^2}$ by the second difference operator, $\Delta^2 = (1-B)^2$. This corresponds to a deterministic model equation,
-$$\eqspace \Delta^2 x_n = - \omega^2 x_n.$$
+$$\eqspace \Delta^2 y_n = - \omega^2 y_n.$$
 
 * Adding white noise, and expanding out $\Delta^2 = (1-B)^2$, we get a stochastic model,
 <br>
 <br>
-[M11] $\eqspace X_n = \frac{2X_{n-1}}{1+\omega^2} - \frac{X_{n-2}}{1+\omega^2}  + \epsilon_n$.
+[M11] $\eqspace Y_n = \frac{2Y_{n-1}}{1+\omega^2} - \frac{Y_{n-2}}{1+\omega^2}  + \epsilon_n$.
 <br><br>
 
 * It seems reasonable to hope that model [M11] would be a good candidate to describe systems that have semi-regular but somewhat eratic fluctuations, called **quasi-periodic** behavior. Such behavior is evident in business cycles or wild animal populations.
